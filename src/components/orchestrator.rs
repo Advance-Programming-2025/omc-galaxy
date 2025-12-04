@@ -1,4 +1,5 @@
 use std::sync::mpsc;
+use std::thread;
 
 use common_game::components::generator::Generator;
 use common_game::components::planet::Planet;
@@ -9,31 +10,6 @@ use common_game::protocols::messages::{
 
 use crate::components::CrabRaveConstructor;
 use crate::components::explorer::Explorer;
-
-// use common_game::components::sunray::Sunray;
-// use common_game::protocols::messages::StartPlanetAiMsg;
-// use common_game::protocols::messages::StopPlanetAiMsg;
-// use common_game::protocols::messages::SupportedCombinationRequest;
-// use common_game::components::asteroid::Asteroid;
-// use common_game::protocols::messages::CombineResourceRequest;
-// use common_game::protocols::messages::SupportedResourceRequest;
-// use common_game::protocols::messages::GenerateResourceRequest;
-// use common_game::protocols::messages::CurrentPlanetRequest;
-// use common_game::protocols::messages::MoveToPlanet;
-// use common_game::protocols::messages::ResetExplorerAIMsg;
-
-pub type GalaxyInit = (
-    Vec<Planet>,
-    Vec<Explorer>,
-    (
-        mpsc::Receiver<PlanetToOrchestrator>,
-        mpsc::Sender<OrchestratorToPlanet>,
-    ),
-    Option<(
-        mpsc::Receiver<ExplorerToOrchestrator>,
-        mpsc::Sender<OrchestratorToExplorer>,
-    )>,
-);
 
 // B generic is there for representing the content type of the bag
 pub struct Orchestrator {
@@ -56,21 +32,23 @@ pub struct Orchestrator {
 impl Orchestrator {
     //Check and init orchestrator
     pub fn new() -> Result<Self, String> {
-        let generator = Generator::new()?;
-        let galaxy_initialization = Orchestrator::initialize_galaxy()?;
-        Ok(Orchestrator {
-            generator: generator,
-            galaxy_topology:galaxy_initialization.0,
-            explorers: galaxy_initialization.1,
-            planet_channels: galaxy_initialization.2,
-            explorer_channels: galaxy_initialization.3,
-        })
+        Orchestrator::initialize_galaxy()
     }
-
+    
     //The return is Result<(), String> because if an error occur it go back to the main that finishes
     // I don't know if there are better approach but I think it is pretty elegant
 
-    pub fn initialize_galaxy(/*_path: &str*/) -> Result<GalaxyInit, String> {
+    pub fn initialize_galaxy(/*_path: &str*/) -> Result<Orchestrator, String> {
+        // Orchestrator know the file path where the galaxy topology is written and also the type of each planet
+        /*
+            Steps of initialization:
+            1. read the line to make a planet (at the moment one planet so there is no loop and linear implementation)
+            2. generate the id - the id generator methos should be on the orchestrator cause is the one to define everything
+            3. generate all the communication channels with the planet
+            3. generate the planet - if it fails then handle the error
+            4. if planet is generated succefully then add it to the topology
+
+         */
         //planet-orch and orch-planet
         let (planet_sender, orch_receiver): (
             mpsc::Sender<PlanetToOrchestrator>,
@@ -111,11 +89,12 @@ impl Orchestrator {
         let orchestrator_to_explorer_channels = (orch_receiver, orch_sender);
 
         //Construct crab-rave planet
-        let crab_rave_planet = CrabRaveConstructor::new(
+        let mut crab_rave_planet = CrabRaveConstructor::new(
             0,
             planet_to_orchestrator_channels,
             planet_to_explorer_channels,
         )?;
+        crab_rave_planet.run();
         // self.planet_channels = Some(orchestrator_to_planet_channels);
         // self.explorer_channels = Some(orchestrator_to_explorer_channels);
         //Add the constructed galaxy to our Orchestrator
@@ -124,8 +103,26 @@ impl Orchestrator {
         //Construct Explorer
         let explorer = Explorer::new(Some(galaxy[0].id()), explorer_to_orchestrator_channels, explorer_to_planet_channels);
         let explorers = vec![explorer];
+        Ok(
+            Self { 
+                generator: Generator::new()?, 
+                galaxy_topology: galaxy, 
+                explorers, 
+                planet_channels: orchestrator_to_planet_channels, 
+                explorer_channels: Some(orchestrator_to_explorer_channels) 
+            }
+        )
+    }
 
-        Ok((galaxy, explorers, orchestrator_to_planet_channels, Some(orchestrator_to_explorer_channels)))
+
+    pub fn run(&mut self)->Result<(),String>{
+        thread::spawn(||{
+            &self.galaxy_topology[0]::run();
+        });
+        loop{
+            
+        }
+        Ok(())
     }
 
     // fn make_planet<T: PlanetAI>(&self, init_sting: String) -> Planet<T> {
@@ -158,9 +155,7 @@ impl OrchestratorTrait for Orchestrator{
     fn make_explorer(&self) -> Explorer {
         todo!()
     }
-    fn make_planet<T: PlanetAI>(&self, init_sting: String) -> Planet<T> {
-        todo!()
-    }
+
     fn move_to_planet<T, E>(&self, msg: MoveToPlanet) -> Result<T, E> {
         todo!()
     }
