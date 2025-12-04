@@ -1,8 +1,25 @@
-# one-million-crabs
+# One-million-crabs galaxy game
 Galaxy simulation about a silly Explorer travelling around the galaxy to gether resources, combining them and create its AI-companion. He is trying not to die, watch how it permforme during the simulation and you can tweak some parameter to make the game more interesting.
 
 
-# In depth description
+# Implementation discussion
+We have to create a galaxy game. Right now we are developing the back-end that is the game logic. 
+Next we should add the loggig to all the parts of the game.
+We have to add the grapic interface.
+We should make available a terminal where the user can interact with simulation. 
+
+### M.A.
+My proposal is to create a library for the logic of the game and import it in the graphic crate. 
+From the graphic create we start the simulation and through API we should poll the state of the game in order to update the frame. 
+In this way we should have a more modular project that enable us to work on different feature without obstructing each other.
+
+### D.D.
+
+### T.A.
+
+### M.P.
+
+# Module description
 
 ## Orchestrator
 ### Galaxy initialization
