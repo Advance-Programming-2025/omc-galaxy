@@ -212,22 +212,23 @@ impl PlanetAI for AI {
                             .map_err(|(e, r1, r2)| { (e , GenericResource::ComplexResources(ComplexResource::Robot(r1)), GenericResource::ComplexResources(ComplexResource::Diamond(r2)))}),
 
                     };
-                    // controllo il risultato di complex_resource
-                    match complex_resource {
+                    // checking the result of complex_resource
+                    return match complex_resource {
                         Ok(resource) => {
-                            return Some(PlanetToExplorer::CombineResourceResponse {
+                            Some(PlanetToExplorer::CombineResourceResponse {
                                 complex_response: Ok(resource),
-                            });
+                            })
                         }
                         Err(err) => {
                             println!("{}", err.0);
-                            return Some(PlanetToExplorer::CombineResourceResponse {
+                            Some(PlanetToExplorer::CombineResourceResponse {
                                 complex_response: Err(err),
-                            });
+                            })
                         }
                     }
                 } else {
                     // TODO handle error, at the moment if there is no cell available the "else" block will be exited and None will be returned
+                    // TODO and the resources will be gone :)
                     println!("No available cell found");
                 }
                 None
