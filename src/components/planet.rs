@@ -1,12 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::mpsc;
 // use std::time::SystemTime;
 use common_game::components::planet::{Planet, PlanetAI, PlanetState, PlanetType};
 use common_game::components::resource::BasicResourceType::Carbon;
 use common_game::components::resource::ComplexResourceType::Diamond;
 use common_game::components::resource::{
-    BasicResource, BasicResourceType, Combinator, ComplexResource, ComplexResourceRequest,
-    Generator,
+    BasicResource, BasicResourceType, Combinator, ComplexResource, ComplexResourceRequest, Dolphin, Generator
 };
 use common_game::components::rocket::Rocket;
 use common_game::protocols::messages::{
@@ -45,7 +44,8 @@ impl CrabRaveConstructor {
             gen_rules,
             comb_rules,
             orchestrator_channels,
-            explorer_channels,
+            // FIX the common crate is wrong 
+            explorer_channels.0,
         )?;
         Ok(new_planet)
     }
@@ -75,11 +75,13 @@ impl PlanetAI for AI {
     ) -> Option<PlanetToOrchestrator> {
         match msg {
             OrchestratorToPlanet::InternalStateRequest => {
-                Some(PlanetToOrchestrator::InternalStateResponse {
-                    planet_id: state.id().clone(),
-                    planet_state: state.clone(), //TODO non so come passare state, vuole un PlanetState, ma PlanetState non implementa Clone o Copy, e non mi permette di fare la "move" perché arriva come shared mutable reference
-                                                 // timestamp: SystemTime::now(),
-                })
+                //REVIEW check if the common code is fixed
+                // Some(PlanetToOrchestrator::InternalStateResponse {
+                //     planet_id: state.id().clone(),
+                //     planet_state: state.clone(), //TODO non so come passare state, vuole un PlanetState, ma PlanetState non implementa Clone o Copy, e non mi permette di fare la "move" perché arriva come shared mutable reference
+                //                                  // timestamp: SystemTime::now(),
+                // })
+                None
             }
             OrchestratorToPlanet::Sunray(sunray) => {
                 for i in 0..N_CELLS {
@@ -214,7 +216,7 @@ impl PlanetAI for AI {
                     match complex_resource {
                         Ok(resource) => {
                             return Some(PlanetToExplorer::CombineResourceResponse {
-                                complex_response: Some(resource),
+                                complex_response: Ok(resource),
                             });
                         }
                         Err(err) => {
@@ -222,9 +224,11 @@ impl PlanetAI for AI {
                         }
                     }
                 }
-                Some(PlanetToExplorer::CombineResourceResponse {
-                    complex_response: None,
-                })
+                // TODO change to the right respose
+                // Some(PlanetToExplorer::CombineResourceResponse {
+                //     complex_response: None,
+                // })
+                None
             }
         }
     }
@@ -232,10 +236,11 @@ impl PlanetAI for AI {
     fn handle_asteroid(
         &mut self,
         state: &mut PlanetState,
-        _generator: &Generator,
-        _combinator: &Combinator,
+        generator: &Generator,
+        combinator: &Combinator,
     ) -> Option<Rocket> {
-        state.take_rocket()
+        // state.take_rocket()
+        None
     }
 
     fn start(&mut self, state: &PlanetState) {

@@ -9,7 +9,7 @@ use common_game::protocols::messages::{
 };
 
 use crate::components::CrabRaveConstructor;
-use crate::components::explorer::Explorer;
+use crate::components::explorer::{BagType, Explorer};
 
 // B generic is there for representing the content type of the bag
 pub struct Orchestrator {
@@ -18,13 +18,13 @@ pub struct Orchestrator {
     galaxy_topology: Vec<Planet>, //At the moment we need only one planet for testing
     explorers: Vec<Explorer>,     //At the momet we need only one explorer for testing
 
-    //we can better define communication like this: galaxy_communication: Option<HashMap<u32,u32>>
+    //we can better define communication like this: galaxy_communication: Option<HashMap<id,channel>>
     planet_channels: (
         mpsc::Receiver<PlanetToOrchestrator>,
         mpsc::Sender<OrchestratorToPlanet>,
     ),
     explorer_channels: Option<(
-        mpsc::Receiver<ExplorerToOrchestrator>,
+        mpsc::Receiver<ExplorerToOrchestrator<BagType>>,
         mpsc::Sender<OrchestratorToExplorer>,
     )>,
 }
@@ -77,8 +77,8 @@ impl Orchestrator {
 
         //explorer-orchestrator and orchestrator-explorer
         let (explorer_sender, orch_receiver): (
-            mpsc::Sender<ExplorerToOrchestrator>,
-            mpsc::Receiver<ExplorerToOrchestrator>,
+            mpsc::Sender<ExplorerToOrchestrator<BagType>>,
+            mpsc::Receiver<ExplorerToOrchestrator<BagType>>,
         ) = mpsc::channel();
         let (orch_sender, explorer_receiver): (
             mpsc::Sender<OrchestratorToExplorer>,
@@ -94,7 +94,7 @@ impl Orchestrator {
             planet_to_orchestrator_channels,
             planet_to_explorer_channels,
         )?;
-        crab_rave_planet.run();
+        // crab_rave_planet.run();
         // self.planet_channels = Some(orchestrator_to_planet_channels);
         // self.explorer_channels = Some(orchestrator_to_explorer_channels);
         //Add the constructed galaxy to our Orchestrator
@@ -116,12 +116,48 @@ impl Orchestrator {
 
 
     pub fn run(&mut self)->Result<(),String>{
-        thread::spawn(||{
-            &self.galaxy_topology[0]::run();
+        let mut planet1 = match self.galaxy_topology.pop(){
+            Some(p)=>p,
+            None=>return Err("Cannot find any planet to pop".to_string()),
+        };
+
+        println!("Creating planet thread...");
+        thread::spawn(move ||->Result<(), String>{
+            println!("Planet running...");
+            let success = planet1.run()?;
+            Ok(())
         });
-        loop{
-            
-        }
+
+        println!("Start Planet...");
+        let start_planet = self.planet_channels.1.send(OrchestratorToPlanet::StartPlanetAI);
+
+
+        // loop{
+            // println!("Receive planet messages...");
+            // let planet_response = match self.planet_channels.0.try_recv(){
+            //     Ok(res)=>res,
+            //     Err(_)=>return Err("Planet is disconnected\n".to_string())
+            // };
+
+            println!("Send Asteroid to Planet");
+            let planet_message = self.planet_channels.1.send(OrchestratorToPlanet::Asteroid(self.generator.generate_asteroid()));
+            let planet_response = match self.planet_channels.0.recv(){
+                Ok(res)=>res,
+                Err(_)=>{
+                    return Err("Planet is disconnected".to_string());
+                }
+            };
+            println!("Planet should have finished running...");
+
+            let planet_message = match self.planet_channels.1.send(OrchestratorToPlanet::Asteroid(self.generator.generate_asteroid())){
+                Ok(_)=>println!("PLANET STILL WORKING..."),
+                Err(_)=>{
+                    println!("Everthing is okey...");
+                    // break;
+                },
+            };
+        // }
+        // let result = spawning_thread.join().expect("Something went wrong in the thread...");
         Ok(())
     }
 
