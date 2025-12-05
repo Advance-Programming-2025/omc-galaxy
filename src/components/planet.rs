@@ -22,10 +22,7 @@ impl CrabRaveConstructor {
             mpsc::Receiver<OrchestratorToPlanet>,
             mpsc::Sender<PlanetToOrchestrator>,
         ),
-        explorer_channels: (
-            mpsc::Receiver<ExplorerToPlanet>,
-            mpsc::Sender<PlanetToExplorer>,
-        ),
+        explorer_channels: mpsc::Receiver<ExplorerToPlanet>,
     ) -> Result<Planet, String> {
         let (planet_type, ai, gen_rules, comb_rules, orchestrator_channels, explorer_channels) = (
             PlanetType::C,
@@ -42,8 +39,7 @@ impl CrabRaveConstructor {
             gen_rules,
             comb_rules,
             orchestrator_channels,
-            // FIX the common crate is wrong 
-            explorer_channels.0,
+            explorer_channels,
         )?;
         Ok(new_planet)
     }
