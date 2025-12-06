@@ -439,3 +439,13 @@ fn peek_charged_cell_index() -> Option<u32> {
     }
 }
 
+
+#[macro_export]
+macro_rules! planet_debug {
+    // with planet id and format args
+    ($planet_id:expr, $($arg:tt)*) => {{
+        if log::log_enabled!(log::Level::Debug) {
+            log::debug!(target: "planet", "[planet {}] {}", $planet_id, format!($($arg)*));
+        }
+    }};
+}
