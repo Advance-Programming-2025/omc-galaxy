@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc;
+use std::sync::{mpsc, LockResult};
 // use std::time::SystemTime;
 use common_game::components::planet::{Planet, PlanetAI, PlanetState, PlanetType};
 use common_game::components::resource::BasicResourceType::Carbon;
@@ -350,34 +350,79 @@ mod stacks {
 }
 
 fn initialize_free_cell_stack(){
-    let mut free_cell_stack = FREE_CELL_STACK.lock().unwrap();
-    for i in 0..N_CELLS {
-        free_cell_stack.push(i as u32);
+    let free_cell_stack = FREE_CELL_STACK.lock();
+    match free_cell_stack {
+        Ok(mut vec) => {
+            for i in 0..N_CELLS {
+                vec.push(i as u32);
+            }
+        }
+        Err(err) => {
+            println!("{}", err);
+        }
     }
 }
 
 fn get_free_cell_index() -> Option<u32> {
-    let mut free_cell_stack = FREE_CELL_STACK.lock().unwrap();
-    free_cell_stack.pop()
+    let free_cell_stack = FREE_CELL_STACK.lock();
+    match free_cell_stack {
+        Ok(mut vec) => {
+            vec.pop()
+        }
+        Err(err) => {
+            println!("{}", err);
+            None
+        }
+    }
 }
 
 fn get_charged_cell_index() -> Option<u32> {
-    let mut charged_cell_stack = CHARGED_CELL_STACK.lock().unwrap();
-    charged_cell_stack.pop()
+    let charged_cell_stack = CHARGED_CELL_STACK.lock();
+    match charged_cell_stack {
+        Ok(mut vec) => {
+            vec.pop()
+        }
+        Err(err) => {
+            println!("{}", err);
+            None
+        }
+    }
 }
 
 fn push_free_cell(index: u32) {
-    let mut free_cell_stack = FREE_CELL_STACK.lock().unwrap();
-    free_cell_stack.push(index);
+    let free_cell_stack = FREE_CELL_STACK.lock();
+    match free_cell_stack {
+        Ok(mut vec) => {
+            vec.push(index);
+        }
+        Err(err) => {
+            println!("{}", err);
+        }
+    }
 }
 
 fn push_charged_cell(index: u32) {
-    let mut charged_cell_stack = CHARGED_CELL_STACK.lock().unwrap();
-    charged_cell_stack.push(index);
+    let charged_cell_stack = CHARGED_CELL_STACK.lock();
+    match charged_cell_stack {
+        Ok(mut vec) => {
+            vec.push(index);
+        }
+        Err(err) => {
+            println!("{}", err);
+        }
+    }
 }
 
 fn peek_charged_cell_index() -> Option<u32> {
-    let charged_cell_stack = CHARGED_CELL_STACK.lock().unwrap();
-    charged_cell_stack.last().copied()
+    let charged_cell_stack = CHARGED_CELL_STACK.lock();
+    match charged_cell_stack {
+        Ok(vec) => {
+            vec.last().copied()
+        }
+        Err(err) => {
+            println!("{}", err);
+            None
+        }
+    }
 }
 
