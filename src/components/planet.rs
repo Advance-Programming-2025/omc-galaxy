@@ -124,6 +124,19 @@ impl PlanetAI for AI {
                 // explode as that is the orchestrator's responsibility.
                 // is this true, chat?
             }
+            OrchestratorToPlanet::StartPlanetAI => {
+                //TODO: handle eventual double requests
+                self.start(state);
+                
+                Some(PlanetToOrchestrator::StartPlanetAIResult { planet_id: state.id() })
+            }
+            OrchestratorToPlanet::StopPlanetAI => {
+                //TODO: handle eventual double requests
+                self.stop(state);
+                
+                Some(PlanetToOrchestrator::StopPlanetAIResult { planet_id: state.id() })
+            }
+            //TODO match mancanti: IncomingExplorerRequest, OutgoingExplorerRequest
             _ => None,
         }
     }
