@@ -421,18 +421,7 @@ impl PlanetAI for AI {
         else if let Some(idx) = get_charged_cell_index() {
             match state.build_rocket(idx as usize) {
                 Ok(_) => {
-                    push_free_cell(idx);
-                    match state.cell_mut(idx as usize).discharge() {
-                        //build was successful, log the rocket creation
-                        Ok(_) => {
-                            //TODO change this to log
-                            println!("Used a charged cell at index {}, to build a rocket", idx);
-                        }
-                        Err(err) => {
-                            //TODO change this to log
-                            println!("{}", err);
-                        }
-                    }
+                    println!("Used a charged cell at index {}, to build a rocket", idx);
                     return state.take_rocket();
                 }
                 //build failed, log the error and return none
