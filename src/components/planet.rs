@@ -11,6 +11,8 @@ use common_game::components::rocket::Rocket;
 use common_game::protocols::messages::{
     ExplorerToPlanet, OrchestratorToPlanet, PlanetToExplorer, PlanetToOrchestrator,
 };
+
+use crate::components::energy_stacks::stacks::{initialize_free_cell_stack, push_free_cell, push_charged_cell, peek_charged_cell_index, get_free_cell_index, get_charged_cell_index};
 use common_game::protocols::messages::OrchestratorToPlanet::Asteroid;
 use common_game::logging::{ActorType, Channel, Payload, EventType, LogEvent};
 use crate::components::planet::stacks::{CHARGED_CELL_STACK, FREE_CELL_STACK};
@@ -71,14 +73,16 @@ impl CrabRaveConstructor {
 // PlanetAI
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-const N_CELLS: usize = 5; // based on the planet
+// REMEMBER -> N_CELLS is in energy_stacks.rs mod
 
 pub struct AI;
 
 impl AI {
     fn new() -> Self {
-        // TODO non so se va qui o nello start AI
-        initialize_free_cell_stack(); // TODO rimuovere se si sceglie la vecchia implementazione
+        // the cell stack needs to be started here
+        // otherwise it would get reset when the AI
+        // gets stopped
+        initialize_free_cell_stack(); // REVIEW rimuovere se si sceglie la vecchia implementazione
         Self
     }
 }
@@ -269,9 +273,34 @@ impl PlanetAI for AI {
                         }
                     }
                 } else {
-                    // TODO handle error, at the moment if there is no cell available the "else" block will be exited and None will be returned
-                    // TODO and the resources will be gone :)
                     println!("No available cell found");
+                    let (ret1,ret2) = match msg {
+                        ComplexResourceRequest::Water(r1, r2) => {
+                            (GenericResource::BasicResources(BasicResource::Hydrogen(r1)),
+                            GenericResource::BasicResources(BasicResource::Oxygen(r2)))
+                        }
+                        ComplexResourceRequest::AIPartner(r1, r2) => {
+                            (GenericResource::ComplexResources(ComplexResource::Robot(r1)),
+                            GenericResource::ComplexResources(ComplexResource::Diamond(r2)))
+                        }
+                        ComplexResourceRequest::Life(r1, r2) => {
+                            (GenericResource::ComplexResources(ComplexResource::Water(r1)),
+                            GenericResource::BasicResources(BasicResource::Carbon(r2)))
+                        }
+                        ComplexResourceRequest::Diamond(r1, r2) => {
+                            (GenericResource::BasicResources(BasicResource::Carbon(r1)),
+                            GenericResource::BasicResources(BasicResource::Carbon(r2)))
+                        }
+                        ComplexResourceRequest::Dolphin(r1, r2) => {
+                            (GenericResource::ComplexResources(ComplexResource::Water(r1)),
+                            GenericResource::ComplexResources(ComplexResource::Life(r2)))
+                        }
+                        ComplexResourceRequest::Robot(r1, r2) => {
+                            (GenericResource::BasicResources(BasicResource::Silicon(r1)),
+                            GenericResource::ComplexResources(ComplexResource::Life(r2)))
+                        }
+                    };
+                    return Some(PlanetToExplorer::CombineResourceResponse { complex_response: Err(("no available cell".to_string(),ret1, ret2)) });
                 }
                 None
             }
@@ -336,87 +365,64 @@ impl PlanetAI for AI {
     }
 }
 
-mod stacks {
-    use std::sync::Mutex;
-    pub(super) static FREE_CELL_STACK: Mutex<Vec<u32>> = Mutex::new(Vec::new());
-    pub(super) static CHARGED_CELL_STACK: Mutex<Vec<u32>> = Mutex::new(Vec::new());
-}
 
-fn initialize_free_cell_stack(){
-    let free_cell_stack = FREE_CELL_STACK.lock();
-    match free_cell_stack {
-        Ok(mut vec) => {
-            for i in 0..N_CELLS {
-                vec.push(i as u32);
-            }
-        }
-        Err(err) => {
-            println!("{}", err);
-        }
-    }
-}
+#[cfg(test)]
+mod planet{
+    use std::sync::mpsc;
 
-fn get_free_cell_index() -> Option<u32> {
-    let free_cell_stack = FREE_CELL_STACK.lock();
-    match free_cell_stack {
-        Ok(mut vec) => {
-            vec.pop()
-        }
-        Err(err) => {
-            println!("{}", err);
-            None
-        }
-    }
-}
+    use common_game::protocols::messages::{ExplorerToOrchestrator, ExplorerToPlanet, OrchestratorToExplorer, OrchestratorToPlanet, PlanetToExplorer, PlanetToOrchestrator};
 
-fn get_charged_cell_index() -> Option<u32> {
-    let charged_cell_stack = CHARGED_CELL_STACK.lock();
-    match charged_cell_stack {
-        Ok(mut vec) => {
-            vec.pop()
-        }
-        Err(err) => {
-            println!("{}", err);
-            None
-        }
-    }
-}
+    use crate::components::{CrabRaveConstructor, explorer::BagType, orchestrator};
 
-fn push_free_cell(index: u32) {
-    let free_cell_stack = FREE_CELL_STACK.lock();
-    match free_cell_stack {
-        Ok(mut vec) => {
-            vec.push(index);
-        }
-        Err(err) => {
-            println!("{}", err);
-        }
-    }
-}
+    #[test]
+    fn t01_planet_initialization()->Result<(),String>{
+        let (planet_sender, orch_receiver): (
+            mpsc::Sender<PlanetToOrchestrator>,
+            mpsc::Receiver<PlanetToOrchestrator>,
+        ) = mpsc::channel();
+        let (orch_sender, planet_receiver): (
+            mpsc::Sender<OrchestratorToPlanet>,
+            mpsc::Receiver<OrchestratorToPlanet>,
+        ) = mpsc::channel();
 
-fn push_charged_cell(index: u32) {
-    let charged_cell_stack = CHARGED_CELL_STACK.lock();
-    match charged_cell_stack {
-        Ok(mut vec) => {
-            vec.push(index);
-        }
-        Err(err) => {
-            println!("{}", err);
-        }
-    }
-}
+        let planet_to_orchestrator_channels = (planet_receiver, planet_sender);
+        let orchestrator_to_planet_channels = (orch_receiver, orch_sender);
 
-fn peek_charged_cell_index() -> Option<u32> {
-    let charged_cell_stack = CHARGED_CELL_STACK.lock();
-    match charged_cell_stack {
-        Ok(vec) => {
-            vec.last().copied()
-        }
-        Err(err) => {
-            println!("{}", err);
-            None
-        }
+        //planet-explorer and explorer-planet
+        let (planet_sender, explorer_receiver): (
+            mpsc::Sender<PlanetToExplorer>,
+            mpsc::Receiver<PlanetToExplorer>,
+        ) = mpsc::channel();
+        let (explorer_sender, planet_receiver): (
+            mpsc::Sender<ExplorerToPlanet>,
+            mpsc::Receiver<ExplorerToPlanet>,
+        ) = mpsc::channel();
+
+        let planet_to_explorer_channels = planet_receiver;
+        let explorer_to_planet_channels = (explorer_receiver, explorer_sender);
+
+        //explorer-orchestrator and orchestrator-explorer
+        let (explorer_sender, orch_receiver): (
+            mpsc::Sender<ExplorerToOrchestrator<BagType>>,
+            mpsc::Receiver<ExplorerToOrchestrator<BagType>>,
+        ) = mpsc::channel();
+        let (orch_sender, explorer_receiver): (
+            mpsc::Sender<OrchestratorToExplorer>,
+            mpsc::Receiver<OrchestratorToExplorer>,
+        ) = mpsc::channel();
+
+        let explorer_to_orchestrator_channels = (explorer_receiver, explorer_sender);
+        let orchestrator_to_explorer_channels = (orch_receiver, orch_sender);
+
+        //Construct crab-rave planet
+        let mut crab_rave_planet = CrabRaveConstructor::new(
+            0,
+            planet_to_orchestrator_channels,
+            planet_to_explorer_channels,
+        )?;
+        Ok(())
     }
+
 }
 
 pub trait ResToString{
