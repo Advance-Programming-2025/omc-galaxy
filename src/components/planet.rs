@@ -16,8 +16,8 @@ use common_game::protocols::messages::{
 use crate::components::energy_stacks::stacks::{initialize_free_cell_stack, push_free_cell, push_charged_cell, peek_charged_cell_index, get_free_cell_index, get_charged_cell_index};
 use common_game::protocols::messages::OrchestratorToPlanet::Asteroid;
 use common_game::logging::{ActorType, Channel, Payload, EventType, LogEvent};
-use common_game::logging::Channel::Debug;
-use common_game::logging::EventType::MessageOrchestratorToPlanet;
+use common_game::logging::Channel::{Debug, Info};
+use common_game::logging::EventType::{MessageOrchestratorToPlanet, MessagePlanetToOrchestrator};
 use crossbeam_channel::internal::SelectHandle;
 use log::max_level;
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -108,8 +108,10 @@ impl PlanetAI for AI {
                 payload.insert(String::from("Message"), String::from("Internal state request"));
                 let event= LogEvent::new(ActorType::Orchestrator, 0u64, ActorType::Planet, state.id().clone().to_string(), EventType::MessageOrchestratorToPlanet, Channel::Info, payload);
                 log::info!("{}", event);
+                let mut payload_ris=Payload::new();
+                payload_ris.insert(String::from("ACK Response of InternalStateRequest"), format!("planet_id: {:?}, planet_state: {:?}", state.id().clone(),PlanetState::to_dummy(&state)));
+                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Orchestrator, "0".to_string(), MessagePlanetToOrchestrator, Info, payload_ris);
                 //LOG
-                //TODO add log for the response
                 Some(PlanetToOrchestrator::InternalStateResponse {
                     planet_id: state.id().clone(),
                     planet_state: PlanetState::to_dummy(&state)
