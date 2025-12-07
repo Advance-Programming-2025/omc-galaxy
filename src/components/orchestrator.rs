@@ -1,4 +1,5 @@
-use std::sync::mpsc;
+//use std::sync::mpsc;
+use crossbeam_channel::{Sender, Receiver, select_biased, unbounded};
 use std::thread;
 
 use common_game::components::forge::Forge;
@@ -20,12 +21,12 @@ pub struct Orchestrator {
 
     //we can better define communication like this: galaxy_communication: Option<HashMap<id,channel>>
     planet_channels: (
-        mpsc::Receiver<PlanetToOrchestrator>,
-        mpsc::Sender<OrchestratorToPlanet>,
+        Receiver<PlanetToOrchestrator>,
+        Sender<OrchestratorToPlanet>,
     ),
     explorer_channels: Option<(
-        mpsc::Receiver<ExplorerToOrchestrator<BagType>>,
-        mpsc::Sender<OrchestratorToExplorer>,
+        Receiver<ExplorerToOrchestrator<BagType>>,
+        Sender<OrchestratorToExplorer>,
     )>,
 }
 
@@ -51,39 +52,39 @@ impl Orchestrator {
          */
         //planet-orch and orch-planet
         let (planet_sender, orch_receiver): (
-            mpsc::Sender<PlanetToOrchestrator>,
-            mpsc::Receiver<PlanetToOrchestrator>,
-        ) = mpsc::channel();
+            Sender<PlanetToOrchestrator>,
+            Receiver<PlanetToOrchestrator>,
+        ) = unbounded();
         let (orch_sender, planet_receiver): (
-            mpsc::Sender<OrchestratorToPlanet>,
-            mpsc::Receiver<OrchestratorToPlanet>,
-        ) = mpsc::channel();
+            Sender<OrchestratorToPlanet>,
+            Receiver<OrchestratorToPlanet>,
+        ) = unbounded();
 
         let planet_to_orchestrator_channels = (planet_receiver, planet_sender);
         let orchestrator_to_planet_channels = (orch_receiver, orch_sender);
 
         //planet-explorer and explorer-planet
         let (planet_sender, explorer_receiver): (
-            mpsc::Sender<PlanetToExplorer>,
-            mpsc::Receiver<PlanetToExplorer>,
-        ) = mpsc::channel();
+            Sender<PlanetToExplorer>,
+            Receiver<PlanetToExplorer>,
+        ) = unbounded();
         let (explorer_sender, planet_receiver): (
-            mpsc::Sender<ExplorerToPlanet>,
-            mpsc::Receiver<ExplorerToPlanet>,
-        ) = mpsc::channel();
+            Sender<ExplorerToPlanet>,
+            Receiver<ExplorerToPlanet>,
+        ) = unbounded();
 
         let planet_to_explorer_channels = planet_receiver;
         let explorer_to_planet_channels = (explorer_receiver, explorer_sender);
 
         //explorer-orchestrator and orchestrator-explorer
         let (explorer_sender, orch_receiver): (
-            mpsc::Sender<ExplorerToOrchestrator<BagType>>,
-            mpsc::Receiver<ExplorerToOrchestrator<BagType>>,
-        ) = mpsc::channel();
+            Sender<ExplorerToOrchestrator<BagType>>,
+            Receiver<ExplorerToOrchestrator<BagType>>,
+        ) = unbounded();
         let (orch_sender, explorer_receiver): (
-            mpsc::Sender<OrchestratorToExplorer>,
-            mpsc::Receiver<OrchestratorToExplorer>,
-        ) = mpsc::channel();
+            Sender<OrchestratorToExplorer>,
+            Receiver<OrchestratorToExplorer>,
+        ) = unbounded();
 
         let explorer_to_orchestrator_channels = (explorer_receiver, explorer_sender);
         let orchestrator_to_explorer_channels = (orch_receiver, orch_sender);

@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
-use std::sync::{mpsc, LockResult};
+//use std::sync::{mpsc, LockResult};
+use crossbeam_channel::{Sender, Receiver, select};
 // use std::time::SystemTime;
 use common_game::components::planet::{Planet, PlanetAI, PlanetState, PlanetType};
 use common_game::components::resource::BasicResourceType::Carbon;
@@ -15,7 +16,6 @@ use common_game::protocols::messages::{
 use crate::components::energy_stacks::stacks::{initialize_free_cell_stack, push_free_cell, push_charged_cell, peek_charged_cell_index, get_free_cell_index, get_charged_cell_index};
 use common_game::protocols::messages::OrchestratorToPlanet::Asteroid;
 use common_game::logging::{ActorType, Channel, Payload, EventType, LogEvent};
-use crate::components::planet::stacks::{CHARGED_CELL_STACK, FREE_CELL_STACK};
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 // CrabRave Constructor
@@ -37,10 +37,10 @@ impl CrabRaveConstructor {
     pub fn new(
         id: u32,
         orchestrator_channels: (
-            mpsc::Receiver<OrchestratorToPlanet>,
-            mpsc::Sender<PlanetToOrchestrator>,
+            Receiver<OrchestratorToPlanet>,
+            Sender<PlanetToOrchestrator>,
         ),
-        explorer_channels: mpsc::Receiver<ExplorerToPlanet>,
+        explorer_channels: Receiver<ExplorerToPlanet>,
     ) -> Result<Planet, String> {
         let (planet_type, ai, gen_rules, comb_rules, orchestrator_channels, explorer_channels) = (
             PlanetType::C,
@@ -368,8 +368,8 @@ impl PlanetAI for AI {
 
 #[cfg(test)]
 mod planet{
-    use std::sync::mpsc;
-
+    //use std::sync::mpsc;
+    use crossbeam_channel::{Sender, Receiver, select, unbounded};
     use common_game::protocols::messages::{ExplorerToOrchestrator, ExplorerToPlanet, OrchestratorToExplorer, OrchestratorToPlanet, PlanetToExplorer, PlanetToOrchestrator};
 
     use crate::components::{CrabRaveConstructor, explorer::BagType, orchestrator};
@@ -377,39 +377,39 @@ mod planet{
     #[test]
     fn t01_planet_initialization()->Result<(),String>{
         let (planet_sender, orch_receiver): (
-            mpsc::Sender<PlanetToOrchestrator>,
-            mpsc::Receiver<PlanetToOrchestrator>,
-        ) = mpsc::channel();
+            Sender<PlanetToOrchestrator>,
+            Receiver<PlanetToOrchestrator>,
+        ) = unbounded();
         let (orch_sender, planet_receiver): (
-            mpsc::Sender<OrchestratorToPlanet>,
-            mpsc::Receiver<OrchestratorToPlanet>,
-        ) = mpsc::channel();
+            Sender<OrchestratorToPlanet>,
+            Receiver<OrchestratorToPlanet>,
+        ) = unbounded();
 
         let planet_to_orchestrator_channels = (planet_receiver, planet_sender);
         let orchestrator_to_planet_channels = (orch_receiver, orch_sender);
 
         //planet-explorer and explorer-planet
         let (planet_sender, explorer_receiver): (
-            mpsc::Sender<PlanetToExplorer>,
-            mpsc::Receiver<PlanetToExplorer>,
-        ) = mpsc::channel();
+            Sender<PlanetToExplorer>,
+            Receiver<PlanetToExplorer>,
+        ) = unbounded();
         let (explorer_sender, planet_receiver): (
-            mpsc::Sender<ExplorerToPlanet>,
-            mpsc::Receiver<ExplorerToPlanet>,
-        ) = mpsc::channel();
+            Sender<ExplorerToPlanet>,
+            Receiver<ExplorerToPlanet>,
+        ) = unbounded();
 
         let planet_to_explorer_channels = planet_receiver;
         let explorer_to_planet_channels = (explorer_receiver, explorer_sender);
 
         //explorer-orchestrator and orchestrator-explorer
         let (explorer_sender, orch_receiver): (
-            mpsc::Sender<ExplorerToOrchestrator<BagType>>,
-            mpsc::Receiver<ExplorerToOrchestrator<BagType>>,
-        ) = mpsc::channel();
+            Sender<ExplorerToOrchestrator<BagType>>,
+            Receiver<ExplorerToOrchestrator<BagType>>,
+        ) = unbounded();
         let (orch_sender, explorer_receiver): (
-            mpsc::Sender<OrchestratorToExplorer>,
-            mpsc::Receiver<OrchestratorToExplorer>,
-        ) = mpsc::channel();
+            Sender<OrchestratorToExplorer>,
+            Receiver<OrchestratorToExplorer>,
+        ) = unbounded();
 
         let explorer_to_orchestrator_channels = (explorer_receiver, explorer_sender);
         let orchestrator_to_explorer_channels = (orch_receiver, orch_sender);

@@ -1,4 +1,5 @@
-use std::sync::mpsc;
+//use std::sync::mpsc;
+use crossbeam_channel::{Sender, Receiver, unbounded};
 
 use common_game::{components::planet::Planet, protocols::messages::{
     ExplorerToOrchestrator, ExplorerToPlanet, OrchestratorToExplorer,
@@ -10,12 +11,12 @@ pub type BagType = u32;
 pub struct Explorer {
     planet_id: Option<u32>, //I assume that the travel isn't instant so I put an Option we should manage the case the planet explodes
     orchestrator_channels: (
-        mpsc::Receiver<OrchestratorToExplorer>,
-        mpsc::Sender<ExplorerToOrchestrator<BagType>>,
+        Receiver<OrchestratorToExplorer>,
+        Sender<ExplorerToOrchestrator<BagType>>,
     ),
     planet_channels: Option<(
-        mpsc::Receiver<PlanetToExplorer>,
-        mpsc::Sender<ExplorerToPlanet>,
+        Receiver<PlanetToExplorer>,
+        Sender<ExplorerToPlanet>,
     )>,
 }
 
@@ -24,12 +25,12 @@ impl Explorer {
     pub fn new(
         planet_id: Option<u32>,
         explorer_to_orchestrator_channels: (
-            mpsc::Receiver<OrchestratorToExplorer>,
-            mpsc::Sender<ExplorerToOrchestrator<BagType>>,
+            Receiver<OrchestratorToExplorer>,
+            Sender<ExplorerToOrchestrator<BagType>>,
         ),
         explorer_to_planet_channels:(
-            mpsc::Receiver<PlanetToExplorer>,
-            mpsc::Sender<ExplorerToPlanet>,
+            Receiver<PlanetToExplorer>,
+            Sender<ExplorerToPlanet>,
         )
     ) -> Self {
         Self {
