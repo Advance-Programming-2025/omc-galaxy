@@ -1,6 +1,7 @@
 //use std::sync::mpsc;
 use crossbeam_channel::{Sender, Receiver, select_biased, unbounded};
 use std::thread;
+use flexi_logger::{Logger};
 
 use common_game::components::forge::Forge;
 use common_game::components::planet::Planet;
@@ -40,6 +41,10 @@ impl Orchestrator {
     // I don't know if there are better approach but I think it is pretty elegant
 
     pub fn initialize_galaxy(/*_path: &str*/) -> Result<Orchestrator, String> {
+        //env_logger::init(); //initialize logging backend, this is only for testing purpose,
+        // in the final implementation the logging backend will be initialized in the orchestrator
+        Logger::try_with_env().unwrap().start().unwrap();
+
         // Orchestrator know the file path where the galaxy topology is written and also the type of each planet
         /*
             Steps of initialization:

@@ -353,6 +353,7 @@ impl PlanetAI for AI {
                         Err(err) => {
                             push_charged_cell(cell_idx);
                             println!("{}", err.0);
+                            //TODO change this to log error
                             Some(PlanetToExplorer::CombineResourceResponse {
                                 complex_response: Err(err),
                             })
@@ -424,9 +425,11 @@ impl PlanetAI for AI {
                     match state.cell_mut(idx as usize).discharge() {
                         //build was successful, log the rocket creation
                         Ok(_) => {
+                            //TODO change this to log
                             println!("Used a charged cell at index {}, to build a rocket", idx);
                         }
                         Err(err) => {
+                            //TODO change this to log
                             println!("{}", err);
                         }
                     }
@@ -435,6 +438,7 @@ impl PlanetAI for AI {
                 //build failed, log the error and return none
                 Err(err) => {
                     push_free_cell(idx);
+                    //TODO change this to log
                     println!("{}", err);
                     return None;
                 }

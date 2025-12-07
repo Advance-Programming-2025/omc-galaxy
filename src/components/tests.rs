@@ -97,8 +97,6 @@ fn t01_asteroid_exchange()->Result<(),String>{
 
 #[test]
 fn t01_planet_initialization() -> Result <(),String >{
-    env_logger::init(); //initialize logging backend, this is only for testing purpose,
-     // in the final implementation the logging backend will be initialized in the orchestrator
     let(planet_sender,orch_receiver):(
     Sender < PlanetToOrchestrator >,
     Receiver < PlanetToOrchestrator >,
