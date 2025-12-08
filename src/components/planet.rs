@@ -4,7 +4,7 @@ use std::fmt::Display;
 use crossbeam_channel::{Sender, Receiver, select};
 // use std::time::SystemTime;
 use common_game::components::planet::{Planet, PlanetAI, PlanetState, PlanetType};
-use common_game::components::resource::BasicResourceType::Carbon;
+use common_game::components::resource::BasicResourceType::{Carbon, Hydrogen, Oxygen, Silicon};
 use common_game::components::resource::ComplexResourceType::Diamond;
 use common_game::components::resource::ComplexResourceType;
 use common_game::components::resource::{BasicResource, BasicResourceType, Combinator, ComplexResource, ComplexResourceRequest, Dolphin, Generator, GenericResource};
@@ -54,7 +54,7 @@ impl CrabRaveConstructor {
         let (planet_type, ai, gen_rules, comb_rules, orchestrator_channels, explorer_channels) = (
             PlanetType::D,
             AI::new(),
-            vec![Carbon],
+            vec![Carbon, Hydrogen, Oxygen, Silicon],
             vec![],
             orchestrator_channels,
             explorer_channels,

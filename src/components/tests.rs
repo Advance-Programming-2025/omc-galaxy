@@ -399,89 +399,90 @@ fn t04_failure_resource_request() -> Result<(), String> {
     }
 }
 
-#[test]
-fn t05_asteroid_success()->Result<(),String>{
-    println!("+++++ Test asteroid success +++++");
-    let mut orchestrator = Orchestrator::new()?;
-    let mut planet1 = match orchestrator.galaxy_topology.pop(){
-        Some(p)=>p,
-        None=>return Err("Cannot find any planet to pop".to_string()),
-    };
-
-    println!("Creating planet thread...");
-    let handle = thread::spawn(move ||->Result<(), String>{
-        println!("Planet running...");
-        planet1.run()
-    });
-
-    println!("Start Planet...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::StartPlanetAI) {
-        Ok(_) => { println!("Planet AI started."); },
-        Err(err)=>{ panic!("Failed to start planet AI: {}", err); },
-    }
-
-    println!("Waiting for response...");
-    match orchestrator.planet_channels.0.recv(){
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
-                    println!("Planet {} AI started.", planet_id);
-                },
-                _ => panic!("Unexpected response to StartPlanetAI.")
-            }
-        }
-        Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
-    }
-
-    println!("Sending sunray...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Sunray(orchestrator.forge.generate_sunray())) {
-        Ok(_) => {println!("Sunray sent.")},
-        Err(err)=>{ panic!("Failed to send sunray: {}.", err); }
-    }
-
-    println!("Waiting for response...");
-    let result_sunray: Result<(), RecvError> = match orchestrator.planet_channels.0.recv(){
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::SunrayAck { planet_id } => {
-                    println!("Planet {} received sunray.", planet_id);
-                    Ok(())
-                },
-                _ => panic!("Unexpected response to Sunray.")
-            }
-        }
-        Err(_) => {
-            panic!("Something went wrong in receiving the SunrayAck."); }
-    };
-
-    println!("Sending asteroid...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Asteroid(orchestrator.forge.generate_asteroid())){
-        Ok(_) => { println!("Asteroid sent."); },
-        Err(err)=>{ panic!("Failed to send asteroid: {}.", err); }
-    }
-
-    println!("Waiting for response...");
-    let result = match orchestrator.planet_channels.0.recv(){
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::AsteroidAck { planet_id, rocket } => {
-                    println!("Planet {} received asteroid.", planet_id);
-                    if rocket.is_some() {
-                        println!("Planet {} survived.", planet_id);
-                        Ok(())
-                    } else {
-                        Err("Planet died but it should have survived...".to_string())
-                    }
-                },
-                _ => panic!("Unexpected response to Asteroid.")
-            }
-        }
-        Err(e) => {
-            println!("Recv Error: {}", e);
-            panic!("Something went wrong in receiving the AsteroidAck."); }
-    };
-    result
-}
+// this test has no longer sense since our planet is type D
+// #[test]
+// fn t05_asteroid_success()->Result<(),String>{
+//     println!("+++++ Test asteroid success +++++");
+//     let mut orchestrator = Orchestrator::new()?;
+//     let mut planet1 = match orchestrator.galaxy_topology.pop(){
+//         Some(p)=>p,
+//         None=>return Err("Cannot find any planet to pop".to_string()),
+//     };
+// 
+//     println!("Creating planet thread...");
+//     let handle = thread::spawn(move ||->Result<(), String>{
+//         println!("Planet running...");
+//         planet1.run()
+//     });
+// 
+//     println!("Start Planet...");
+//     match orchestrator.planet_channels.1.send(OrchestratorToPlanet::StartPlanetAI) {
+//         Ok(_) => { println!("Planet AI started."); },
+//         Err(err)=>{ panic!("Failed to start planet AI: {}", err); },
+//     }
+// 
+//     println!("Waiting for response...");
+//     match orchestrator.planet_channels.0.recv(){
+//         Ok(res) => {
+//             match res {
+//                 PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
+//                     println!("Planet {} AI started.", planet_id);
+//                 },
+//                 _ => panic!("Unexpected response to StartPlanetAI.")
+//             }
+//         }
+//         Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
+//     }
+// 
+//     println!("Sending sunray...");
+//     match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Sunray(orchestrator.forge.generate_sunray())) {
+//         Ok(_) => {println!("Sunray sent.")},
+//         Err(err)=>{ panic!("Failed to send sunray: {}.", err); }
+//     }
+// 
+//     println!("Waiting for response...");
+//     let result_sunray: Result<(), RecvError> = match orchestrator.planet_channels.0.recv(){
+//         Ok(res) => {
+//             match res {
+//                 PlanetToOrchestrator::SunrayAck { planet_id } => {
+//                     println!("Planet {} received sunray.", planet_id);
+//                     Ok(())
+//                 },
+//                 _ => panic!("Unexpected response to Sunray.")
+//             }
+//         }
+//         Err(_) => {
+//             panic!("Something went wrong in receiving the SunrayAck."); }
+//     };
+// 
+//     println!("Sending asteroid...");
+//     match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Asteroid(orchestrator.forge.generate_asteroid())){
+//         Ok(_) => { println!("Asteroid sent."); },
+//         Err(err)=>{ panic!("Failed to send asteroid: {}.", err); }
+//     }
+// 
+//     println!("Waiting for response...");
+//     let result = match orchestrator.planet_channels.0.recv(){
+//         Ok(res) => {
+//             match res {
+//                 PlanetToOrchestrator::AsteroidAck { planet_id, rocket } => {
+//                     println!("Planet {} received asteroid.", planet_id);
+//                     if rocket.is_some() {
+//                         println!("Planet {} survived.", planet_id);
+//                         Ok(())
+//                     } else {
+//                         Err("Planet died but it should have survived...".to_string())
+//                     }
+//                 },
+//                 _ => panic!("Unexpected response to Asteroid.")
+//             }
+//         }
+//         Err(e) => {
+//             println!("Recv Error: {}", e);
+//             panic!("Something went wrong in receiving the AsteroidAck."); }
+//     };
+//     result
+// }
 
 #[test]
 fn t06_asteroid_exchange_without_rocket()->Result<(),String>{
