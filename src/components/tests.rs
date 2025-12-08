@@ -80,6 +80,38 @@ fn sending_available_cell_request(orchestrator: &Orchestrator) -> Result<(), Str
     Ok(())
 }
 
+fn register_the_explorer(orchestrator: &Orchestrator) -> Result<(), String> {
+    match &orchestrator.explorers[0] {
+        Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels  } => {
+            match planet_to_explorer_channels {
+                None => { panic!("Planet channels is None."); }
+                Some(channels) => {
+                    println!("Registering explorer on planet...");
+
+                    // Invia la richiesta di registrazione tramite l'orchestrator
+                    orchestrator.planet_channels.1
+                        .send(OrchestratorToPlanet::IncomingExplorerRequest {
+                            explorer_id: 0,
+                            new_mpsc_sender: channels.clone().1, // Il sender per rispondere all'explorer
+                        })
+                        .expect("Failed to send IncomingExplorerRequest");
+
+                    // Aspetta la conferma
+                    match orchestrator.planet_channels.0.recv() {
+                        Ok(PlanetToOrchestrator::IncomingExplorerResponse { planet_id, res }) => {
+                            println!("Explorer registered on planet {}", planet_id);
+                            assert!(res.is_ok());
+                        }
+                        Ok(_) => panic!("Unexpected response to IncomingExplorerRequest"),
+                        Err(err) => panic!("Failed to receive IncomingExplorerResponse: {}", err),
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn killing_planet(orchestrator: &Orchestrator) -> Result<(), String> {
     println!("Sending KillPlanet...");
     orchestrator.planet_channels.1
@@ -610,34 +642,7 @@ fn t08_available_resources_request()->Result<(),String> {
         Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
     }
 
-    match &orchestrator.explorers[0] {
-        Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels  } => {
-            match planet_to_explorer_channels {
-                None => { panic!("Planet channels is None."); }
-                Some(channels) => {
-                    println!("Registering explorer on planet...");
-
-                    // Invia la richiesta di registrazione tramite l'orchestrator
-                    orchestrator.planet_channels.1
-                        .send(OrchestratorToPlanet::IncomingExplorerRequest {
-                            explorer_id: 0,
-                            new_mpsc_sender: channels.clone().1, // Il sender per rispondere all'explorer
-                        })
-                        .expect("Failed to send IncomingExplorerRequest");
-
-                    // Aspetta la conferma
-                    match orchestrator.planet_channels.0.recv() {
-                        Ok(PlanetToOrchestrator::IncomingExplorerResponse { planet_id, res }) => {
-                            println!("Explorer registered on planet {}", planet_id);
-                            assert!(res.is_ok());
-                        }
-                        Ok(_) => panic!("Unexpected response to IncomingExplorerRequest"),
-                        Err(err) => panic!("Failed to receive IncomingExplorerResponse: {}", err),
-                    }
-                }
-            }
-        }
-    }
+    register_the_explorer(&orchestrator)?;
 
     match &orchestrator.explorers[0] {
         Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels } => {
