@@ -16,7 +16,7 @@ use common_game::protocols::messages::{
 use crate::components::energy_stacks::stacks::{initialize_free_cell_stack, push_free_cell, push_charged_cell, peek_charged_cell_index, get_free_cell_index, get_charged_cell_index};
 use common_game::protocols::messages::OrchestratorToPlanet::Asteroid;
 use common_game::logging::{ActorType, Channel, Payload, EventType, LogEvent};
-use common_game::logging::EventType::{MessageOrchestratorToPlanet, MessagePlanetToOrchestrator};
+use common_game::logging::EventType::{MessageOrchestratorToPlanet, MessagePlanetToExplorer, MessagePlanetToOrchestrator};
 use crossbeam_channel::internal::SelectHandle;
 use log::max_level;
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -120,11 +120,11 @@ impl PlanetAI for AI {
                 let mut payload = Payload::new();
                 payload.insert("PlanetState".to_string(), format!("{:?}",PlanetState::to_dummy(&state)));
                 payload.insert(String::from("Message"), String::from("Internal state request"));
-                let event= LogEvent::new(ActorType::Orchestrator, 0u64, ActorType::Planet, state.id().clone().to_string(), EventType::MessageOrchestratorToPlanet, Channel::Info, payload);
+                let event= LogEvent::new(ActorType::Orchestrator, 0u64, ActorType::Planet, state.id().clone().to_string(), EventType::MessageOrchestratorToPlanet, RCV_MSG_LOG_CHNL, payload);
                 log_msg!(event, RCV_MSG_LOG_CHNL);
                 let mut payload_ris=Payload::new();
                 payload_ris.insert(String::from("ACK Response of InternalStateRequest"), format!("planet_id: {:?}, planet_state: {:?}", state.id().clone(),PlanetState::to_dummy(&state)));
-                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Orchestrator, "0".to_string(), MessagePlanetToOrchestrator, Channel::Info, payload_ris);
+                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Orchestrator, "0".to_string(), MessagePlanetToOrchestrator, ACK_MSG_LOG_CHNL, payload_ris);
                 log_msg!(event_ris, ACK_MSG_LOG_CHNL);
                 //LOG
                 Some(PlanetToOrchestrator::InternalStateResponse {
@@ -161,26 +161,26 @@ impl PlanetAI for AI {
                     })
                 }
                 else{
-                    payload_ris.insert("Message".to_string(), "SunrayAck".to_string());
+                    payload_ris.insert("Response to".to_string(), "Sunray".to_string());
                     payload_ris.insert(String::from("Result"), String::from("No free cell found"));
                 }
 
                 //LOG
                 let mut payload = Payload::new();
                 payload.insert(String::from("Message"), String::from("Sunray"));
-                let event=LogEvent::new(ActorType::Orchestrator, 0u64, ActorType::Planet, state.id().clone().to_string(), EventType::MessageOrchestratorToPlanet, Channel::Info, payload);
+                let event=LogEvent::new(ActorType::Orchestrator, 0u64, ActorType::Planet, state.id().clone().to_string(), EventType::MessageOrchestratorToPlanet, RCV_MSG_LOG_CHNL, payload);
                 log_msg!(event, RCV_MSG_LOG_CHNL);
-                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Orchestrator, "0".to_string(), MessagePlanetToOrchestrator, Channel::Info, payload_ris);
+                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Orchestrator, "0".to_string(), MessagePlanetToOrchestrator, ACK_MSG_LOG_CHNL, payload_ris);
                 log_msg!(event_ris, ACK_MSG_LOG_CHNL);
                 //LOG
                 ris
             }
             _ => {
-                //LOG
+                //LOG TODO add more information
                 let mut payload = Payload::new();
                 payload.insert(String::from("Message"), "message behaviour not defined".to_string());
-                let event=LogEvent::new(ActorType::Orchestrator, 0u64, ActorType::Planet, state.id().clone().to_string(), EventType::MessageOrchestratorToPlanet, Channel::Info, payload);
-                log_msg!(event, Channel::Error); 
+                let event=LogEvent::new(ActorType::Orchestrator, 0u64, ActorType::Planet, state.id().clone().to_string(), EventType::MessageOrchestratorToPlanet, Channel::Error, payload);
+                log_msg!(event, Channel::Error);
                 None
             },
         }
@@ -205,39 +205,45 @@ impl PlanetAI for AI {
                 //     }
                 // }
                 // None
+
+                let mut payload_ris = Payload::new();
+
                 let mut ris=None;
-                let mut ris_idx=0;
                 if let Some(idx) = peek_charged_cell_index() {
-                    ris_idx = idx;
+                    payload_ris.insert("Message".to_string(), "AvailableEnergyCellResponse".to_string());
+                    payload_ris.insert(String::from("Result"), "EnergyCell available".to_string());
+                    payload_ris.insert(String::from("EnergyCell index"), format!("{}", idx));
                     ris= Some(PlanetToExplorer::AvailableEnergyCellResponse {
                         available_cells: idx
                     })
                 }
+                else{
+                    payload_ris.insert("Response to".to_string(), "AvailableEnergyCellRequest".to_string());
+                    payload_ris.insert(String::from("Result"), "No EnergyCell available".to_string());
+                }
 
                 //LOG
                 let mut payload = Payload::new();
-                if ris.is_some() {
-                    payload.insert("return value".to_string(), format!("Some(available_cells: {})", ris_idx));
-                }
-                else{
-                    payload.insert("return value".to_string(), "None".to_string());
-                }
                 payload.insert(String::from("Message"), String::from("Available EnergyCell request"));
-                let event=LogEvent::new(ActorType::Explorer, id, ActorType::Planet, state.id().clone().to_string(), EventType::MessageExplorerToPlanet, Channel::Info, payload);
-                log::info!("{}", event);
+                let event=LogEvent::new(ActorType::Explorer, id, ActorType::Planet, state.id().clone().to_string(), EventType::MessageExplorerToPlanet, RCV_MSG_LOG_CHNL, payload);
+                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Orchestrator, "0".to_string(), MessagePlanetToOrchestrator, ACK_MSG_LOG_CHNL, payload_ris);
+                log_msg!(event, RCV_MSG_LOG_CHNL);
+                log_msg!(event_ris, ACK_MSG_LOG_CHNL);
                 //LOG
-                //TODO add log for the response
                 ris
             }
             ExplorerToPlanet::SupportedResourceRequest { explorer_id: id } => {
                 //LOG
                 let mut payload = Payload::new();
-                payload.insert("return value".to_string(), format!("Some(resource_list: {:?})", generator.all_available_recipes()));
+                let mut payload_ris=Payload::new();
                 payload.insert(String::from("Message"), String::from("Supported resource request"));
-                let event=LogEvent::new(ActorType::Explorer, id, ActorType::Planet, state.id().clone().to_string(), EventType::MessageExplorerToPlanet, Channel::Info, payload);
-                log::info!("{}", event);
+                payload_ris.insert(String::from("Message"), "Supported resource response".to_string());
+                payload_ris.insert("Result".to_string(), format!("resource_list: {:?})", generator.all_available_recipes()));
+                let event=LogEvent::new(ActorType::Explorer, id, ActorType::Planet, state.id().clone().to_string(), EventType::MessageExplorerToPlanet, RCV_MSG_LOG_CHNL, payload);
+                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Explorer, id.to_string(), EventType::MessagePlanetToExplorer, ACK_MSG_LOG_CHNL, payload_ris);
+                log_msg!(event, RCV_MSG_LOG_CHNL);
+                log_msg!(event_ris, ACK_MSG_LOG_CHNL);
                 //LOG
-                //TODO add log for the response
                 Some(PlanetToExplorer::SupportedResourceResponse {
                     resource_list: generator.all_available_recipes()
                 })
@@ -245,12 +251,15 @@ impl PlanetAI for AI {
             ExplorerToPlanet::SupportedCombinationRequest { explorer_id: id } => {
                 //LOG
                 let mut payload = Payload::new();
-                payload.insert("return value".to_string(), format!("Some(combination_list: {:?})", combinator.all_available_recipes()));
+                let mut payload_ris=Payload::new();
                 payload.insert(String::from("Message"), String::from("Supported combination request"));
-                let event=LogEvent::new(ActorType::Explorer, id, ActorType::Planet, state.id().clone().to_string(), EventType::MessageExplorerToPlanet, Channel::Info, payload);
-                log::info!("{}", event);
+                payload_ris.insert(String::from("Message"), "Supported combination response".to_string());
+                payload_ris.insert("Result".to_string(), format!("combination_list: {:?}", combinator.all_available_recipes()));
+                let event=LogEvent::new(ActorType::Explorer, id, ActorType::Planet, state.id().clone().to_string(), EventType::MessageExplorerToPlanet, RCV_MSG_LOG_CHNL, payload);
+                let event_ris=LogEvent::new(ActorType::Planet, state.id().clone(), ActorType::Explorer, id.to_string(), MessagePlanetToExplorer, ACK_MSG_LOG_CHNL, payload_ris);
+                log_msg!(event, RCV_MSG_LOG_CHNL);
+                log_msg!(event_ris, ACK_MSG_LOG_CHNL);
                 //LOG
-                //TODO add log for the response
                 Some(PlanetToExplorer::SupportedCombinationResponse {
                     combination_list: combinator.all_available_recipes() 
                 })
