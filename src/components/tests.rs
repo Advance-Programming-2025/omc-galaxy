@@ -142,6 +142,55 @@ fn killing_planet(orchestrator: &Orchestrator) -> Result<(), String> {
 }
 
 #[test]
+fn t01_planet_initialization() -> Result <(),String >{
+    println!("+++++ Test planet initialization +++++");
+    let(planet_sender,orch_receiver):(
+        Sender < PlanetToOrchestrator >,
+        Receiver < PlanetToOrchestrator >,
+    )= unbounded();
+    let(orch_sender,planet_receiver):(
+        Sender < OrchestratorToPlanet >,
+        Receiver < OrchestratorToPlanet >,
+    )= unbounded();
+
+    let planet_to_orchestrator_channels =(planet_receiver,planet_sender);
+    let orchestrator_to_planet_channels =(orch_receiver,orch_sender);
+
+    //planet-explorer and explorer-planet
+    let(planet_sender,explorer_receiver):(
+        Sender < PlanetToExplorer >,
+        Receiver < PlanetToExplorer >,
+    )= unbounded();
+    let(explorer_sender,planet_receiver):(
+        Sender < ExplorerToPlanet >,
+        Receiver < ExplorerToPlanet >,
+    )= unbounded();
+
+    let planet_to_explorer_channels = planet_receiver;
+    let explorer_to_planet_channels =(explorer_receiver,explorer_sender);
+
+    //explorer-orchestrator and orchestrator-explorer
+    let(explorer_sender,orch_receiver):(
+        Sender < ExplorerToOrchestrator < BagType > >,
+        Receiver < ExplorerToOrchestrator < BagType > >,
+    )= unbounded();
+    let(orch_sender,explorer_receiver):(
+        Sender < OrchestratorToExplorer >,
+        Receiver < OrchestratorToExplorer >,
+    )= unbounded();
+
+    let explorer_to_orchestrator_channels =(explorer_receiver,explorer_sender);
+    let orchestrator_to_explorer_channels =(orch_receiver,orch_sender);
+    //Construct crab-rave planet
+    let mut crab_rave_planet = CrabRaveConstructor::new(
+        0,
+        planet_to_orchestrator_channels,
+        planet_to_explorer_channels,
+    )?;
+    Ok(())
+}
+
+#[test]
 fn t02_single_sunray_exchange() -> Result<(), String> {
     println!("+++++ Test single sunray +++++");
     let mut orchestrator = Orchestrator::new()?;
@@ -225,6 +274,8 @@ fn t03_correct_resource_request() -> Result<(), String> {
 
     sending_sunray(&orchestrator)?;
 
+    register_the_explorer(&orchestrator)?;
+
     match &orchestrator.explorers[0] {
         Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels } => {
 
@@ -239,18 +290,18 @@ fn t03_correct_resource_request() -> Result<(), String> {
                         Err(err)=>{ panic!("Failed to generate resource request: {}", err); }
                     }
 
-                    // println!("Responding to resource request...");
-                    // match channels.0.recv() {
-                    //     Ok(PlanetToExplorer::GenerateResourceResponse { resource }) => {
-                    //         if resource.is_some() {
-                    //             println!("Explorer received the resource request response correctly.");
-                    //         } else {
-                    //             println!("Planet gave back None resource.");
-                    //         }
-                    //     }
-                    //     Ok(_) => { panic!("Unexpected resource request response."); }
-                    //     Err(err)=>{ panic!("Failed to respond to resource request: {}", err); }
-                    // }
+                    println!("Responding to resource request...");
+                    match channels.0.recv() {
+                        Ok(PlanetToExplorer::GenerateResourceResponse { resource }) => {
+                            if resource.is_some() {
+                                println!("Explorer received the resource request response correctly.");
+                            } else {
+                                println!("Planet gave back None resource.");
+                            }
+                        }
+                        Ok(_) => { panic!("Unexpected resource request response."); }
+                        Err(err)=>{ panic!("Failed to respond to resource request: {}", err); }
+                    }
                 }
             }
         }
@@ -303,6 +354,8 @@ fn t04_failure_resource_request() -> Result<(), String> {
         Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
     }
 
+    register_the_explorer(&orchestrator);
+
     match &orchestrator.explorers[0] {
         Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels } => {
 
@@ -317,18 +370,18 @@ fn t04_failure_resource_request() -> Result<(), String> {
                         Err(err)=>{ panic!("Failed to generate resource request: {}", err); }
                     }
 
-                    // println!("Responding to resource request...");
-                    // match channels.0.recv() {
-                    //     Ok(PlanetToExplorer::GenerateResourceResponse { resource }) => {
-                    //         if resource.is_some() {
-                    //             println!("Explorer received the resource request response correctly.");
-                    //         } else {
-                    //             println!("Planet gave back None resource.");
-                    //         }
-                    //     }
-                    //     Ok(_) => { panic!("Unexpected resource request response."); }
-                    //     Err(err)=>{ panic!("Failed to respond to resource request: {}", err); }
-                    // }
+                    println!("Responding to resource request...");
+                    match channels.0.recv() {
+                        Ok(PlanetToExplorer::GenerateResourceResponse { resource }) => {
+                            if resource.is_some() {
+                                println!("Explorer received the resource request response correctly.");
+                            } else {
+                                println!("Planet gave back None resource.");
+                            }
+                        }
+                        Ok(_) => { panic!("Unexpected resource request response."); }
+                        Err(err)=>{ panic!("Failed to respond to resource request: {}", err); }
+                    }
                 }
             }
         }
@@ -344,6 +397,90 @@ fn t04_failure_resource_request() -> Result<(), String> {
         Ok(Err(e)) => Err(format!("Planet thread returned error: {}", e)),
         Err(_) => Err("Planet thread panicked".to_string()),
     }
+}
+
+#[test]
+fn t05_asteroid_success()->Result<(),String>{
+    println!("+++++ Test asteroid success +++++");
+    let mut orchestrator = Orchestrator::new()?;
+    let mut planet1 = match orchestrator.galaxy_topology.pop(){
+        Some(p)=>p,
+        None=>return Err("Cannot find any planet to pop".to_string()),
+    };
+
+    println!("Creating planet thread...");
+    let handle = thread::spawn(move ||->Result<(), String>{
+        println!("Planet running...");
+        planet1.run()
+    });
+
+    println!("Start Planet...");
+    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::StartPlanetAI) {
+        Ok(_) => { println!("Planet AI started."); },
+        Err(err)=>{ panic!("Failed to start planet AI: {}", err); },
+    }
+
+    println!("Waiting for response...");
+    match orchestrator.planet_channels.0.recv(){
+        Ok(res) => {
+            match res {
+                PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
+                    println!("Planet {} AI started.", planet_id);
+                },
+                _ => panic!("Unexpected response to StartPlanetAI.")
+            }
+        }
+        Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
+    }
+
+    println!("Sending sunray...");
+    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Sunray(orchestrator.forge.generate_sunray())) {
+        Ok(_) => {println!("Sunray sent.")},
+        Err(err)=>{ panic!("Failed to send sunray: {}.", err); }
+    }
+
+    println!("Waiting for response...");
+    let result_sunray: Result<(), RecvError> = match orchestrator.planet_channels.0.recv(){
+        Ok(res) => {
+            match res {
+                PlanetToOrchestrator::SunrayAck { planet_id } => {
+                    println!("Planet {} received sunray.", planet_id);
+                    Ok(())
+                },
+                _ => panic!("Unexpected response to Sunray.")
+            }
+        }
+        Err(_) => {
+            panic!("Something went wrong in receiving the SunrayAck."); }
+    };
+
+    println!("Sending asteroid...");
+    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Asteroid(orchestrator.forge.generate_asteroid())){
+        Ok(_) => { println!("Asteroid sent."); },
+        Err(err)=>{ panic!("Failed to send asteroid: {}.", err); }
+    }
+
+    println!("Waiting for response...");
+    let result = match orchestrator.planet_channels.0.recv(){
+        Ok(res) => {
+            match res {
+                PlanetToOrchestrator::AsteroidAck { planet_id, rocket } => {
+                    println!("Planet {} received asteroid.", planet_id);
+                    if rocket.is_some() {
+                        println!("Planet {} survived.", planet_id);
+                        Ok(())
+                    } else {
+                        Err("Planet died but it should have survived...".to_string())
+                    }
+                },
+                _ => panic!("Unexpected response to Asteroid.")
+            }
+        }
+        Err(e) => {
+            println!("Recv Error: {}", e);
+            panic!("Something went wrong in receiving the AsteroidAck."); }
+    };
+    result
 }
 
 #[test]
@@ -434,139 +571,6 @@ fn t06_asteroid_exchange_without_rocket()->Result<(),String>{
         Ok(Err(e)) => Err(format!("Planet thread returned error: {}", e)),
         Err(_) => Err("Planet thread panicked".to_string()),
     }
-}
-
-#[test]
-fn t01_planet_initialization() -> Result <(),String >{
-    println!("+++++ Test planet initialization +++++");
-    let(planet_sender,orch_receiver):(
-    Sender < PlanetToOrchestrator >,
-    Receiver < PlanetToOrchestrator >,
-    )= unbounded();
-    let(orch_sender,planet_receiver):(
-    Sender < OrchestratorToPlanet >,
-    Receiver < OrchestratorToPlanet >,
-    )= unbounded();
-
-    let planet_to_orchestrator_channels =(planet_receiver,planet_sender);
-    let orchestrator_to_planet_channels =(orch_receiver,orch_sender);
-
-     //planet-explorer and explorer-planet
-    let(planet_sender,explorer_receiver):(
-    Sender < PlanetToExplorer >,
-    Receiver < PlanetToExplorer >,
-    )= unbounded();
-    let(explorer_sender,planet_receiver):(
-    Sender < ExplorerToPlanet >,
-    Receiver < ExplorerToPlanet >,
-    )= unbounded();
-
-    let planet_to_explorer_channels = planet_receiver;
-    let explorer_to_planet_channels =(explorer_receiver,explorer_sender);
-
-     //explorer-orchestrator and orchestrator-explorer
-    let(explorer_sender,orch_receiver):(
-    Sender < ExplorerToOrchestrator < BagType > >,
-    Receiver < ExplorerToOrchestrator < BagType > >,
-    )= unbounded();
-    let(orch_sender,explorer_receiver):(
-    Sender < OrchestratorToExplorer >,
-    Receiver < OrchestratorToExplorer >,
-    )= unbounded();
-
-    let explorer_to_orchestrator_channels =(explorer_receiver,explorer_sender);
-    let orchestrator_to_explorer_channels =(orch_receiver,orch_sender);
-     //Construct crab-rave planet
-    let mut crab_rave_planet = CrabRaveConstructor::new(
-    0,
-    planet_to_orchestrator_channels,
-    planet_to_explorer_channels,
-    )?;
-    Ok(())
-}
-
-#[test]
-fn t05_asteroid_success()->Result<(),String>{
-    println!("+++++ Test asteroid success +++++");
-    let mut orchestrator = Orchestrator::new()?;
-    let mut planet1 = match orchestrator.galaxy_topology.pop(){
-        Some(p)=>p,
-        None=>return Err("Cannot find any planet to pop".to_string()),
-    };
-
-    println!("Creating planet thread...");
-    let handle = thread::spawn(move ||->Result<(), String>{
-        println!("Planet running...");
-        planet1.run()
-    });
-
-    println!("Start Planet...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::StartPlanetAI) {
-        Ok(_) => { println!("Planet AI started."); },
-        Err(err)=>{ panic!("Failed to start planet AI: {}", err); },
-    }
-
-    println!("Waiting for response...");
-    match orchestrator.planet_channels.0.recv(){
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
-                    println!("Planet {} AI started.", planet_id);
-                },
-                _ => panic!("Unexpected response to StartPlanetAI.")
-            }
-        }
-        Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
-    }
-
-    println!("Sending sunray...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Sunray(orchestrator.forge.generate_sunray())) {
-        Ok(_) => {println!("Sunray sent.")},
-        Err(err)=>{ panic!("Failed to send sunray: {}.", err); }
-    }
-
-    println!("Waiting for response...");
-    let result_sunray: Result<(), RecvError> = match orchestrator.planet_channels.0.recv(){
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::SunrayAck { planet_id } => {
-                    println!("Planet {} received sunray.", planet_id);
-                    Ok(())
-                },
-                _ => panic!("Unexpected response to Sunray.")
-            }
-        }
-        Err(_) => { 
-            panic!("Something went wrong in receiving the SunrayAck."); }
-    };
-
-    println!("Sending asteroid...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Asteroid(orchestrator.forge.generate_asteroid())){
-        Ok(_) => { println!("Asteroid sent."); },
-        Err(err)=>{ panic!("Failed to send asteroid: {}.", err); }
-    }
-
-    println!("Waiting for response...");
-    let result = match orchestrator.planet_channels.0.recv(){
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::AsteroidAck { planet_id, rocket } => {
-                    println!("Planet {} received asteroid.", planet_id);
-                    if rocket.is_some() {
-                        println!("Planet {} survived.", planet_id);
-                        Ok(())
-                    } else {
-                       Err("Planet died but it should have survived...".to_string())
-                    }
-                },
-                _ => panic!("Unexpected response to Asteroid.")
-            }
-        }
-        Err(e) => { 
-            println!("Recv Error: {}", e);
-            panic!("Something went wrong in receiving the AsteroidAck."); }
-    };
-    result
 }
 
 #[test]
@@ -730,8 +734,6 @@ fn t11_charged_cell_request_with_one_charged_cell()->Result<(),String>{
 
     sending_sunray(&orchestrator)?;
 
-    register_the_explorer(&orchestrator)?;
-
     match sending_available_cell_request(&orchestrator) {
         Ok(available_cells) => println!("Planet available cells: {:?}", available_cells),
         Err(err)=> panic!("Failed to send available cell request: {}", err),
@@ -785,6 +787,154 @@ fn t12_charged_cell_request_with_no_charged_cell()->Result<(),String> {
     match sending_available_cell_request(&orchestrator) {
         Ok(available_cells) => println!("Planet available cells: {:?}", available_cells),
         Err(err)=> panic!("Failed to send available cell request: {}", err),
+    }
+
+    let result = killing_planet(&orchestrator);
+
+    match handle.join() {
+        Ok(Ok(_)) => {
+            println!("Planet thread completed successfully");
+            result
+        }
+        Ok(Err(e)) => Err(format!("Planet thread returned error: {}", e)),
+        Err(_) => Err("Planet thread panicked".to_string()),
+    }
+}
+
+#[test]
+fn t13_final_test_all_combined()->Result<(),String> {
+    let mut orchestrator = Orchestrator::new()?;
+    let mut planet1 = match orchestrator.galaxy_topology.pop(){
+        Some(p)=>p,
+        None=>return Err("Cannot find any planet to pop".to_string()),
+    };
+
+    println!("Creating planet thread...");
+    let handle = thread::spawn(move ||->Result<(), String>{
+        println!("Planet running...");
+        planet1.run()
+    });
+
+    println!("Start Planet...");
+    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::StartPlanetAI) {
+        Ok(_) => { println!("Planet AI started."); },
+        Err(err)=>{ panic!("Failed to start planet AI: {}", err); },
+    }
+
+    println!("Waiting for response...");
+    match orchestrator.planet_channels.0.recv(){
+        Ok(res) => {
+            match res {
+                PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
+                    println!("Planet {} AI started.", planet_id);
+                },
+                _ => panic!("Unexpected response to StartPlanetAI.")
+            }
+        }
+        Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
+    }
+
+    match sending_available_cell_request(&orchestrator) {
+        Ok(available_cells) => println!("Planet available cells: {:?}", available_cells),
+        Err(err)=> panic!("Failed to send available cell request: {}", err),
+    }
+
+    sending_sunray(&orchestrator)?;
+
+    match sending_available_cell_request(&orchestrator) {
+        Ok(available_cells) => println!("Planet available cells: {:?}", available_cells),
+        Err(err)=> panic!("Failed to send available cell request: {}", err),
+    }
+
+    match &orchestrator.explorers[0] {
+        Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels } => {
+
+            println!("Accessing planet-explorer channels...");
+            match explorer_to_planet_channels {
+                None => { panic!("Planet channels is None."); }
+                Some(channels) => {
+
+                    println!("Sending resource request...");
+                    match channels.1.send(ExplorerToPlanet::SupportedResourceRequest { explorer_id: 0 }) {
+                        Ok(_) => { println!("Planet supported resource request sent."); },
+                        Err(err)=>{ panic!("Failed to generate resource request: {}", err); }
+                    }
+
+                    println!("Responding to available resource request...");
+                    match channels.0.recv() {
+                        Ok(PlanetToExplorer::SupportedResourceResponse { resource_list }) => {
+                            println!("Planet supported resource list: {:?}", resource_list);
+                        }
+                        Ok(_) => { panic!("Unexpected available resource request response."); }
+                        Err(err)=>{ panic!("Failed to respond to available resource request: {}", err); }
+                    }
+                }
+            }
+        }
+    }
+
+    match &orchestrator.explorers[0] {
+        Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels } => {
+
+            println!("Accessing planet-explorer channels...");
+            match explorer_to_planet_channels {
+                None => { panic!("Planet channels is None."); }
+                Some(channels) => {
+
+                    println!("Sending resource request...");
+                    match channels.1.send(ExplorerToPlanet::GenerateResourceRequest { explorer_id: 0, resource: BasicResourceType::Carbon}) {
+                        Ok(_) => { println!("Planet generated resource request."); },
+                        Err(err)=>{ panic!("Failed to generate resource request: {}", err); }
+                    }
+
+                    println!("Responding to resource request...");
+                    match channels.0.recv() {
+                        Ok(PlanetToExplorer::GenerateResourceResponse { resource }) => {
+                            if resource.is_some() {
+                                println!("Explorer received the resource request response correctly.");
+                            } else {
+                                println!("Planet gave back None resource.");
+                            }
+                        }
+                        Ok(_) => { panic!("Unexpected resource request response."); }
+                        Err(err)=>{ panic!("Failed to respond to resource request: {}", err); }
+                    }
+                }
+            }
+        }
+    }
+
+    sending_sunray(&orchestrator)?;
+
+    match &orchestrator.explorers[0] {
+        Explorer { planet_id, orchestrator_channels, explorer_to_planet_channels, planet_to_explorer_channels } => {
+
+            println!("Accessing planet-explorer channels...");
+            match explorer_to_planet_channels {
+                None => { panic!("Planet channels is None."); }
+                Some(channels) => {
+
+                    println!("Sending resource request...");
+                    match channels.1.send(ExplorerToPlanet::GenerateResourceRequest { explorer_id: 0, resource: BasicResourceType::Carbon}) {
+                        Ok(_) => { println!("Planet generated resource request."); },
+                        Err(err)=>{ panic!("Failed to generate resource request: {}", err); }
+                    }
+
+                    println!("Responding to resource request...");
+                    match channels.0.recv() {
+                        Ok(PlanetToExplorer::GenerateResourceResponse { resource }) => {
+                            if resource.is_some() {
+                                println!("Explorer received the resource request response correctly.");
+                            } else {
+                                println!("Planet gave back None resource.");
+                            }
+                        }
+                        Ok(_) => { panic!("Unexpected resource request response."); }
+                        Err(err)=>{ panic!("Failed to respond to resource request: {}", err); }
+                    }
+                }
+            }
+        }
     }
 
     let result = killing_planet(&orchestrator);

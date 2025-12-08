@@ -93,9 +93,6 @@ pub struct AI;
 
 impl AI {
     fn new() -> Self {
-        // the cell stack needs to be started here
-        // otherwise it would get reset when the AI
-        // gets stopped
         //LOG
         let mut payload = Payload::new();
         payload.insert(String::from("Message"), String::from("New AI created"));
@@ -131,21 +128,9 @@ impl PlanetAI for AI {
                 Some(PlanetToOrchestrator::InternalStateResponse {
                     planet_id: state.id().clone(),
                     planet_state: PlanetState::to_dummy(&state)
-                                                 // timestamp: SystemTime::now(),
                 })
             }
             OrchestratorToPlanet::Sunray(sunray) => {
-                // for i in 0..N_CELLS {
-                //     // non ho trovato un modo per ottenere il vettore, l'unico modo penso sia quello di ciclare
-                //     if !state.cell(i).is_charged() {
-                //         state.cell_mut(i).charge(sunray);
-                //         return Some(PlanetToOrchestrator::SunrayAck {
-                //             planet_id: state.id(),
-                //             // timestamp: SystemTime::now(),
-                //         });
-                //     }
-                // }
-                // None
                 let mut payload_ris = Payload::new();
                 let mut ris=None;
                 if let Some(idx) = get_free_cell_index() {
@@ -207,18 +192,12 @@ impl PlanetAI for AI {
                 }
 
                 let mut ris=None;
-                if let Some(idx) = peek_charged_cell_index() {
-                    payload_ris.insert("Message".to_string(), "AvailableEnergyCellResponse".to_string());
-                    payload_ris.insert(String::from("Result"), "EnergyCell available".to_string());
-                    payload_ris.insert(String::from("EnergyCell index"), format!("{}", idx));
-                    ris= Some(PlanetToExplorer::AvailableEnergyCellResponse {
-                        available_cells: n_available_cells,
-                    })
-                }
-                else{
-                    payload_ris.insert("Response to".to_string(), "AvailableEnergyCellRequest".to_string());
-                    payload_ris.insert(String::from("Result"), "No EnergyCell available".to_string());
-                }
+                payload_ris.insert("Message".to_string(), "AvailableEnergyCellResponse".to_string());
+                payload_ris.insert(String::from("Result"), "EnergyCell available".to_string());
+                payload_ris.insert(String::from("EnergyCell number"), format!("{}", n_available_cells));
+                ris= Some(PlanetToExplorer::AvailableEnergyCellResponse {
+                    available_cells: n_available_cells,
+                });
 
                 //LOG
                 let mut payload = Payload::new();
