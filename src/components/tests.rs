@@ -1,11 +1,73 @@
 #[cfg(test)]
-use crate::{components::{explorer::BagType, CrabRaveConstructor}, Orchestrator};
+use crate::{components::{explorer::BagType, CrabRaveConstructor}};
+use crate::Orchestrator;
 use common_game::components::sunray::Sunray;
 use common_game::protocols::messages::{ExplorerToOrchestrator, ExplorerToPlanet, OrchestratorToExplorer, OrchestratorToPlanet, PlanetToExplorer, PlanetToOrchestrator};
 use crossbeam_channel::{unbounded, Receiver, RecvError, Sender};
 use std::thread;
 use common_game::components::resource::BasicResourceType;
+use common_game::components::rocket::Rocket;
 use crate::components::explorer::Explorer;
+
+fn sending_sunray(orchestrator: &Orchestrator) -> Result<(), String> {
+    println!("Sending sunray...");
+    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Sunray(Sunray::default())) {
+        Ok(_) => { println!("Planet Sunray started."); },
+        Err(err)=>{ panic!("Failed to start planet Sunray: {}", err); }
+    }
+
+    println!("Waiting for response...");
+    match orchestrator.planet_channels.0.recv() {
+        Ok(res) => {
+            match res {
+                PlanetToOrchestrator::SunrayAck { planet_id } => {
+                    println!("Planet {} Sunray acknowledged.", planet_id);
+                }
+                _ => panic!("Unexpected response to SunrayAck.")
+            }
+        }
+        Err(err)=>{ panic!("Failed to start planet Sunray: {}", err); }
+    };
+    Ok(())
+}
+fn sending_asteroid(orchestrator: &Orchestrator) -> Result<Option<Rocket>, String> {
+    println!("Sending asteroid...");
+    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Asteroid(orchestrator.forge.generate_asteroid())){
+        Ok(_) => { println!("Asteroid sent."); },
+        Err(err)=>{ panic!("Failed to send asteroid: {}.", err); }
+    }
+
+    println!("Waiting for response...");
+    match orchestrator.planet_channels.0.recv() {
+        Ok(res) => {
+            match res {
+                PlanetToOrchestrator::AsteroidAck { planet_id, rocket} => {
+                    println!("Planet {} Asteroid acknowledged.", planet_id);
+                    Ok(rocket)
+                }
+                _ => panic!("Unexpected response to AsteroidAck.")
+            }
+        }
+        Err(err)=>{ panic!("Failed to send asteroid: {}.", err); }
+    }
+}
+
+fn killing_planet(orchestrator: &Orchestrator) -> Result<(), String> {
+    println!("Sending KillPlanet...");
+    orchestrator.planet_channels.1
+        .send(OrchestratorToPlanet::KillPlanet)
+        .map_err(|_| "Failed to send KillPlanet")?;
+
+    println!("Waiting for KillPlanet response...");
+    match orchestrator.planet_channels.0.recv() {
+        Ok(PlanetToOrchestrator::KillPlanetResult { planet_id }) => {
+            println!("Planet {} killed.", planet_id);
+        }
+        Ok(_) => return Err("Unexpected response to KillPlanet".to_string()),
+        Err(err) => return Err(format!("Failed to receive KillPlanet response: {}", err)),
+    };
+    Ok(())
+}
 
 #[test]
 fn t02_single_sunray_exchange() -> Result<(), String> {
@@ -41,39 +103,9 @@ fn t02_single_sunray_exchange() -> Result<(), String> {
         Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
     }
 
-    println!("Sending sunray...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Sunray(Sunray::default())) {
-        Ok(_) => { println!("Planet Sunray started."); },
-        Err(err)=>{ panic!("Failed to start planet Sunray: {}", err); }
-    }
+    sending_sunray(&orchestrator)?;
 
-    println!("Waiting for response...");
-    match orchestrator.planet_channels.0.recv() {
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::SunrayAck { planet_id } => {
-                    println!("Planet {} Sunray acknowledged.", planet_id);
-                }
-                _ => panic!("Unexpected response to SunrayAck.")
-            }
-        }
-        Err(err)=>{ panic!("Failed to start planet Sunray: {}", err); }
-    };
-
-    println!("Sending KillPlanet...");
-    orchestrator.planet_channels.1
-        .send(OrchestratorToPlanet::KillPlanet)
-        .map_err(|_| "Failed to send KillPlanet")?;
-
-    println!("Waiting for KillPlanet response...");
-    let result = match orchestrator.planet_channels.0.recv() {
-        Ok(PlanetToOrchestrator::KillPlanetResult { planet_id }) => {
-            println!("Planet {} killed.", planet_id);
-            Ok(())
-        }
-        Ok(_) => return Err("Unexpected response to KillPlanet".to_string()),
-        Err(err) => return Err(format!("Failed to receive KillPlanet response: {}", err)),
-    };
+    let result = killing_planet(&orchestrator);
 
     match handle.join() {
         Ok(Ok(_)) => {
@@ -119,24 +151,7 @@ fn t03_correct_resource_request() -> Result<(), String> {
         Err(err)=>{ panic!("Failed to start planet AI: {}.", err); }
     }
 
-    println!("Sending sunray...");
-    match orchestrator.planet_channels.1.send(OrchestratorToPlanet::Sunray(Sunray::default())) {
-        Ok(_) => { println!("Planet Sunray started."); },
-        Err(err)=>{ panic!("Failed to start planet Sunray: {}", err); }
-    }
-
-    println!("Waiting for response...");
-    match orchestrator.planet_channels.0.recv() {
-        Ok(res) => {
-            match res {
-                PlanetToOrchestrator::SunrayAck { planet_id } => {
-                    println!("Planet {} Sunray acknowledged.", planet_id);
-                }
-                _ => panic!("Unexpected response to SunrayAck.")
-            }
-        }
-        Err(err)=>{ panic!("Failed to start planet Sunray: {}", err); }
-    };
+    sending_sunray(&orchestrator)?;
 
     match &orchestrator.explorers[0] {
         Explorer { planet_id, orchestrator_channels, planet_channels } => {
@@ -169,20 +184,7 @@ fn t03_correct_resource_request() -> Result<(), String> {
         }
     }
 
-    println!("Sending KillPlanet...");
-    orchestrator.planet_channels.1
-        .send(OrchestratorToPlanet::KillPlanet)
-        .map_err(|_| "Failed to send KillPlanet")?;
-
-    println!("Waiting for KillPlanet response...");
-    let result = match orchestrator.planet_channels.0.recv() {
-        Ok(PlanetToOrchestrator::KillPlanetResult { planet_id }) => {
-            println!("Planet {} killed.", planet_id);
-            Ok(())
-        }
-        Ok(_) => return Err("Unexpected response to KillPlanet".to_string()),
-        Err(err) => return Err(format!("Failed to receive KillPlanet response: {}", err)),
-    };
+    let result = killing_planet(&orchestrator);
 
     match handle.join() {
         Ok(Ok(_)) => {
