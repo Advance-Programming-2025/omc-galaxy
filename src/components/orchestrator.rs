@@ -14,8 +14,8 @@ use crate::components::CrabRaveConstructor;
 use crate::components::explorer::{BagType, Explorer};
 
 pub enum Status{
-    Alive,
-    Pause,
+    Running,
+    Paused,
     Dead,
 }
 // B generic is there for representing the content type of the bag
@@ -85,7 +85,7 @@ impl Orchestrator {
             CrabRaveConstructor::new(id, planet_to_orchestrator_channels, receiver_explorer)?;
 
         //Update HashMaps
-        self.planets_status.insert(new_planet.id(), Status::Pause);
+        self.planets_status.insert(new_planet.id(), Status::Paused);
         self.planet_channels.insert(
             new_planet.id(),
             (sender_orchestrator, sender_explorer),
@@ -118,7 +118,7 @@ impl Orchestrator {
         );
 
         //Update HashMaps
-        self.explorer_status.insert(new_explorer.id(), Status::Pause);
+        self.explorer_status.insert(new_explorer.id(), Status::Paused);
         self.explorer_channels.insert(
             new_explorer.id(),
             (sender_orch, sender_planet),
@@ -196,11 +196,13 @@ impl Orchestrator {
             }
             let receive_channel = self.recevier_orch_planet.recv().map_err(|_|"Cannot receive message from planets".to_string())?;
             match receive_channel{
-                PlanetToOrchestrator::StartPlanetAIResult { planet_id } => println!("Started PAI: {}", planet_id),
+                PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
+                    println!("Started PAI: {}", planet_id);
+                    self.planets_status.insert(planet_id, Status::Running);
+                    count+=1;
+                },
                 _=>{},
             }
-
-            count+=1;
         }
         Ok(())
     }
