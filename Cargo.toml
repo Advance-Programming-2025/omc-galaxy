@@ -7,6 +7,8 @@ edition = "2024"
 log = "0.4"
 dotenv = "0.15"
 common-game = {git = "https://github.com/unitn-ap-2025/common.git"}
+one-million-crabs = { git = "https://github.com/Advance-Programming-2025/One_million_crabs.git", branch="dev"}
+
 
 crossbeam-channel = "0.5.15"
 env_logger = "0.11.8"

@@ -1,12 +1,8 @@
 //use std::sync::mpsc;
 use crossbeam_channel::{Receiver, Sender, unbounded};
-
-use common_game::{
-    components::planet::Planet,
-    protocols::messages::{
-        ExplorerToOrchestrator, ExplorerToPlanet, OrchestratorToExplorer, PlanetToExplorer,
-    },
-};
+use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
+use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
+use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 
 pub type BagType = u32;
 

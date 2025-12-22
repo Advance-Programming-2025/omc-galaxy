@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use std::{fs, thread};
 
 use common_game::components::forge::Forge;
-use common_game::protocols::messages::{
-    ExplorerToOrchestrator, ExplorerToPlanet, OrchestratorToExplorer, OrchestratorToPlanet,
-    PlanetToExplorer, PlanetToOrchestrator,
-};
+use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
+use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
+use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 
-use crate::components::CrabRaveConstructor;
 use crate::components::explorer::{BagType, Explorer};
+use one_million_crabs::planet::create_planet;
 
+#[derive(PartialEq)]
 pub enum Status {
     Running,
     Paused,
@@ -111,8 +111,9 @@ impl Orchestrator {
             (receiver_orchestrator, self.sender_planet_orch.clone());
 
         //Construct crab-rave planet
+        //REVIEW check if there is a better way to write it
         let mut new_planet =
-            CrabRaveConstructor::new(id, planet_to_orchestrator_channels, receiver_explorer)?;
+            create_planet(planet_to_orchestrator_channels.0, planet_to_orchestrator_channels.1, receiver_explorer, id)?;
 
         //Update HashMaps
         self.planets_status.insert(new_planet.id(), Status::Paused);
@@ -227,13 +228,22 @@ impl Orchestrator {
 
     pub fn initialize_planets_by_ids_list(&mut self, ids_list: Vec<u32>) -> Result<(), String> {
         for planet_id in ids_list {
+            //TODO we need to initialize the other planets randomly or precisely
             self.add_planet(planet_id)?;
         }
         Ok(())
     }
 
     fn start_all_planet_ais(&mut self) -> Result<(), String> {
+
+        for (id, (from_orch, _)) in &self.planet_channels {
+            let send_channel = from_orch
+                .try_send(OrchestratorToPlanet::StartPlanetAI)
+                .map_err(|_| "Cannot send message to {id}".to_string())?;
+        }
+
         let mut count = 0;
+        //REVIEW is it possible that this loop could block forevere the game?
         loop {
             if count == self.planet_channels.len() {
                 break;
@@ -254,18 +264,86 @@ impl Orchestrator {
         Ok(())
     }
 
+    fn handle_planet_message(&mut self, msg: PlanetToOrchestrator)->Result<(),String>{
+        match msg{
+            PlanetToOrchestrator::SunrayAck { planet_id }=>{},
+            PlanetToOrchestrator::AsteroidAck { planet_id, rocket }=>{
+                match rocket{
+                    Some(_)=>{
+                        //TODO some logging function
+                    },
+                    None=>{
+                        //If you have the id then surely that planet exist so we can unwrap without worring
+                        let sender = &self.planet_channels.get(&planet_id).unwrap().0;
+                        sender.send(OrchestratorToPlanet::KillPlanet).map_err(|_|"Unable to send to planet: {planet_id}")?;
+                        
+                        //Update planet State
+                        self.planets_status.insert(planet_id, Status::Dead);
+                        //TODO we need to do a check if some explorer is on that planet
+                    }
+                }
+            },
+            // PlanetToOrchestrator::IncomingExplorerResponse { planet_id, res }=>{},
+            PlanetToOrchestrator::InternalStateResponse { planet_id, planet_state }=>{},
+            PlanetToOrchestrator::KillPlanetResult { planet_id }=>{},
+            // PlanetToOrchestrator::OutgoingExplorerResponse { planet_id, res }=>{},
+            PlanetToOrchestrator::StartPlanetAIResult { planet_id }=>{},
+            PlanetToOrchestrator::StopPlanetAIResult { planet_id }=>{},
+            PlanetToOrchestrator::Stopped { planet_id }=>{},
+            _=>{}
+            
+        }
+        Ok(())
+    }
+
+    fn send_sunray(&self, sender: &Sender<OrchestratorToPlanet>)->Result<(),String>{
+        sender.send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray())).map_err(|_|"Unable to send a sunray to planet: {id}".to_string())
+    }
+    fn send_sunray_to_all(&self)->Result<(),String>{
+        for (id, (sender, _)) in &self.planet_channels{
+            if *self.planets_status.get(id).unwrap() != Status::Dead{
+                self.send_sunray(sender)?;
+            }
+        }
+        Ok(())
+    }
+    
+    fn game(&mut self)->Result<(),String>{
+        /*
+            v0 - totally sequencial
+            Every message is responded to bloking all the other channels till it is finished
+            Sunrays and asteroids are sent to all the planet after a timeout
+        */
+        loop{
+            select! {
+                recv(self.recevier_orch_planet)->msg=>{
+                    let msg_unwraped = match msg{
+                        Ok(res)=>res,
+                        Err(_)=>return Err("Cannot receive message from planets".to_string()),
+                    };
+                    self.handle_planet_message(msg_unwraped)?;
+                }
+                recv(self.receiver_orch_explorer)->msg=>{
+                    break;
+                    todo!()
+                }
+            }
+        }
+        Ok(())
+    }
+
+    
     
 
     pub fn run_example(&mut self) -> Result<(), String> {
-        //Start all the planets AI
-        for (id, (from_orch, _)) in &self.planet_channels {
-            let send_channel = from_orch
-                .try_send(OrchestratorToPlanet::StartPlanetAI)
-                .map_err(|_| "Cannot send message to {id}".to_string())?;
-        }
-
+        
         //Loop to start all planet ais
         self.start_all_planet_ais()?;
+        
+
+        //Game
+        self.game()?;
+
 
         Ok(())
     }
