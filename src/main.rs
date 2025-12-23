@@ -1,7 +1,7 @@
 #[cfg(feature = "debug-prints")]
 #[macro_export]
 macro_rules! debug_println {
-    ($($arg:tt)*) => { println!($($arg)*); };
+    ($($arg:tt)*) => { println!($($arg)*) };
 }
 
 #[cfg(not(feature = "debug-prints"))]
