@@ -200,8 +200,8 @@ impl Orchestrator {
 
         //Initialize matrix of adjecencies
         let mut new_topology: Vec<Vec<bool>> = Vec::new();
-        for _ in 0..num_planets - 1 {
-            let v = vec![false; num_planets - 1];
+        for _ in 0..num_planets{
+            let v = vec![false; num_planets];
             new_topology.push(v);
         }
         debug_println!("empty adj matrix:");
