@@ -132,17 +132,18 @@ impl Orchestrator {
         thread::spawn(move || -> Result<(), String> { new_planet.run() });
         Ok(())
     }
-    pub fn add_explorer(&mut self, id: u32) {
+    pub fn add_explorer(&mut self, explorer_id: u32, planet_id: u32, free_cells: u32, sender_explorer: Sender<ExplorerToPlanet>) {
         //Create the comms for the new explorer
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
             Orchestrator::init_comms_explorers();
 
         //Construct Explorer
         let new_explorer = Explorer::new(
-            id,
-            None,
+            explorer_id,
+            planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
-            receiver_planet,
+            (receiver_planet, sender_explorer),
+            free_cells
         );
 
         //Update HashMaps
