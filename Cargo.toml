@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 log = "0.4"
 dotenv = "0.15"
-common-game = {git = "https://github.com/unitn-ap-2025/common.git"}
+common-game = "2.0.0"
 black-adidas-shoe = {git="https://github.com/black-adidas-shoe-org/planet.git", package="ara_kees"}
 ciuc_planet = {git = "https://github.com/Pietro-Calvi/ciuc_planet.git"}
 houston-we-have-a-borrow = {git="https://github.com/Houston-we-have-a-borrow/Planet.git", package="Planet"}
