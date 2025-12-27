@@ -12,7 +12,7 @@ use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetTo
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 
 use crate::components::explorer::{BagType, Explorer};
-use one_million_crabs::planet::create_planet;
+use crate::utils_planets::PLANET_REGISTRY;
 
 #[derive(PartialEq, Debug)]
 pub enum Status {
@@ -118,7 +118,13 @@ impl Orchestrator{
 
         //Construct crab-rave planet
         //REVIEW check if there is a better way to write it
-        let mut new_planet = create_planet(
+        // let mut new_planet = create_planet(
+        //     planet_to_orchestrator_channels.0,
+        //     planet_to_orchestrator_channels.1,
+        //     receiver_explorer,
+        //     id,
+        // )?;
+        let mut new_planet = (PLANET_REGISTRY.get(&4).unwrap().as_ref())(
             planet_to_orchestrator_channels.0,
             planet_to_orchestrator_channels.1,
             receiver_explorer,
@@ -423,7 +429,7 @@ impl Orchestrator {
 
         //Game
         let start = Instant::now();
-        let ticker = tick(Duration::from_millis(100));
+        let ticker = tick(Duration::from_millis(1000));
 
         loop {
             select! {

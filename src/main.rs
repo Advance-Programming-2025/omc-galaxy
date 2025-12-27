@@ -13,6 +13,7 @@ macro_rules! debug_println {
 }
 
 mod components;
+mod utils_planets;
 
 use components::Orchestrator;
 use std::env;
@@ -30,7 +31,7 @@ fn main() -> Result<(), String> {
 
     orchestrator.initialize_galaxy_by_file(file_path.as_str().trim())?;
     // orchestrator.run_only_planets()?;
-    let sequence = "ASSSSSSSSSSS".to_string();
+    let sequence = "AAAASSS".to_string();
     orchestrator.run_only_planet_sequence(sequence)?;
 
     Ok(())
