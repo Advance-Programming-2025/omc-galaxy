@@ -2,7 +2,7 @@
 Galaxy simulation about Explorers travelling around the galaxy to gather resources, combining them and create some complex resources. They try not to die, watch how they performe during the simulation and you can manually interact with the simulation
 
 
-# Initialization file
+## Initialization file
 Create a new .env file and write in it the variable as in .env.example use the absolute path of the initialization file.
 Write in it this topology:
 ```
@@ -23,6 +23,13 @@ The adjacency matrix should look like this:
 
 ## How to run it (at the moment)
 After that you can use `cargo run` or `cargo run --features debug-prints` to se all the debug messages. 
+
+## Tests
+Use `cargo nextest run`
+
+>Tests run with `cargo test` are considered as the same process. Therefore we cannot istanciate orchestrator multiple times in different test.
+
+
 
 # Task for each member
 - Davide Da Col => UI

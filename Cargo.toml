@@ -19,6 +19,7 @@ rusty-crab = {package = "rusty-crab-ap2025", version = "2.0.0-alpha.1"}
 crossbeam-channel = "0.5.15"
 env_logger = "0.11.8"
 once_cell = "1.21.3"
+cargo-nextest = "0.9.116"
 
 [features]
 debug-prints = []
