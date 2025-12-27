@@ -1,5 +1,6 @@
 use crossbeam_channel::{Receiver, Sender, select, tick, unbounded};
 use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
 use std::{fs, thread};
 
@@ -13,7 +14,7 @@ use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer
 use crate::components::explorer::{BagType, Explorer};
 use one_million_crabs::planet::create_planet;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum Status {
     Running,
     Paused,
@@ -27,9 +28,9 @@ pub struct Orchestrator {
     //Galaxy
     pub galaxy_topology: Vec<Vec<bool>>,
 
-    //Status for each planets and explorers
-    pub planets_status: HashMap<u32, Status>,
-    pub explorer_status: HashMap<u32, Status>,
+    //Status for each planets and explorers, BTreeMaps are useful for printing 
+    pub planets_status: BTreeMap<u32, Status>,
+    pub explorer_status: BTreeMap<u32, Status>,
     //Communication channels for sending messages to planets and explorers
     pub planet_channels: HashMap<u32, (Sender<OrchestratorToPlanet>, Sender<ExplorerToPlanet>)>,
     pub explorer_channels: HashMap<u32, (Sender<OrchestratorToExplorer>, Sender<PlanetToExplorer>)>,
@@ -43,7 +44,8 @@ pub struct Orchestrator {
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
 }
 
-impl Orchestrator {
+//Initialization game functions
+impl Orchestrator{
     //Check and init orchestrator
     pub fn new() -> Result<Self, String> {
         let (sender_planet_orch, recevier_orch_planet) = unbounded();
@@ -52,8 +54,8 @@ impl Orchestrator {
         let new_orch = Self {
             forge: Forge::new()?,
             galaxy_topology: Vec::new(),
-            planets_status: HashMap::new(),
-            explorer_status: HashMap::new(),
+            planets_status: BTreeMap::new(),
+            explorer_status: BTreeMap::new(),
             planet_channels: HashMap::new(),
             explorer_channels: HashMap::new(),
             sender_planet_orch,
@@ -243,6 +245,11 @@ impl Orchestrator {
         Ok(())
     }
 
+}
+
+//Game functions
+impl Orchestrator {
+    
 
     /// Removes the link between two planets if one of them explodes.
     /// ``
@@ -442,7 +449,18 @@ impl Orchestrator {
                 }
             }
         }
+        self.print_planets_state();
 
         Ok(())
+    }
+}
+
+//Debug game functions
+impl Orchestrator{
+    pub fn print_planets_state(&self){
+        // for (id, status) in &self.planets_status{
+        //     print!("({}, {:?})",id, status);
+        // }
+        print!("{:?}", self.planets_status);
     }
 }
