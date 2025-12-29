@@ -27,3 +27,4 @@ target
 /.DS_Store
 /Cargo.lock
 .env
+/orch-example/Cargo.lock

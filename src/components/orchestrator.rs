@@ -1,6 +1,6 @@
 use crossbeam_channel::{Receiver, Sender, select, tick, unbounded};
-use std::collections::HashMap;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::{fs, thread};
 
@@ -13,6 +13,20 @@ use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer
 
 use crate::components::explorer::{BagType, Explorer};
 use crate::utils_planets::PLANET_REGISTRY;
+
+#[cfg(feature = "debug-prints")]
+#[macro_export]
+macro_rules! debug_println {
+    ($($arg:tt)*) => { println!($($arg)*) };
+}
+
+#[cfg(not(feature = "debug-prints"))]
+#[macro_export]
+macro_rules! debug_println {
+    ($($arg:tt)*) => {
+        ()
+    };
+}
 
 #[derive(PartialEq, Debug)]
 pub enum Status {
@@ -28,7 +42,7 @@ pub struct Orchestrator {
     //Galaxy
     pub galaxy_topology: Vec<Vec<bool>>,
 
-    //Status for each planets and explorers, BTreeMaps are useful for printing 
+    //Status for each planets and explorers, BTreeMaps are useful for printing
     pub planets_status: BTreeMap<u32, Status>,
     pub explorer_status: BTreeMap<u32, Status>,
     //Communication channels for sending messages to planets and explorers
@@ -45,7 +59,7 @@ pub struct Orchestrator {
 }
 
 //Initialization game functions
-impl Orchestrator{
+impl Orchestrator {
     //Check and init orchestrator
     pub fn new() -> Result<Self, String> {
         let (sender_planet_orch, recevier_orch_planet) = unbounded();
@@ -65,11 +79,11 @@ impl Orchestrator{
         };
         Ok(new_orch)
     }
-    pub fn reset(&mut self)->Result<(),String>{
+    pub fn reset(&mut self) -> Result<(), String> {
         let ticker = tick(Duration::from_millis(2000));
         //Kill every thread
         self.send_planet_kill_to_all()?;
-        loop{
+        loop {
             select! {
                 recv(self.recevier_orch_planet)->msg=>{
                     let msg_unwraped = match msg{
@@ -97,10 +111,10 @@ impl Orchestrator{
 
         //Reinit orchestrator
         self.galaxy_topology = Vec::new();
-        self.planets_status= BTreeMap::new();
-        self.explorer_status= BTreeMap::new();
-        self.planet_channels=HashMap::new();
-        self.explorer_channels=HashMap::new();
+        self.planets_status = BTreeMap::new();
+        self.explorer_status = BTreeMap::new();
+        self.planet_channels = HashMap::new();
+        self.explorer_channels = HashMap::new();
         Ok(())
     }
     fn init_comms_planet() -> (
@@ -170,7 +184,13 @@ impl Orchestrator{
         thread::spawn(move || -> Result<(), String> { new_planet.run() });
         Ok(())
     }
-    pub fn add_explorer(&mut self, explorer_id: u32, planet_id: u32, free_cells: u32, sender_explorer: Sender<ExplorerToPlanet>) {
+    pub fn add_explorer(
+        &mut self,
+        explorer_id: u32,
+        planet_id: u32,
+        free_cells: u32,
+        sender_explorer: Sender<ExplorerToPlanet>,
+    ) {
         //Create the comms for the new explorer
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
             Orchestrator::init_comms_explorers();
@@ -181,7 +201,7 @@ impl Orchestrator{
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
             (receiver_planet, sender_explorer),
-            free_cells
+            free_cells,
         );
 
         //Update HashMaps
@@ -238,7 +258,7 @@ impl Orchestrator{
 
         //Initialize matrix of adjecencies
         let mut new_topology: Vec<Vec<bool>> = Vec::new();
-        for _ in 0..num_planets{
+        for _ in 0..num_planets {
             let v = vec![false; num_planets];
             new_topology.push(v);
         }
@@ -279,23 +299,24 @@ impl Orchestrator{
         }
         Ok(())
     }
-
 }
 
 //Game functions
 impl Orchestrator {
-    
-
     /// Removes the link between two planets if one of them explodes.
     /// ``
     /// Returns Err if the given indexes are out of bounds, Ok otherwise;
     /// it does NOT currently check wether the link was already set to false beforehand
-    /// 
+    ///
     /// * `planet_one_pos` - Position of the first planet in the matrix. Must be a valid index
     /// * `planet_two_pos` - Position of the second planet in the matrix. Must be a valid index
-    fn destroy_topology_link(&mut self, planet_one_pos: usize, planet_two_pos: usize) -> Result<(),String>{
+    fn destroy_topology_link(
+        &mut self,
+        planet_one_pos: usize,
+        planet_two_pos: usize,
+    ) -> Result<(), String> {
         let topology = &mut self.galaxy_topology;
-        if planet_one_pos < topology.len() && planet_two_pos < topology.len() { 
+        if planet_one_pos < topology.len() && planet_two_pos < topology.len() {
             topology[planet_one_pos][planet_two_pos] = false;
             topology[planet_two_pos][planet_one_pos] = false;
             Ok(())
@@ -405,10 +426,12 @@ impl Orchestrator {
         Ok(())
     }
 
-    fn send_planet_kill(&self, sender: &Sender<OrchestratorToPlanet>)->Result<(), String>{
-        sender.send(OrchestratorToPlanet::KillPlanet).map_err(|_| "Unable to send kill message to planet: {id}".to_string())
+    fn send_planet_kill(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+        sender
+            .send(OrchestratorToPlanet::KillPlanet)
+            .map_err(|_| "Unable to send kill message to planet: {id}".to_string())
     }
-    fn send_planet_kill_to_all(&self)->Result<(),String>{
+    fn send_planet_kill_to_all(&self) -> Result<(), String> {
         for (id, (sender, _)) in &self.planet_channels {
             //unwrap cannot fail because every id is contained in the map
             if *self.planets_status.get(id).unwrap() != Status::Dead {
@@ -502,20 +525,31 @@ impl Orchestrator {
 
         Ok(())
     }
+
+    pub fn run(file_path: String, sequence:String) -> Result<(), String> {
+        //Init and check orchestrator
+        let mut orchestrator = Orchestrator::new()?;
+
+        orchestrator.initialize_galaxy_by_file(file_path.as_str().trim())?;
+        // orchestrator.run_only_planets()?;
+        
+        orchestrator.run_only_planet_sequence(sequence)?;
+        Ok(())
+    }
 }
 
 //Debug game functions
-impl Orchestrator{
-    pub fn print_planets_state(&self){
+impl Orchestrator {
+    pub fn print_planets_state(&self) {
         // for (id, status) in &self.planets_status{
         //     print!("({}, {:?})",id, status);
         // }
         debug_println!("{:?}", self.planets_status);
     }
-    pub fn print_galaxy_topology(&self){
+    pub fn print_galaxy_topology(&self) {
         debug_println!("{:?}", self.galaxy_topology);
     }
-    pub fn print_orch(&self){
+    pub fn print_orch(&self) {
         debug_println!("Orchestrator running");
     }
 }

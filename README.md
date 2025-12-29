@@ -22,7 +22,7 @@ The adjacency matrix should look like this:
 ```
 
 ## How to run it (at the moment)
-After that you can use `cargo run` or `cargo run --features debug-prints` to se all the debug messages. 
+Go in `orch-example`, after that you can use `cargo run` or `cargo run --features omc-galaxy/debug-prints` to se all the debug messages. 
 
 ## Tests
 Use `cargo nextest run`
