@@ -17,9 +17,9 @@ use common_game::logging::Channel;
 use crate::components::explorer::{BagType, Explorer};
 use crate::utils_planets::PLANET_REGISTRY;
 
-const log_fn_call_chnl:Channel=Channel::Debug;
-const log_fn_int_operations:Channel=Channel::Trace;
-const log_actors_activity:Channel=Channel::Info;
+const LOG_FN_CALL_CHNL:Channel=Channel::Debug;
+const LOG_FN_INT_OPERATIONS:Channel=Channel::Trace;
+const LOG_ACTORS_ACTIVITY:Channel=Channel::Info;
 
 
 #[cfg(feature = "debug-prints")]
