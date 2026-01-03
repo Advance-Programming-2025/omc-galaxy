@@ -93,7 +93,8 @@ impl Orchestrator {
         Ok(new_orch)
     }
     pub fn reset(&mut self) -> Result<(), String> {
-        let ticker = tick(Duration::from_millis(2000));
+        //send a message every 2000 millis to the ticker receiver
+        let timeout = tick(Duration::from_millis(2000));
         //Kill every thread
         self.send_planet_kill_to_all()?;
         loop {
@@ -101,16 +102,26 @@ impl Orchestrator {
                 recv(self.recevier_orch_planet)->msg=>{
                     let msg_unwraped = match msg{
                         Ok(res)=>res,
-                        Err(_)=>return Err("Cannot receive message from planets".to_string()),
+                        Err(_)=>return Err("No more sender connected and no messages in the buffer".to_string()),
                     };
                     match msg_unwraped{
                         PlanetToOrchestrator::KillPlanetResult { planet_id }=>{
                             self.planets_status.insert(planet_id, Status::Dead);
+                            let mut planet_alive=false;
+                            for (_, state) in &self.planets_status{
+                                if *state != Status::Dead{
+                                    planet_alive=true;
+                                    break;
+                                }
+                            }
+                            if !planet_alive{
+                                break;
+                            }
                         },
                         _=>{}
                     }
                 }
-                recv(ticker)->msg=>{
+                recv(timeout)->msg=>{
                     //After one second every planet should have been killed
                     for (_, state) in &self.planets_status{
                         if *state != Status::Dead{
