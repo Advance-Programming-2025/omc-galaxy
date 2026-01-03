@@ -12,9 +12,15 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
+use common_game::logging::Channel;
 
 use crate::components::explorer::{BagType, Explorer};
 use crate::utils_planets::PLANET_REGISTRY;
+
+const log_fn_call_chnl:Channel=Channel::Debug;
+const log_fn_int_operations:Channel=Channel::Trace;
+const log_actors_activity:Channel=Channel::Info;
+
 
 #[cfg(feature = "debug-prints")]
 #[macro_export]
@@ -70,11 +76,15 @@ impl Orchestrator {
     /// Function used as shorthand to create a new
     /// galaxy topology instance
     fn new_gtop() -> GalaxyTopology {
+        //TODO implement proper debug. channel: INFO
+
         Arc::new(RwLock::new(Vec::new()))
     }
 
     //Check and init orchestrator
     pub fn new() -> Result<Self, String> {
+        //TODO implement proper debug. channel: INFO
+
         let (sender_planet_orch, recevier_orch_planet) = unbounded();
         let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
 
@@ -93,11 +103,14 @@ impl Orchestrator {
         Ok(new_orch)
     }
     pub fn reset(&mut self) -> Result<(), String> {
+        //TODO implement proper debug. channel: INFO. start
+
         //send a message every 2000 millis to the ticker receiver
         let timeout = tick(Duration::from_millis(2000));
         //Kill every thread
         self.send_planet_kill_to_all()?;
         loop {
+            //TODO implement proper debug. channel: DEBUG.
             select! {
                 recv(self.recevier_orch_planet)->msg=>{
                     let msg_unwraped = match msg{
@@ -140,6 +153,7 @@ impl Orchestrator {
         self.planet_channels = HashMap::new();
         self.explorer_channels = HashMap::new();
         Ok(())
+        //TODO implement proper debug. channel: INFO. finish
     }
     fn init_comms_planet() -> (
         Sender<OrchestratorToPlanet>,
