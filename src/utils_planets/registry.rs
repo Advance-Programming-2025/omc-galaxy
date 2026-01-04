@@ -3,45 +3,69 @@ use once_cell::sync::Lazy;
 
 use super::types::PlanetFactory;
 use std::{collections::HashMap, time::Duration};
+use crate::utils_planets::registry::PlanetType::{BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs};
+use rand::seq::{IndexedRandom};
+// Importiamo il trait per poter usare .iter()
+use strum::IntoEnumIterator;
+// Importiamo la macro per il derive
+use strum_macros::EnumIter;
 
+#[derive(Debug, EnumIter, Eq, PartialEq, Hash, Clone, Copy)]
+pub enum PlanetType {
+    BlackAdidasShoe,
+    Ciuc,
+    HoustonWeHaveABorrow,
+    ImmutableCosmicBorrow,
+    OneMillionCrabs,
+    Rustrelli,
+    RustyCrab
+}
+impl PlanetType {
+    pub fn random() -> Self {
+        let mut rng = rand::rng();
+        let variants: Vec<PlanetType> = PlanetType::iter().collect();
+        *variants.choose(&mut rng).unwrap()
+    }
+}
 
-pub static PLANET_REGISTRY: Lazy<HashMap<u8, PlanetFactory>> = Lazy::new(|| {
+pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new(|| {
     HashMap::from([
         
-        //Type D
+        //black_adidas_shoe: Type D
         (
-            0,
+            BlackAdidasShoe,
             Box::new(|rx_o, tx_o, rx_e, planet_id| {
                 black_adidas_shoe::planet::create_planet(rx_o, tx_o, rx_e, planet_id)
             }) as PlanetFactory,
         ),
-        //Type A
+        //ciuc: Type A
         (
-            1,
+            Ciuc,
             Box::new(|rx_o, tx_p, rx_e, id| Ok(ciuc_planet::create_planet(rx_o, tx_p, rx_e, id)))
                 as PlanetFactory,
         ),
         
-        // Type C planet
+        //houston_we_have_a_borrow: Type C
         (
-            2,
+            HoustonWeHaveABorrow,
             Box::new(|rx_o, tx_o, rx_e, planet_id| {
                 let rocket = houston_we_have_a_borrow::RocketStrategy::Default;
                 let basic_resource = BasicResourceType::Hydrogen;
                 houston_we_have_a_borrow::houston_we_have_a_borrow(rx_o, tx_o, rx_e, planet_id, rocket, Some(basic_resource))
             }) as PlanetFactory,
         ),
-        // Type C
+        //immutable_cosmic_borrow: Type C
         (
-            3,
+            ImmutableCosmicBorrow,
             Box::new(|rx_o, tx_p, rx_e, id| {
                 let duration = Duration::from_secs(10);
                 let ai = immutable_cosmic_borrow::Ai::new(true, 0.0, 0.0, duration.clone() , duration.clone());
                 immutable_cosmic_borrow::create_planet(ai, id, (rx_o, tx_p), rx_e)
             }) as PlanetFactory,
         ),
+        // one_million_crabs: Type D
         (
-            4,
+            OneMillionCrabs,
             Box::new(|rx_o, tx_o, rx_e, planet_id| {
                 one_million_crabs::planet::create_planet(rx_o, tx_o, rx_e, planet_id)
             }) as PlanetFactory,
@@ -49,7 +73,7 @@ pub static PLANET_REGISTRY: Lazy<HashMap<u8, PlanetFactory>> = Lazy::new(|| {
         ),
         // TODO manca planet_id
         // (
-        //     5,
+        //     Rustrelli,
         //     Box::new(|rx_o, tx_o, rx_e, planet_id| {
         //         let request_limit=rustrelli::ExplorerRequestLimit::None;
         //         Ok(rustrelli::create_planet(rx_o, tx_o, rx_e, request_limit))
@@ -57,7 +81,7 @@ pub static PLANET_REGISTRY: Lazy<HashMap<u8, PlanetFactory>> = Lazy::new(|| {
         // ),
         // TODO manca planet_id
         // (
-        //     6,
+        //     RustyCrab,
         //     Box::new(|rx_o, tx_o, rx_e, planet_id| {
         //         Ok(rusty_crab::planet::create_planet(rx_o, tx_o, rx_e, BasicResourceType::Carbon))
         //     }) as PlanetFactory,

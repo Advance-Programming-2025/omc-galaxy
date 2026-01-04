@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
 use std::{fs, thread};
-
+use rustc_hash::FxHashMap;
 use common_game::components::forge::Forge;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -16,10 +16,14 @@ use common_game::logging::Channel;
 
 use crate::components::explorer::{BagType, Explorer};
 use crate::utils_planets::PLANET_REGISTRY;
+use crate::utils_planets::registry::PlanetType;
+use crate::utils_planets::registry::PlanetType::{BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli};
 
 const LOG_FN_CALL_CHNL:Channel=Channel::Debug;
 const LOG_FN_INT_OPERATIONS:Channel=Channel::Trace;
 const LOG_ACTORS_ACTIVITY:Channel=Channel::Info;
+
+const TIMEOUT_DURATION:Duration = Duration::from_millis(2000);
 
 
 #[cfg(feature = "debug-prints")]
@@ -51,6 +55,7 @@ pub struct Orchestrator {
 
     //Galaxy
     pub galaxy_topology: GalaxyTopology,
+    pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
 
     //Status for each planets and explorers, BTreeMaps are useful for printing
     pub planets_status: BTreeMap<u32, Status>,
@@ -76,14 +81,14 @@ impl Orchestrator {
     /// Function used as shorthand to create a new
     /// galaxy topology instance
     fn new_gtop() -> GalaxyTopology {
-        //TODO implement proper debug. channel: INFO
+        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
 
         Arc::new(RwLock::new(Vec::new()))
     }
 
     //Check and init orchestrator
     pub fn new() -> Result<Self, String> {
-        //TODO implement proper debug. channel: INFO
+        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
 
         let (sender_planet_orch, recevier_orch_planet) = unbounded();
         let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
@@ -91,6 +96,7 @@ impl Orchestrator {
         let new_orch = Self {
             forge: Forge::new()?,
             galaxy_topology: Self::new_gtop(),
+            galaxy_lookup: FxHashMap::default(),
             planets_status: BTreeMap::new(),
             explorer_status: BTreeMap::new(),
             planet_channels: HashMap::new(),
@@ -103,14 +109,14 @@ impl Orchestrator {
         Ok(new_orch)
     }
     pub fn reset(&mut self) -> Result<(), String> {
-        //TODO implement proper debug. channel: INFO. start
+        //TODO implement proper debug. channel: INFO. LOG_FN_CALL_CHNL. start
 
         //send a message every 2000 millis to the ticker receiver
-        let timeout = tick(Duration::from_millis(2000));
+        let timeout = tick(TIMEOUT_DURATION);
         //Kill every thread
         self.send_planet_kill_to_all()?;
         loop {
-            //TODO implement proper debug. channel: DEBUG.
+            //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
             select! {
                 recv(self.recevier_orch_planet)->msg=>{
                     let msg_unwraped = match msg{
@@ -153,20 +159,28 @@ impl Orchestrator {
         self.planet_channels = HashMap::new();
         self.explorer_channels = HashMap::new();
         Ok(())
-        //TODO implement proper debug. channel: INFO. finish
+        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL. finish
     }
+
+    ///initialize communication channels for planets
+    /// needed as a shorthand to initialize OrchestratorToPlanet and ExplorerToPlanet channels
+    /// just tu remember: these channels are simplex
     fn init_comms_planet() -> (
         Sender<OrchestratorToPlanet>,
         Receiver<OrchestratorToPlanet>,
         Sender<ExplorerToPlanet>,
         Receiver<ExplorerToPlanet>,
     ) {
+        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
+        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         //orch-planet
         let (sender_orch, receiver_orch): (
             Sender<OrchestratorToPlanet>,
             Receiver<OrchestratorToPlanet>,
         ) = unbounded();
 
+
+        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         //explorer-planet
         let (sender_explorer, receiver_explorer): (
             Sender<ExplorerToPlanet>,
@@ -180,17 +194,33 @@ impl Orchestrator {
             receiver_explorer,
         )
     }
+
+
+    ///initialize communication channels for explorer.
+    ///
+    /// needed as a shorthand to initialize OrchestratorToExplorer and PlanetToExplorer
+    ///
+    /// Remember that when an explorer goes from a planet to another first the new planet is connected
+    /// to the sender side and only after the previous planet is disconnected from the channel. No new channel is created
+    ///
+    /// just tu remember: these channels are simplex
+    ///
     fn init_comms_explorers() -> (
         Sender<OrchestratorToExplorer>,
         Receiver<OrchestratorToExplorer>,
         Sender<PlanetToExplorer>,
         Receiver<PlanetToExplorer>,
     ) {
+        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
+
+        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         let (sender_orch, receiver_orch): (
             Sender<OrchestratorToExplorer>,
             Receiver<OrchestratorToExplorer>,
         ) = unbounded();
 
+
+        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         let (sender_planet, receiver_planet): (
             Sender<PlanetToExplorer>,
             Receiver<PlanetToExplorer>,
@@ -198,21 +228,27 @@ impl Orchestrator {
 
         (sender_orch, receiver_orch, sender_planet, receiver_planet)
     }
-    pub fn add_planet(&mut self, id: u32) -> Result<(), String> {
-        //Init comms
+    pub fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
+        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
+        //Init comms OrchestratorToPlanet, ExplorerToPlanet
         let (sender_orchestrator, receiver_orchestrator, sender_explorer, receiver_explorer) =
             Orchestrator::init_comms_planet();
 
+        //Planet-end of prchestrator-planet/planet-orchestrator channels
         let planet_to_orchestrator_channels =
             (receiver_orchestrator, self.sender_planet_orch.clone());
 
-        let mut new_planet = (PLANET_REGISTRY.get(&4).unwrap().as_ref())(
+        //TODO implement proper debug. channel: LOG_ACTORS_ACTIVITY
+        //creation of the planet
+
+        let mut new_planet = (PLANET_REGISTRY.get(&type_id).unwrap().as_ref())(
             planet_to_orchestrator_channels.0,
             planet_to_orchestrator_channels.1,
             receiver_explorer,
             id,
         )?;
 
+        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         //Update HashMaps
         self.planets_status.insert(new_planet.id(), Status::Paused);
         self.planet_channels
@@ -257,8 +293,8 @@ impl Orchestrator {
     }
 
     pub fn initialize_galaxy_example(&mut self /*_path: &str*/) -> Result<(), String> {
-        self.add_planet(0)?;
-        self.add_planet(1)?;
+        self.add_planet(0, OneMillionCrabs)?;
+        self.add_planet(1, OneMillionCrabs)?;
         Ok(())
     }
     pub fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
@@ -267,23 +303,60 @@ impl Orchestrator {
         //Read the input file and handle it
         let input = fs::read_to_string(path)
             .map_err(|_| format!("Unable to read the input from {path}"))?;
-        let input_refined: Vec<&str> = input.split('\n').collect();
 
-        //Check the input and convert the string into u32
-        let input_refined_2 = input_refined
-            .iter()
-            .map(|row| {
-                row.split_ascii_whitespace()
-                    .map(|x| {
-                        x.parse::<u32>()
-                            .map_err(|_| "Unable to convert value to u32".to_string())
-                    })
-                    .collect::<Result<Vec<u32>, String>>()
-            })
-            .collect::<Result<Vec<Vec<u32>>, String>>()?;
+        let mut adj_list_for_topology = Vec::new();
 
+        let mut new_lookup: FxHashMap<u32, (u32, PlanetType)> = FxHashMap::default();
+
+        for (line_num, line) in input.lines().enumerate() {
+            let line = line.trim();
+            if line.is_empty() { continue; }
+
+            // Split at comma and u32 conversion
+            let values: Vec<u32> = line
+                .split(',')
+                .map(|s| s.trim().parse::<u32>().map_err(|_|
+                    format!("Error row {}: value '{}' is not a u32", line_num + 1, s)
+                ))
+                .collect::<Result<Vec<u32>, String>>()?;
+
+            if values.len() < 2 {
+                return Err(format!("Row {}: ID or Type missing", line_num + 1));
+            }
+
+            let node_id = values[0];
+            let node_type = values[1];
+            let neighbors = &values[2..];
+
+            //saving id-index to lookup table
+            new_lookup.insert(node_id, (line_num as u32, match node_type {
+                0 => {BlackAdidasShoe}
+                1 => {Ciuc}
+                2 => {HoustonWeHaveABorrow}
+                3 => {ImmutableCosmicBorrow}
+                4 => {OneMillionCrabs}
+                5 => {Rustrelli}
+                6 => {Rustrelli}
+                _ => {
+                    PlanetType::random()
+                }
+            }));
+
+            let mut adj_row = vec![];
+            adj_row.extend_from_slice(neighbors);
+
+            adj_list_for_topology.push(adj_row);
+        }
+        for row in &mut adj_list_for_topology {
+            for node in row {
+                if let Some(&(new_idx, _)) = new_lookup.get(node) {
+                    *node = new_idx;
+                }
+            }
+        }
+        self.galaxy_lookup = new_lookup;
         //Initialize the orchestrator galaxy topology
-        self.initialize_galaxy_by_adj_list(input_refined_2)?;
+        self.initialize_galaxy_by_adj_list(adj_list_for_topology)?;
 
         Ok(())
     }
@@ -296,6 +369,7 @@ impl Orchestrator {
 
         //Initialize matrix of adjecencies
         let mut new_topology: Vec<Vec<bool>> = Vec::new();
+
         for _ in 0..num_planets {
             let v = vec![false; num_planets];
             new_topology.push(v);
@@ -305,13 +379,10 @@ impl Orchestrator {
             .iter()
             .for_each(|row| debug_println!("{:?}", row));
 
-        for row in &adj_list {
-            let planet = row[0];
-            for (i, conn) in row.iter().enumerate() {
-                if i != 0 {
-                    new_topology[planet as usize][*conn as usize] = true;
-                    new_topology[*conn as usize][planet as usize] = true;
-                }
+        for (idx, row) in adj_list.iter().enumerate() {
+            for conn in row.iter() {
+                new_topology[idx][*conn as usize] = true;
+                new_topology[*conn as usize][idx] = true;
             }
         }
 
@@ -339,7 +410,7 @@ impl Orchestrator {
 
         if lock_try.is_ok(){
             //Initialize all the planets give the list of ids
-                let ids_list = adj_list.iter().map(|x| x[0]).collect::<Vec<u32>>(); //Every row should have at least one ids
+                let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
             self.initialize_planets_by_ids_list(ids_list.clone())?;
             Ok(())
         } else {
@@ -350,11 +421,23 @@ impl Orchestrator {
     }
 
     pub fn initialize_planets_by_ids_list(&mut self, ids_list: Vec<u32>) -> Result<(), String> {
+        let mut err=false;
         for planet_id in ids_list {
             //TODO we need to initialize the other planets randomly or precisely
-            self.add_planet(planet_id)?;
+            match self.galaxy_lookup.get(&planet_id) {
+                None => {
+                    err=true;
+                    break;
+                }
+                Some((_,typ)) => {
+                    self.add_planet(planet_id, typ.clone())?;
+                }
+            };
         }
-        Ok(())
+        match err {
+            true => Ok(()),
+            false => {Err("no planet type found".to_string())}
+        }
     }
 }
 
