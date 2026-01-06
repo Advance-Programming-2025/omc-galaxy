@@ -7,9 +7,13 @@ Create a new .env file and write in it the variable as in .env.example use the a
 
 File format:
 the file follows csv schema and each row represent a planet, the first 2 elements are: `planet_id`, `type_id`
+
 The remaining elements are the `planet_id`s to which the planet is connected.
+
 (Note: It doesn't matter if you define a connection in only one direction or both; the program will always create a bidirectional connection.)
+
 (Note: `planet_id` and `type_id` are `u32`)
+
 (Note: the `planet_ids` do not need to be consecutive)
 
 List of possible values of `type_id`:
