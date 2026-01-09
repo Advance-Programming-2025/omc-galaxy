@@ -1,30 +1,33 @@
+use common_game::components::forge::Forge;
+use common_game::logging::Channel;
+use common_game::protocols::orchestrator_explorer::{
+    ExplorerToOrchestrator, OrchestratorToExplorer,
+};
+use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
+use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
+use crossbeam_channel::select_biased;
 use crossbeam_channel::{Receiver, Sender, select, tick, unbounded};
+use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::{Duration, Instant};
 use std::{fs, thread};
-use rustc_hash::FxHashMap;
-use common_game::components::forge::Forge;
-use common_game::protocols::orchestrator_explorer::{
-    ExplorerToOrchestrator, OrchestratorToExplorer,
-};
-use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
-use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
-use common_game::logging::Channel;
 
 use crate::components::explorer::{BagType, Explorer};
+use crate::settings::pop_sunray_asteroid_sequence;
 use crate::utils_planets::PLANET_REGISTRY;
 use crate::utils_planets::registry::PlanetType;
-use crate::utils_planets::registry::PlanetType::{BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli};
+use crate::utils_planets::registry::PlanetType::{
+    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
+};
 
-const LOG_FN_CALL_CHNL:Channel=Channel::Debug;
-const LOG_FN_INT_OPERATIONS:Channel=Channel::Trace;
-const LOG_ACTORS_ACTIVITY:Channel=Channel::Info;
+const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
+const LOG_FN_INT_OPERATIONS: Channel = Channel::Trace;
+const LOG_ACTORS_ACTIVITY: Channel = Channel::Info;
 
-const TIMEOUT_DURATION:Duration = Duration::from_millis(2000);
-
+const TIMEOUT_DURATION: Duration = Duration::from_millis(2000);
 
 #[cfg(feature = "debug-prints")]
 #[macro_export]
@@ -45,6 +48,12 @@ pub enum Status {
     Running,
     Paused,
     Dead,
+}
+
+pub enum GameState {
+    Running,
+    Paused,
+    Exit,
 }
 
 pub type GalaxyTopology = Arc<RwLock<Vec<Vec<bool>>>>;
@@ -75,7 +84,6 @@ pub struct Orchestrator {
 
 //Initialization game functions
 impl Orchestrator {
-
     /// Create a new Galaxy Topology
     /// ` `
     /// Function used as shorthand to create a new
@@ -86,7 +94,7 @@ impl Orchestrator {
         Arc::new(RwLock::new(Vec::new()))
     }
 
-    //Check and init orchestrator
+    //Check and init orchestrator for the test, the comms with the ui are fake
     pub fn new() -> Result<Self, String> {
         //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
 
@@ -108,6 +116,7 @@ impl Orchestrator {
         };
         Ok(new_orch)
     }
+
     pub fn reset(&mut self) -> Result<(), String> {
         //TODO implement proper debug. channel: INFO. LOG_FN_CALL_CHNL. start
 
@@ -140,7 +149,7 @@ impl Orchestrator {
                         _=>{}
                     }
                 }
-                recv(timeout)->msg=>{
+                recv(timeout)->_msg=>{
                     //After one second every planet should have been killed
                     for (_, state) in &self.planets_status{
                         if *state != Status::Dead{
@@ -179,7 +188,6 @@ impl Orchestrator {
             Receiver<OrchestratorToPlanet>,
         ) = unbounded();
 
-
         //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         //explorer-planet
         let (sender_explorer, receiver_explorer): (
@@ -194,7 +202,6 @@ impl Orchestrator {
             receiver_explorer,
         )
     }
-
 
     ///initialize communication channels for explorer.
     ///
@@ -218,7 +225,6 @@ impl Orchestrator {
             Sender<OrchestratorToExplorer>,
             Receiver<OrchestratorToExplorer>,
         ) = unbounded();
-
 
         //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         let (sender_planet, receiver_planet): (
@@ -310,14 +316,18 @@ impl Orchestrator {
 
         for (line_num, line) in input.lines().enumerate() {
             let line = line.trim();
-            if line.is_empty() { continue; }
+            if line.is_empty() {
+                continue;
+            }
 
             // Split at comma and u32 conversion
             let values: Vec<u32> = line
                 .split(',')
-                .map(|s| s.trim().parse::<u32>().map_err(|_|
-                    format!("Error row {}: value '{}' is not a u32", line_num + 1, s)
-                ))
+                .map(|s| {
+                    s.trim().parse::<u32>().map_err(|_| {
+                        format!("Error row {}: value '{}' is not a u32", line_num + 1, s)
+                    })
+                })
                 .collect::<Result<Vec<u32>, String>>()?;
 
             if values.len() < 2 {
@@ -329,18 +339,22 @@ impl Orchestrator {
             let neighbors = &values[2..];
 
             //saving id-index to lookup table
-            new_lookup.insert(node_id, (line_num as u32, match node_type {
-                0 => {BlackAdidasShoe}
-                1 => {Ciuc}
-                2 => {HoustonWeHaveABorrow}
-                3 => {ImmutableCosmicBorrow}
-                4 => {OneMillionCrabs}
-                5 => {Rustrelli}
-                6 => {Rustrelli}
-                _ => {
-                    PlanetType::random()
-                }
-            }));
+            new_lookup.insert(
+                node_id,
+                (
+                    line_num as u32,
+                    match node_type {
+                        0 => BlackAdidasShoe,
+                        1 => Ciuc,
+                        2 => HoustonWeHaveABorrow,
+                        3 => ImmutableCosmicBorrow,
+                        4 => OneMillionCrabs,
+                        5 => Rustrelli,
+                        6 => Rustrelli,
+                        _ => PlanetType::random(),
+                    },
+                ),
+            );
 
             let mut adj_row = vec![];
             adj_row.extend_from_slice(neighbors);
@@ -365,7 +379,9 @@ impl Orchestrator {
         let num_planets = adj_list.len();
         //Print the result
         debug_println!("Init file content:");
-        adj_list.iter().for_each(|row| debug_println!("{:?}", row));
+        adj_list
+            .iter()
+            .for_each(|_row| debug_println!("{:?}", _row));
 
         //Initialize matrix of adjecencies
         let mut new_topology: Vec<Vec<bool>> = Vec::new();
@@ -377,7 +393,7 @@ impl Orchestrator {
         debug_println!("empty adj matrix:");
         new_topology
             .iter()
-            .for_each(|row| debug_println!("{:?}", row));
+            .for_each(|_row| debug_println!("{:?}", _row));
 
         for (idx, row) in adj_list.iter().enumerate() {
             for conn in row.iter() {
@@ -389,7 +405,7 @@ impl Orchestrator {
         debug_println!("full adj matrix:");
         new_topology
             .iter()
-            .for_each(|row| debug_println!("{:?}", row));
+            .for_each(|_row| debug_println!("{:?}", _row));
 
         //Update orchestrator topology
 
@@ -399,44 +415,40 @@ impl Orchestrator {
                 //drops the lock just in case
                 drop(gtop);
                 Ok(())
-            },
+            }
             Err(_e) => {
-                debug_println!(
-                    "ERROR galaxy topology lock failed."
-                );
+                debug_println!("ERROR galaxy topology lock failed.");
                 Err(())
             }
         };
 
-        if lock_try.is_ok(){
+        if lock_try.is_ok() {
             //Initialize all the planets give the list of ids
-                let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
+            let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
             self.initialize_planets_by_ids_list(ids_list.clone())?;
             Ok(())
         } else {
             Err("rwlock error".to_string())
         }
-
-        
     }
 
     pub fn initialize_planets_by_ids_list(&mut self, ids_list: Vec<u32>) -> Result<(), String> {
-        let mut err=false;
+        let mut err = false;
         for planet_id in ids_list {
             //TODO we need to initialize the other planets randomly or precisely
             match self.galaxy_lookup.get(&planet_id) {
                 None => {
-                    err=true;
+                    err = true;
                     break;
                 }
-                Some((_,typ)) => {
+                Some((_, typ)) => {
                     self.add_planet(planet_id, typ.clone())?;
                 }
             };
         }
         match err {
             false => Ok(()),
-            true => {Err("no planet type found".to_string())}
+            true => Err("no planet type found".to_string()),
         }
     }
 }
@@ -465,20 +477,19 @@ impl Orchestrator {
                 } else {
                     Err("index out of bounds (too large)".to_string())
                 }
-            },
+            }
             Err(e) => {
                 debug_println!("RwLock failed for destroy_topology_link");
                 Err(e.to_string())
             }
         }
-        
     }
 
     fn start_all_planet_ais(&mut self) -> Result<(), String> {
-        for (id, (from_orch, _)) in &self.planet_channels {
-            let send_channel = from_orch
+        for (_id, (from_orch, _)) in &self.planet_channels {
+            from_orch
                 .try_send(OrchestratorToPlanet::StartPlanetAI)
-                .map_err(|_| "Cannot send message to {id}".to_string())?;
+                .map_err(|_| "Cannot send message to {_id}".to_string())?;
         }
 
         let mut count = 0;
@@ -506,10 +517,10 @@ impl Orchestrator {
     fn handle_planet_message(&mut self, msg: PlanetToOrchestrator) -> Result<(), String> {
         match msg {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
-                debug_println!("SunrayAck from: {planet_id}")
+                debug_println!("SunrayAck from: {}", planet_id)
             }
             PlanetToOrchestrator::AsteroidAck { planet_id, rocket } => {
-                debug_println!("AsteroidAck from: {planet_id}");
+                debug_println!("AsteroidAck from: {}", planet_id);
                 match rocket {
                     Some(_) => {
                         //TODO some logging function
@@ -549,7 +560,7 @@ impl Orchestrator {
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
             .map_err(|_| "Unable to send a sunray to planet: {id}".to_string())
     }
-    fn send_sunray_to_all(&self) -> Result<(), String> {
+    pub(crate) fn send_sunray_to_all(&self) -> Result<(), String> {
         for (id, (sender, _)) in &self.planet_channels {
             if *self.planets_status.get(id).unwrap() != Status::Dead {
                 self.send_sunray(sender)?;
@@ -565,7 +576,7 @@ impl Orchestrator {
             ))
             .map_err(|_| "Unable to send sunray to planet: {id}".to_string())
     }
-    fn send_asteroid_to_all(&self) -> Result<(), String> {
+    pub(crate) fn send_asteroid_to_all(&self) -> Result<(), String> {
         //unwrap cannot fail because every id is contained in the map
         for (id, (sender, _)) in &self.planet_channels {
             if *self.planets_status.get(id).unwrap() != Status::Dead {
@@ -580,7 +591,7 @@ impl Orchestrator {
             .send(OrchestratorToPlanet::KillPlanet)
             .map_err(|_| "Unable to send kill message to planet: {id}".to_string())
     }
-    fn send_planet_kill_to_all(&self) -> Result<(), String> {
+    pub(crate) fn send_planet_kill_to_all(&self) -> Result<(), String> {
         for (id, (sender, _)) in &self.planet_channels {
             //unwrap cannot fail because every id is contained in the map
             if *self.planets_status.get(id).unwrap() != Status::Dead {
@@ -590,7 +601,51 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub fn run_only_planets(&mut self) -> Result<(), String> {
+    /// Run by the game loop, it should handle the messages from planets and explorers
+    pub(crate) fn handle_game_messages(&mut self) -> Result<(), String> {
+        select! {
+            recv(self.recevier_orch_planet)->msg=>{
+                let msg_unwraped = match msg{
+                    Ok(res)=>res,
+                    Err(_)=>return Err("Cannot receive message from planets".to_string()),
+                };
+                self.handle_planet_message(msg_unwraped)?;
+            }
+            recv(self.receiver_orch_explorer)->msg=>{
+                todo!()
+            }
+            default=>{}
+        }
+
+        Ok(())
+    }
+}
+//Functions used by the game
+impl Orchestrator {
+    pub(crate) fn start_all(&mut self) -> Result<(), String> {
+        self.start_all_planet_ais()?;
+        Ok(())
+    }
+    pub(crate) fn stop_all(&mut self) -> Result<(), String> {
+        todo!();
+        Ok(())
+    }
+}
+
+// REVIEW function used for testing or to eliminate
+impl Orchestrator {
+    pub fn run_test(file_path: String) -> Result<(), String> {
+        //Init and check orchestrator
+        let mut orchestrator = Orchestrator::new()?;
+
+        orchestrator.initialize_galaxy_by_file(file_path.as_str().trim())?;
+        // orchestrator.run_asteroid_after_five()?;
+
+        // orchestrator.run_sequence_next_probability()?;
+        Ok(())
+    }
+
+    pub(crate) fn run_asteroid_after_five(&mut self) -> Result<(), String> {
         //Loop to start all planet ais
         self.start_all_planet_ais()?;
 
@@ -635,56 +690,6 @@ impl Orchestrator {
 
         Ok(())
     }
-
-    pub fn run_only_planet_sequence(
-        &mut self,
-        mut asteroid_sunray_list: String,
-    ) -> Result<(), String> {
-        self.start_all_planet_ais()?;
-
-        //Game
-        let start = Instant::now();
-        let ticker = tick(Duration::from_millis(1000));
-
-        loop {
-            select! {
-                recv(self.recevier_orch_planet)->msg=>{
-                    let msg_unwraped = match msg{
-                        Ok(res)=>res,
-                        Err(_)=>return Err("Cannot receive message from planets".to_string()),
-                    };
-                    self.handle_planet_message(msg_unwraped)?;
-                }
-                recv(self.receiver_orch_explorer)->msg=>{
-                    break;
-                    todo!()
-                }
-                recv(ticker)->time=>{
-                    debug_println!("{:?}", start.elapsed());
-
-                    match asteroid_sunray_list.pop(){
-                        Some('A')=>self.send_asteroid_to_all()?,
-                        Some('S')=>self.send_sunray_to_all()?,
-                        _=>break,
-                    }
-                }
-            }
-        }
-        self.print_planets_state();
-
-        Ok(())
-    }
-
-    pub fn run(file_path: String, sequence:String) -> Result<(), String> {
-        //Init and check orchestrator
-        let mut orchestrator = Orchestrator::new()?;
-
-        orchestrator.initialize_galaxy_by_file(file_path.as_str().trim())?;
-        // orchestrator.run_only_planets()?;
-        
-        orchestrator.run_only_planet_sequence(sequence)?;
-        Ok(())
-    }
 }
 
 //Debug game functions
@@ -705,9 +710,8 @@ impl Orchestrator {
 
 //GUI communication functions
 impl Orchestrator {
-    
     /// Get a snapshot of the current galaxy topology
-    /// 
+    ///
     /// Returns an atomic reference of the current
     /// galaxy topology. This is made to avoid changing
     /// the topology from the GUI's side in an improper

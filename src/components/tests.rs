@@ -5,43 +5,35 @@
 // use once_cell::sync::Lazy;
 
 #[cfg(test)]
-use crate::components::Orchestrator;
+use crate::components::orchestrator::Orchestrator;
 
 #[cfg(test)]
-
-// pub static ORCHESTRATOR:Lazy<Mutex<Orchestrator>> = Lazy::new(||{
-//     let orch = Orchestrator::new().expect("Failed to init orchestrator");
-//     Mutex::new(orch)
-// }); 
-
 #[test]
-fn topology_generation()-> Result<(), String> {
+fn topology_generation() -> Result<(), String> {
     println!("topology generation");
     let mut _orchestrator = Orchestrator::new()?;
     _orchestrator.initialize_galaxy_by_file("")
 }
 
 #[test]
-fn is_orch_initialized()->Result<(),String>{
+fn is_orch_initialized() -> Result<(), String> {
     let _orchestrator = Orchestrator::new()?;
     Ok(())
 }
 #[test]
-fn is_orch_usable_again()->Result<(),String>{
+fn is_orch_usable_again() -> Result<(), String> {
     let _orchestrator = Orchestrator::new()?;
     Ok(())
 }
 
 #[test]
-fn try_galaxy_top_lock()->Result<(),String>{
+fn try_galaxy_top_lock() -> Result<(), String> {
     let orchestrator = Orchestrator::new()?;
     match orchestrator.get_topology().try_write() {
         Ok(gtop) => {
             drop(gtop);
             Ok(())
-        },
-        Err(_e) => Err(
-            "try lock failed".to_string()
-        ) 
+        }
+        Err(_e) => Err("try lock failed".to_string()),
     }
 }

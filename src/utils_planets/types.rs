@@ -3,11 +3,13 @@ use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetTo
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use crossbeam_channel::{Receiver, Sender};
 
-pub type PlanetFactory = Box<dyn Fn(
+pub type PlanetFactory = Box<
+    dyn Fn(
             Receiver<OrchestratorToPlanet>,
             Sender<PlanetToOrchestrator>,
             Receiver<ExplorerToPlanet>,
             u32,
-        ) -> Result<Planet,String>
+        ) -> Result<Planet, String>
         + Send
-        + Sync>;
+        + Sync,
+>;
