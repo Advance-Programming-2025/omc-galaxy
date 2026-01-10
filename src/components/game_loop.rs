@@ -1,10 +1,11 @@
 use crossbeam_channel::select;
 use crossbeam_channel::{Receiver, Sender, select_biased, tick};
 use std::time::Duration;
-use ui_messages::{GameToUi, UiToGame};
+
 
 use crate::components::orchestrator::Orchestrator;
 use crate::debug_println;
+use crate::messages::{GameToUi, UiToGame};
 use crate::settings;
 use crate::utils::GameState;
 

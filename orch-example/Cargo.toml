@@ -7,4 +7,3 @@ edition = "2024"
 crossbeam-channel = "0.5.15"
 dotenv = "0.15.0"
 omc-galaxy = {path="../"}
-ui-messages = {path="/Users/marco/Desktop/ui-messages"}

@@ -5,7 +5,7 @@ use std::env;
 use std::io;
 use std::io::Write;
 use std::{thread, time};
-use ui_messages::{GameToUi, UiToGame};
+use omc_galaxy::messages::{UiToGame, GameToUi};
 
 //This main let us terminate in an elegant and simple way, returning the error message
 fn main() -> Result<(), String> {
