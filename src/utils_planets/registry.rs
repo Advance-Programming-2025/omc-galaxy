@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 
 use super::types::PlanetFactory;
 use crate::utils_planets::registry::PlanetType::{
-    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs,
+    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, RustyCrab, Rustrelli,
 };
 use rand::seq::IndexedRandom;
 use std::{collections::HashMap, time::Duration};
@@ -84,19 +84,19 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
             }) as PlanetFactory,
         ),
         // TODO manca planet_id
-        // (
-        //     Rustrelli,
-        //     Box::new(|rx_o, tx_o, rx_e, planet_id| {
-        //         let request_limit=rustrelli::ExplorerRequestLimit::None;
-        //         Ok(rustrelli::create_planet(rx_o, tx_o, rx_e, request_limit))
-        //     }) as PlanetFactory,
-        // ),
+        (
+            Rustrelli,
+            Box::new(|rx_o, tx_o, rx_e, planet_id| {
+                let request_limit=rustrelli::ExplorerRequestLimit::None;
+                Ok(rustrelli::create_planet(planet_id, rx_o, tx_o, rx_e, request_limit))
+            }) as PlanetFactory,
+        ),
         // TODO manca planet_id
-        // (
-        //     RustyCrab,
-        //     Box::new(|rx_o, tx_o, rx_e, planet_id| {
-        //         Ok(rusty_crab::planet::create_planet(rx_o, tx_o, rx_e, BasicResourceType::Carbon))
-        //     }) as PlanetFactory,
-        // ),
+        (
+            RustyCrab,
+            Box::new(|rx_o, tx_o, rx_e, planet_id| {
+                Ok(rusty_crab::planet::create_planet(rx_o, tx_o, rx_e, planet_id))
+            }) as PlanetFactory,
+        ),
     ])
 });

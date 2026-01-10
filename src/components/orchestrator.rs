@@ -95,7 +95,7 @@ impl Orchestrator {
     }
 
     //Check and init orchestrator for the test, the comms with the ui are fake
-    pub fn new() -> Result<Self, String> {
+    pub(crate) fn new() -> Result<Self, String> {
         //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
 
         let (sender_planet_orch, recevier_orch_planet) = unbounded();
@@ -117,7 +117,7 @@ impl Orchestrator {
         Ok(new_orch)
     }
 
-    pub fn reset(&mut self) -> Result<(), String> {
+    pub(crate) fn reset(&mut self) -> Result<(), String> {
         //TODO implement proper debug. channel: INFO. LOG_FN_CALL_CHNL. start
 
         //send a message every 2000 millis to the ticker receiver
@@ -174,7 +174,7 @@ impl Orchestrator {
     ///initialize communication channels for planets
     /// needed as a shorthand to initialize OrchestratorToPlanet and ExplorerToPlanet channels
     /// just tu remember: these channels are simplex
-    fn init_comms_planet() -> (
+    pub(crate) fn init_comms_planet() -> (
         Sender<OrchestratorToPlanet>,
         Receiver<OrchestratorToPlanet>,
         Sender<ExplorerToPlanet>,
@@ -212,7 +212,7 @@ impl Orchestrator {
     ///
     /// just tu remember: these channels are simplex
     ///
-    fn init_comms_explorers() -> (
+    pub(crate) fn init_comms_explorers() -> (
         Sender<OrchestratorToExplorer>,
         Receiver<OrchestratorToExplorer>,
         Sender<PlanetToExplorer>,
@@ -234,7 +234,7 @@ impl Orchestrator {
 
         (sender_orch, receiver_orch, sender_planet, receiver_planet)
     }
-    pub fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
+    pub(crate) fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
         //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
         //Init comms OrchestratorToPlanet, ExplorerToPlanet
         let (sender_orchestrator, receiver_orchestrator, sender_explorer, receiver_explorer) =
@@ -264,7 +264,7 @@ impl Orchestrator {
         thread::spawn(move || -> Result<(), String> { new_planet.run() });
         Ok(())
     }
-    pub fn add_explorer(
+    pub(crate) fn add_explorer(
         &mut self,
         explorer_id: u32,
         planet_id: u32,
@@ -298,12 +298,12 @@ impl Orchestrator {
         });
     }
 
-    pub fn initialize_galaxy_example(&mut self /*_path: &str*/) -> Result<(), String> {
+    pub(crate) fn initialize_galaxy_example(&mut self /*_path: &str*/) -> Result<(), String> {
         self.add_planet(0, OneMillionCrabs)?;
         self.add_planet(1, OneMillionCrabs)?;
         Ok(())
     }
-    pub fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
+    pub(crate) fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
         //At the moment are allowed only consecutive id from 0 to MAX u32
 
         //Read the input file and handle it
@@ -375,7 +375,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub fn initialize_galaxy_by_adj_list(&mut self, adj_list: Vec<Vec<u32>>) -> Result<(), String> {
+    pub(crate) fn initialize_galaxy_by_adj_list(&mut self, adj_list: Vec<Vec<u32>>) -> Result<(), String> {
         let num_planets = adj_list.len();
         //Print the result
         debug_println!("Init file content:");
@@ -432,7 +432,7 @@ impl Orchestrator {
         }
     }
 
-    pub fn initialize_planets_by_ids_list(&mut self, ids_list: Vec<u32>) -> Result<(), String> {
+    pub(crate) fn initialize_planets_by_ids_list(&mut self, ids_list: Vec<u32>) -> Result<(), String> {
         let mut err = false;
         for planet_id in ids_list {
             //TODO we need to initialize the other planets randomly or precisely
@@ -462,7 +462,7 @@ impl Orchestrator {
     ///
     /// * `planet_one_pos` - Position of the first planet in the matrix. Must be a valid index
     /// * `planet_two_pos` - Position of the second planet in the matrix. Must be a valid index
-    fn destroy_topology_link(
+    pub(crate) fn destroy_topology_link(
         &mut self,
         planet_one_pos: usize,
         planet_two_pos: usize,
@@ -485,7 +485,7 @@ impl Orchestrator {
         }
     }
 
-    fn start_all_planet_ais(&mut self) -> Result<(), String> {
+    pub(crate) fn start_all_planet_ais(&mut self) -> Result<(), String> {
         for (_id, (from_orch, _)) in &self.planet_channels {
             from_orch
                 .try_send(OrchestratorToPlanet::StartPlanetAI)
@@ -514,7 +514,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    fn handle_planet_message(&mut self, msg: PlanetToOrchestrator) -> Result<(), String> {
+    pub(crate) fn handle_planet_message(&mut self, msg: PlanetToOrchestrator) -> Result<(), String> {
         match msg {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
                 debug_println!("SunrayAck from: {}", planet_id)
@@ -555,7 +555,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    fn send_sunray(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub(crate) fn send_sunray(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
         sender
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
             .map_err(|_| "Unable to send a sunray to planet: {id}".to_string())
@@ -569,7 +569,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    fn send_asteroid(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub(crate) fn send_asteroid(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
         sender
             .send(OrchestratorToPlanet::Asteroid(
                 self.forge.generate_asteroid(),
@@ -586,7 +586,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    fn send_planet_kill(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub(crate) fn send_planet_kill(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
         sender
             .send(OrchestratorToPlanet::KillPlanet)
             .map_err(|_| "Unable to send kill message to planet: {id}".to_string())
@@ -634,7 +634,7 @@ impl Orchestrator {
 
 // REVIEW function used for testing or to eliminate
 impl Orchestrator {
-    pub fn run_test(file_path: String) -> Result<(), String> {
+    pub(crate) fn run_test(file_path: String) -> Result<(), String> {
         //Init and check orchestrator
         let mut orchestrator = Orchestrator::new()?;
 
@@ -694,16 +694,16 @@ impl Orchestrator {
 
 //Debug game functions
 impl Orchestrator {
-    pub fn print_planets_state(&self) {
+    pub(crate) fn print_planets_state(&self) {
         // for (id, status) in &self.planets_status{
         //     print!("({}, {:?})",id, status);
         // }
         debug_println!("{:?}", self.planets_status);
     }
-    pub fn print_galaxy_topology(&self) {
+    pub(crate) fn print_galaxy_topology(&self) {
         debug_println!("{:?}", self.galaxy_topology);
     }
-    pub fn print_orch(&self) {
+    pub(crate) fn print_orch(&self) {
         debug_println!("Orchestrator running");
     }
 }
@@ -716,7 +716,7 @@ impl Orchestrator {
     /// galaxy topology. This is made to avoid changing
     /// the topology from the GUI's side in an improper
     /// way that might misalign the internal state
-    pub fn get_topology(&self) -> GalaxyTopology {
+    pub(crate) fn get_topology(&self) -> GalaxyTopology {
         self.galaxy_topology.clone()
     }
 }
