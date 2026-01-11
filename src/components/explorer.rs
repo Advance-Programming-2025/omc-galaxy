@@ -271,10 +271,10 @@ pub fn move_to_planet(explorer: &mut Explorer, sender_to_new_planet: Option<Send
     match sender_to_new_planet {
         Some(sender) => {
             explorer.planet_channels.1 = sender;
+            explorer.planet_id = explorer.next_planet_id.clone();
             println!("[EXPLORER DEBUG] Sender channel set correctly");
         }
         None => {
-            explorer.planet_id = explorer.old_planet_id.clone();
             println!("[EXPLORER DEBUG] Sender channel is None.");
         }
     }
@@ -537,7 +537,7 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
 pub struct Explorer {
     explorer_id: u32,
     planet_id: u32, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
-    old_planet_id: u32, // needed if the travelToPlanet doesn't go well
+    next_planet_id: u32, // needed if the travelToPlanet doesn't go well
     orchestrator_channels: (
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<BagType>>,
@@ -568,7 +568,7 @@ impl Explorer {
         Self {
             explorer_id,
             planet_id,
-            old_planet_id: planet_id,
+            next_planet_id: planet_id,
             orchestrator_channels: explorer_to_orchestrator_channels,
             planet_channels: explorer_to_planet_channels,
             topology_info: starting_topology_info,
