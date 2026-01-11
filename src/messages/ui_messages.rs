@@ -1,13 +1,13 @@
-use std::{collections::BTreeMap, sync::{Arc, RwLock}};
+use common_game::components::planet::Planet;
 
-use crate::utils::Status;
+use crate::utils::{ExplorerStatus, GalaxyTopology, PlanetStatus};
 
 #[derive(Debug)]
 pub enum GameToUi{
-    GameStatePointers{
-        galaxy_topology: Arc<RwLock<Vec<Vec<bool>>>>,
-        planets_status: BTreeMap<u32, Status>,
-        explorer_status: BTreeMap<u32, Status>,
+    GameStatusUpdate{
+        galaxy_topology: GalaxyTopology,    
+        planets_status: PlanetStatus,
+        explorer_status: ExplorerStatus,
     }
 }
 

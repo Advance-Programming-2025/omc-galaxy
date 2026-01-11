@@ -63,6 +63,15 @@ impl Game {
                 debug_println!("The game should start for the first time");
                 self.game_tick = GameTick::new(Duration::from_millis(1000));
                 self.state = GameState::Running;
+
+                //Send the update to UI
+                let update = self.orchestrator.get_game_status()?;
+                let handle_err = self.sender_game_ui.send(GameToUi::GameStatusUpdate { galaxy_topology: update.0, planets_status: update.1, explorer_status: update.2 }).map_err(|_|"Unable to send messages to UI");
+
+                // handle case error
+                if let Err(e) = handle_err {
+                    debug_println!("Error sending game status update to UI: {}", e);
+                }
                 // self.notify_ui(GameToUi::GameStarted)?;
                 self.orchestrator.start_all()?;
             }
@@ -70,6 +79,7 @@ impl Game {
                 debug_println!("The game should start or restart");
                 self.game_tick = GameTick::new(Duration::from_millis(1000));
                 self.state = GameState::Running;
+                
                 // self.notify_ui(GameToUi::GameStarted)?;
                 // self.orchestrator.start_all()?;
             }
@@ -164,12 +174,7 @@ impl Game {
             .recv()
             .map_err(|_| "UI Channel Error")?;
 
-        if let UiToGame::StartGame = msg {
-            debug_println!("Starting game...");
-            self.game_tick = GameTick::new(Duration::from_millis(1000));
-            self.orchestrator.start_all()?;
-            self.state = GameState::Running;
-        }
+        self.handle_ui_command(msg)?;
         Ok(())
     }
 

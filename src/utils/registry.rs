@@ -6,7 +6,7 @@ use crate::utils::registry::PlanetType::{
     BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, RustyCrab, Rustrelli,
 };
 use rand::seq::IndexedRandom;
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap};
 // Importiamo il trait per poter usare .iter()
 use strum::IntoEnumIterator;
 // Importiamo la macro per il derive
@@ -64,17 +64,21 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
         //immutable_cosmic_borrow: Type C
         (
             ImmutableCosmicBorrow,
-            Box::new(|rx_o, tx_p, rx_e, id| {
-                let duration = Duration::from_secs(10);
-                let ai = immutable_cosmic_borrow::Ai::new(
-                    true,
-                    0.0,
-                    0.0,
-                    duration.clone(),
-                    duration.clone(),
-                );
-                immutable_cosmic_borrow::create_planet(ai, id, (rx_o, tx_p), rx_e)
+            Box::new(|rx_o, tx_o, rx_e, planet_id| {
+                one_million_crabs::planet::create_planet(rx_o, tx_o, rx_e, planet_id)
             }) as PlanetFactory,
+            // Box::new(|rx_o, tx_p, rx_e, id| {
+            //     let duration = Duration::from_secs(10);
+            //     let ai = immutable_cosmic_borrow::Ai::new(
+            //         true,
+            //         0.0,
+            //         0.0,
+            //         duration.clone(),
+            //         duration.clone(),
+            //     );
+                
+            //     immutable_cosmic_borrow::create_planet(true, 2.0, ai, id, (rx_o, tx_p), rx_e)
+            // }) as PlanetFactory,
         ),
         // one_million_crabs: Type D
         (

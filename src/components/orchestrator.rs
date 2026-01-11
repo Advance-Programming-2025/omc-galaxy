@@ -1,3 +1,11 @@
+use crate::components::explorer::{BagType, Explorer};
+use crate::utils::{ExplorerStatus, PlanetStatus};
+use crate::utils::registry::PlanetType::{
+    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
+};
+use crate::utils::registry::{PLANET_REGISTRY, PlanetType};
+use crate::utils::state_enums::Status;
+use crate::utils::types::GalaxyTopology;
 use common_game::components::forge::Forge;
 use common_game::logging::Channel;
 use common_game::protocols::orchestrator_explorer::{
@@ -5,23 +13,14 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
-use crossbeam_channel::select_biased;
 use crossbeam_channel::{Receiver, Sender, select, tick, unbounded};
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::time::{Duration, Instant};
+use std::time::{Duration};
 use std::{fs, thread};
-use crate::components::explorer::{BagType, Explorer};
-use crate::settings::pop_sunray_asteroid_sequence;
-use crate::utils::state_enums::Status;
-use crate::utils::types::GalaxyTopology;
-use crate::utils::registry::PlanetType::{
-    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
-};
-use crate::utils::registry::{PlanetType, PLANET_REGISTRY};
 
 const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
 const LOG_FN_INT_OPERATIONS: Channel = Channel::Trace;
@@ -52,8 +51,8 @@ pub struct Orchestrator {
     pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
 
     //Status for each planets and explorers, BTreeMaps are useful for printing
-    pub planets_status: BTreeMap<u32, Status>,
-    pub explorer_status: BTreeMap<u32, Status>,
+    pub planets_status: PlanetStatus,
+    pub explorer_status: ExplorerStatus,
     //Communication channels for sending messages to planets and explorers
     pub planet_channels: HashMap<u32, (Sender<OrchestratorToPlanet>, Sender<ExplorerToPlanet>)>,
     pub explorer_channels: HashMap<u32, (Sender<OrchestratorToExplorer>, Sender<PlanetToExplorer>)>,
@@ -90,8 +89,8 @@ impl Orchestrator {
             forge: Forge::new()?,
             galaxy_topology: Self::new_gtop(),
             galaxy_lookup: FxHashMap::default(),
-            planets_status: BTreeMap::new(),
-            explorer_status: BTreeMap::new(),
+            planets_status: Arc::new(RwLock::new(BTreeMap::new())),
+            explorer_status: Arc::new(RwLock::new(BTreeMap::new())),
             planet_channels: HashMap::new(),
             explorer_channels: HashMap::new(),
             sender_planet_orch,
@@ -119,9 +118,9 @@ impl Orchestrator {
                     };
                     match msg_unwraped{
                         PlanetToOrchestrator::KillPlanetResult { planet_id }=>{
-                            self.planets_status.insert(planet_id, Status::Dead);
+                            self.planets_status.write().unwrap().insert(planet_id, Status::Dead);
                             let mut planet_alive=false;
-                            for (_, state) in &self.planets_status{
+                            for (_, state) in self.planets_status.read().unwrap().iter(){
                                 if *state != Status::Dead{
                                     planet_alive=true;
                                     break;
@@ -136,7 +135,7 @@ impl Orchestrator {
                 }
                 recv(timeout)->_msg=>{
                     //After one second every planet should have been killed
-                    for (_, state) in &self.planets_status{
+                    for (_, state) in self.planets_status.read().unwrap().iter(){
                         if *state != Status::Dead{
                             return Err("Not every planet is being killed".to_string());
                         }
@@ -148,8 +147,8 @@ impl Orchestrator {
 
         //Reinit orchestrator
         self.galaxy_topology = Self::new_gtop();
-        self.planets_status = BTreeMap::new();
-        self.explorer_status = BTreeMap::new();
+        self.planets_status = Arc::new(RwLock::new(BTreeMap::new()));
+        self.explorer_status = Arc::new(RwLock::new(BTreeMap::new()));
         self.planet_channels = HashMap::new();
         self.explorer_channels = HashMap::new();
         Ok(())
@@ -241,7 +240,7 @@ impl Orchestrator {
 
         //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         //Update HashMaps
-        self.planets_status.insert(new_planet.id(), Status::Paused);
+        self.planets_status.write().unwrap().insert(new_planet.id(), Status::Paused);
         self.planet_channels
             .insert(new_planet.id(), (sender_orchestrator, sender_explorer));
 
@@ -271,6 +270,8 @@ impl Orchestrator {
 
         //Update HashMaps
         self.explorer_status
+            .write()
+            .unwrap()
             .insert(new_explorer.id(), Status::Paused);
         self.explorer_channels
             .insert(new_explorer.id(), (sender_orch, sender_planet));
@@ -281,12 +282,6 @@ impl Orchestrator {
             let _ = new_explorer; //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
-    }
-
-    pub(crate) fn initialize_galaxy_example(&mut self /*_path: &str*/) -> Result<(), String> {
-        self.add_planet(0, OneMillionCrabs)?;
-        self.add_planet(1, OneMillionCrabs)?;
-        Ok(())
     }
     pub(crate) fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
         //At the moment are allowed only consecutive id from 0 to MAX u32
@@ -360,7 +355,10 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub(crate) fn initialize_galaxy_by_adj_list(&mut self, adj_list: Vec<Vec<u32>>) -> Result<(), String> {
+    pub(crate) fn initialize_galaxy_by_adj_list(
+        &mut self,
+        adj_list: Vec<Vec<u32>>,
+    ) -> Result<(), String> {
         let num_planets = adj_list.len();
         //Print the result
         debug_println!("Init file content:");
@@ -417,7 +415,10 @@ impl Orchestrator {
         }
     }
 
-    pub(crate) fn initialize_planets_by_ids_list(&mut self, ids_list: Vec<u32>) -> Result<(), String> {
+    pub(crate) fn initialize_planets_by_ids_list(
+        &mut self,
+        ids_list: Vec<u32>,
+    ) -> Result<(), String> {
         let mut err = false;
         for planet_id in ids_list {
             //TODO we need to initialize the other planets randomly or precisely
@@ -490,7 +491,7 @@ impl Orchestrator {
             match receive_channel {
                 PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
                     debug_println!("Started Planet AI: {}", planet_id);
-                    self.planets_status.insert(planet_id, Status::Running);
+                    self.planets_status.write().unwrap().insert(planet_id, Status::Running);
                     count += 1;
                 }
                 _ => {}
@@ -499,7 +500,10 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub(crate) fn handle_planet_message(&mut self, msg: PlanetToOrchestrator) -> Result<(), String> {
+    pub(crate) fn handle_planet_message(
+        &mut self,
+        msg: PlanetToOrchestrator,
+    ) -> Result<(), String> {
         match msg {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
                 debug_println!("SunrayAck from: {}", planet_id)
@@ -518,7 +522,7 @@ impl Orchestrator {
                             .map_err(|_| "Unable to send to planet: {planet_id}")?;
 
                         //Update planet State
-                        self.planets_status.insert(planet_id, Status::Dead);
+                        self.planets_status.write().unwrap().insert(planet_id, Status::Dead);
                         //TODO we need to do a check if some explorer is on that planet
                     }
                 }
@@ -547,14 +551,17 @@ impl Orchestrator {
     }
     pub(crate) fn send_sunray_to_all(&self) -> Result<(), String> {
         for (id, (sender, _)) in &self.planet_channels {
-            if *self.planets_status.get(id).unwrap() != Status::Dead {
+            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
                 self.send_sunray(sender)?;
             }
         }
         Ok(())
     }
 
-    pub(crate) fn send_asteroid(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub(crate) fn send_asteroid(
+        &self,
+        sender: &Sender<OrchestratorToPlanet>,
+    ) -> Result<(), String> {
         sender
             .send(OrchestratorToPlanet::Asteroid(
                 self.forge.generate_asteroid(),
@@ -564,14 +571,17 @@ impl Orchestrator {
     pub(crate) fn send_asteroid_to_all(&self) -> Result<(), String> {
         //unwrap cannot fail because every id is contained in the map
         for (id, (sender, _)) in &self.planet_channels {
-            if *self.planets_status.get(id).unwrap() != Status::Dead {
+            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
                 self.send_asteroid(sender)?;
             }
         }
         Ok(())
     }
 
-    pub(crate) fn send_planet_kill(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub(crate) fn send_planet_kill(
+        &self,
+        sender: &Sender<OrchestratorToPlanet>,
+    ) -> Result<(), String> {
         sender
             .send(OrchestratorToPlanet::KillPlanet)
             .map_err(|_| "Unable to send kill message to planet: {id}".to_string())
@@ -579,7 +589,7 @@ impl Orchestrator {
     pub(crate) fn send_planet_kill_to_all(&self) -> Result<(), String> {
         for (id, (sender, _)) in &self.planet_channels {
             //unwrap cannot fail because every id is contained in the map
-            if *self.planets_status.get(id).unwrap() != Status::Dead {
+            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
                 self.send_planet_kill(sender)?;
             }
         }
@@ -630,51 +640,6 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub(crate) fn run_asteroid_after_five(&mut self) -> Result<(), String> {
-        //Loop to start all planet ais
-        self.start_all_planet_ais()?;
-
-        //Game
-
-        /*
-            v0 - totally sequencial
-            Every message is responded to bloking all the other channels till it is finished
-            Sunrays and asteroids are sent to all the planet after a timeout
-        */
-        let start = Instant::now();
-        let ticker = tick(Duration::from_millis(100));
-        let mut count = 0;
-
-        loop {
-            select! {
-                recv(self.recevier_orch_planet)->msg=>{
-                    let msg_unwraped = match msg{
-                        Ok(res)=>res,
-                        Err(_)=>return Err("Cannot receive message from planets".to_string()),
-                    };
-                    self.handle_planet_message(msg_unwraped)?;
-                }
-                recv(self.receiver_orch_explorer)->msg=>{
-                    break;
-                    todo!()
-                }
-                recv(ticker)->time=>{
-                    debug_println!("{:?}", start.elapsed());
-
-                    if count!=4{
-                        self.send_sunray_to_all()?;
-                    }else{
-                        self.send_asteroid_to_all()?;
-                    }
-                    count+=1;
-                    count%=5;
-
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
 
 //Debug game functions
@@ -703,5 +668,9 @@ impl Orchestrator {
     /// way that might misalign the internal state
     pub(crate) fn get_topology(&self) -> GalaxyTopology {
         self.galaxy_topology.clone()
+    }
+
+    pub(crate) fn get_game_status(&self) -> Result<(GalaxyTopology, PlanetStatus, ExplorerStatus), String> {
+        Ok((Arc::clone(&self.galaxy_topology), Arc::clone(&self.planets_status), Arc::clone(&self.explorer_status)))
     }
 }
