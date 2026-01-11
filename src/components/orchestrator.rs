@@ -7,7 +7,7 @@ use crate::utils::registry::{PLANET_REGISTRY, PlanetType};
 use crate::utils::state_enums::Status;
 use crate::utils::types::GalaxyTopology;
 use common_game::components::forge::Forge;
-use common_game::logging::Channel;
+use common_game::logging::{Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
@@ -21,10 +21,56 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::{Duration};
 use std::{fs, thread};
+use common_game::logging;
+use common_game::logging::Channel::Error;
 
 const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
 const LOG_FN_INT_OPERATIONS: Channel = Channel::Trace;
 const LOG_ACTORS_ACTIVITY: Channel = Channel::Info;
+/// LOG macros
+/// needed to reduce code duplication when writing log code
+#[macro_export] //make this macro visible outside
+macro_rules! payload {
+    ($($key:expr => $val:expr),* $(,)?) => {{
+        let mut p = std::collections::BTreeMap::new();
+        $(
+            p.insert($key.to_string(), $val.to_string());
+        )*
+        p
+    }};
+}
+
+#[macro_export]
+macro_rules! log_orch_internal {
+    ({ $($key:expr => $val:expr),* $(,)? }) => {{
+        use common_game::logging::{LogEvent, Participant, ActorType, EventType};
+
+        LogEvent::self_directed(
+            Participant::new(ActorType::Orchestrator, 0u32),
+            EventType::InternalOrchestratorAction,
+            LOG_FN_INT_OPERATIONS,
+            $crate::payload!( $($key => $val),* )
+        ).emit();
+    }};
+    // for easily write one element in the payload
+    ($msg:expr) => {
+        $crate::log_orch_internal!({ "action" => $msg });
+    };
+}
+#[macro_export]
+macro_rules! log_orch_fn {
+    ($fn_name:expr $(, $key:expr => $val:expr)* $(,)?) => {{
+        use common_game::logging::{LogEvent, Participant, ActorType, EventType};
+        LogEvent::self_directed(
+            Participant::new(ActorType::Orchestrator, 0u32),
+            EventType::InternalOrchestratorAction,
+            LOG_FN_CALL_CHNL,
+            $crate::payload! {
+                "fn" => $fn_name,
+                $($key => $val),* }
+        ).emit();
+    }};
+}
 
 const TIMEOUT_DURATION: Duration = Duration::from_millis(2000);
 
@@ -73,17 +119,30 @@ impl Orchestrator {
     /// Function used as shorthand to create a new
     /// galaxy topology instance
     fn new_gtop() -> GalaxyTopology {
-        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
+        //Log
+        log_orch_fn!("new_gtop()");
+        //LOG
+
 
         Arc::new(RwLock::new(Vec::new()))
     }
 
     //Check and init orchestrator for the test, the comms with the ui are fake
     pub(crate) fn new() -> Result<Self, String> {
-        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
+        //Log
+        log_orch_fn!("new()");
+        //LOG
 
         let (sender_planet_orch, recevier_orch_planet) = unbounded();
         let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
+
+        //Log
+        log_orch_internal!({
+            "action"=>"channels initialized",
+            "from"=>"planet, explorer",
+            "to"=>"orchestrator"
+        });
+        //LOG
 
         let new_orch = Self {
             forge: Forge::new()?,
@@ -102,22 +161,56 @@ impl Orchestrator {
     }
 
     pub(crate) fn reset(&mut self) -> Result<(), String> {
-        //TODO implement proper debug. channel: INFO. LOG_FN_CALL_CHNL. start
+        //Log
+        log_orch_fn!(
+            "reset()",
+            "procedure"=>"started"
+        );
+        //LOG
 
         //send a message every 2000 millis to the ticker receiver
         let timeout = tick(TIMEOUT_DURATION);
         //Kill every thread
         self.send_planet_kill_to_all()?;
         loop {
-            //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
             select! {
                 recv(self.recevier_orch_planet)->msg=>{
                     let msg_unwraped = match msg{
                         Ok(res)=>res,
-                        Err(_)=>return Err("No more sender connected and no messages in the buffer".to_string()),
+                        Err(_)=>{
+                            //Log
+                            let event=LogEvent::self_directed(
+                                Participant::new(logging::ActorType::Orchestrator, 0u32),
+                                EventType::InternalOrchestratorAction,
+                                Channel::Warning,
+                                payload!(
+                                    "fn"=>"reset",
+                                    "Warning"=>"No more sender connected and no messages in the buffer"
+                                )
+                            );
+                            event.emit();
+                            //LOG
+
+                            return Err("No more sender connected and no messages in the buffer".to_string())
+                        },
                     };
                     match msg_unwraped{
                         PlanetToOrchestrator::KillPlanetResult { planet_id }=>{
+                            //Log
+                            let event=LogEvent::new(
+                                Some(Participant::new(logging::ActorType::Planet, planet_id)),
+                                Some(Participant::new(logging::ActorType::Orchestrator, 0u32)),
+                                EventType::MessagePlanetToOrchestrator,
+                                LOG_ACTORS_ACTIVITY,
+                                payload!(
+                                    "message"=>"KillPlanetResult",
+                                    "planet"=>planet_id,
+                                    "status"=>"Dead"
+                                )
+                            );
+                            event.emit();
+                            //LOG
+
                             self.planets_status.write().unwrap().insert(planet_id, Status::Dead);
                             let mut planet_alive=false;
                             for (_, state) in self.planets_status.read().unwrap().iter(){
@@ -135,8 +228,23 @@ impl Orchestrator {
                 }
                 recv(timeout)->_msg=>{
                     //After one second every planet should have been killed
-                    for (_, state) in self.planets_status.read().unwrap().iter(){
+                    for (id, state) in self.planets_status.read().unwrap().iter(){
                         if *state != Status::Dead{
+                            //Log
+                            let event=LogEvent::new(
+                                Some(Participant::new(logging::ActorType::Orchestrator, 0u32)),
+                                Some(Participant::new(logging::ActorType::Planet, *id)),
+                                EventType::MessageOrchestratorToPlanet,
+                                Channel::Warning,
+                                payload!(
+                                    "fn"=>"reset",
+                                    "Warning"=>"Timeout",
+                                    "duration_ms"=>TIMEOUT_DURATION.as_millis(),
+                                )
+                            );
+                            event.emit();
+                            //LOG
+
                             return Err("Not every planet is being killed".to_string());
                         }
                     }
@@ -151,8 +259,17 @@ impl Orchestrator {
         self.explorer_status = Arc::new(RwLock::new(BTreeMap::new()));
         self.planet_channels = HashMap::new();
         self.explorer_channels = HashMap::new();
+
+        //Log
+        log_orch_internal!({"orchestrator reinitialized"=>"galaxy_topology, planets_status, explorer_status, planet_channels, explorer_channels"});
+
+        log_orch_fn!(
+            "reset()",
+            "procedure"=>"Completed"
+        );
+        //LOG
+
         Ok(())
-        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL. finish
     }
 
     ///initialize communication channels for planets
@@ -164,20 +281,29 @@ impl Orchestrator {
         Sender<ExplorerToPlanet>,
         Receiver<ExplorerToPlanet>,
     ) {
-        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
-        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
+        //LOG
+        log_orch_fn!("init_comms_planet()");
+        //LOG
+
         //orch-planet
         let (sender_orch, receiver_orch): (
             Sender<OrchestratorToPlanet>,
             Receiver<OrchestratorToPlanet>,
         ) = unbounded();
 
-        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         //explorer-planet
         let (sender_explorer, receiver_explorer): (
             Sender<ExplorerToPlanet>,
             Receiver<ExplorerToPlanet>,
         ) = unbounded();
+
+        //Log
+        log_orch_internal!({
+                "action"=>"channels initialized",
+                "from"=>"orchestrator, explorer",
+                "to"=>"planet"
+        });
+        //LOG
 
         (
             sender_orch,
@@ -202,24 +328,41 @@ impl Orchestrator {
         Sender<PlanetToExplorer>,
         Receiver<PlanetToExplorer>,
     ) {
-        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
 
-        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
+        //LOG
+        log_orch_fn!("init_comms_explorers()");
+        //LOG
+
         let (sender_orch, receiver_orch): (
             Sender<OrchestratorToExplorer>,
             Receiver<OrchestratorToExplorer>,
         ) = unbounded();
 
-        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
         let (sender_planet, receiver_planet): (
             Sender<PlanetToExplorer>,
             Receiver<PlanetToExplorer>,
         ) = unbounded();
 
+        //Log
+        log_orch_internal!({
+            "action"=>"channels initialized",
+            "from"=>"orchestrator, planet",
+            "to"=>"explorer"
+        });
+        //LOG
+
         (sender_orch, receiver_orch, sender_planet, receiver_planet)
     }
     pub(crate) fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
-        //TODO implement proper debug. channel: LOG_FN_CALL_CHNL
+
+        //LOG
+        log_orch_fn!(
+            "add_planet()",
+            "id"=>id,
+            "type_id"=>format!("{:?}", type_id),
+        );
+        //LOG
+
         //Init comms OrchestratorToPlanet, ExplorerToPlanet
         let (sender_orchestrator, receiver_orchestrator, sender_explorer, receiver_explorer) =
             Orchestrator::init_comms_planet();
@@ -228,7 +371,15 @@ impl Orchestrator {
         let planet_to_orchestrator_channels =
             (receiver_orchestrator, self.sender_planet_orch.clone());
 
-        //TODO implement proper debug. channel: LOG_ACTORS_ACTIVITY
+        //LOG
+        log_orch_internal!({
+            "action"=>"channel initialized",
+            "from"=>"planet",
+            "id"=>id,
+            "to"=>"orchestrator"
+        });
+        //LOG
+
         //creation of the planet
 
         let mut new_planet = (PLANET_REGISTRY.get(&type_id).unwrap().as_ref())(
@@ -238,7 +389,13 @@ impl Orchestrator {
             id,
         )?;
 
-        //TODO implement proper debug. channel: LOG_FN_INT_OPERATIONS
+        //LOG
+        log_orch_internal!({
+                "action"=>"planet created",
+                "id"=>id
+        });
+        //LOG
+
         //Update HashMaps
         self.planets_status.write().unwrap().insert(new_planet.id(), Status::Paused);
         self.planet_channels
@@ -246,6 +403,13 @@ impl Orchestrator {
 
         debug_println!("Start planet{id} thread");
         thread::spawn(move || -> Result<(), String> { new_planet.run() });
+
+        //LOG
+        log_orch_internal!({
+            "action"=>"planet thread started",
+            "planet_id"=>id
+        });
+        //LOG
         Ok(())
     }
     pub(crate) fn add_explorer(
@@ -255,6 +419,13 @@ impl Orchestrator {
         free_cells: u32,
         sender_explorer: Sender<ExplorerToPlanet>,
     ) {
+        log_orch_fn!(
+            "add_explorer()",
+            "explorer_id"=>explorer_id,
+            "planet_id"=>planet_id,
+            "free_cells"=>free_cells,
+            "sender_explorer"=>"Sender<ExplorerToPlanet>"
+        );
         //Create the comms for the new explorer
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
             Orchestrator::init_comms_explorers();
@@ -268,23 +439,41 @@ impl Orchestrator {
             free_cells,
         );
 
+        log_orch_internal!({
+            "action"=>"explorer created",
+            "explorer_id"=>explorer_id,
+        });
+
         //Update HashMaps
         self.explorer_status
             .write()
             .unwrap()
             .insert(new_explorer.id(), Status::Paused);
+        log_orch_internal!({
+            "action"=>"explorer_status hashmap updated",
+        });
         self.explorer_channels
             .insert(new_explorer.id(), (sender_orch, sender_planet));
-
+        log_orch_internal!({
+            "action"=>"saved channels: sender_orch, sender_planet",
+        });
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(|| -> Result<(), String> {
             let _ = new_explorer; //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
+        log_orch_internal!({
+            "action"=>"explorer thread created",
+            "explorer_id"=>explorer_id,
+        });
     }
     pub(crate) fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
-        //At the moment are allowed only consecutive id from 0 to MAX u32
+        //At the moment are allowed only id from 0 to MAX u32
+        log_orch_fn!(
+            "initialize_galaxy_by_file()",
+            "path"=>path,
+        );
 
         //Read the input file and handle it
         let input = fs::read_to_string(path)
