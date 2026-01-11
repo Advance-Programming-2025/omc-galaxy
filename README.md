@@ -1,60 +1,65 @@
 # One-million-crabs galaxy game
-Galaxy simulation about a silly Explorer travelling around the galaxy to gether resources, combining them and create its AI-companion. He is trying not to die, watch how it permforme during the simulation and you can tweak some parameter to make the game more interesting.
+Galaxy simulation about Explorers travelling around the galaxy to gather resources, combining them and create some complex resources. They try not to die, watch how they performe during the simulation and you can manually interact with the simulation
 
 
-# Implementation discussion
-We have to create a galaxy game. Right now we are developing the back-end that is the game logic. 
-Next we should add the loggig to all the parts of the game.
-We have to add the grapic interface.
-We should make available a terminal where the user can interact with simulation. 
+## Initialization file
+Create a new .env file and write in it the variable as in .env.example use the absolute path of the initialization file.
 
-### M.A.
-My proposal is to create a library for the logic of the game and import it in the graphic crate. 
-From the graphic create we start the simulation and through API we should poll the state of the game in order to update the frame. 
-In this way we should have a more modular project that enable us to work on different feature without obstructing each other.
+File format:
+the file follows csv schema and each row represent a planet, the first 2 elements are: `planet_id`, `type_id`
 
-### D.D.
+The remaining elements are the `planet_id`s to which the planet is connected.
 
-### T.A.
+(Note: It doesn't matter if you define a connection in only one direction or both; the program will always create a bidirectional connection.)
 
-### M.P.
+(Note: `planet_id` and `type_id` are `u32`)
 
-# Module description
+(Note: the `planet_ids` do not need to be consecutive)
 
-## Orchestrator
-### Galaxy initialization
-It creates all the galaxy components at the same time it is created.
-It needs create communication channels for planets and explorers.
+List of possible values of `type_id`:
+```
+0: BlackAdidasShoe
+1: Ciuc
+2: HoustonWeHaveABorrow
+3: ImmutableCosmicBorrow
+4: OneMillionCrabs
+5: Rustrelli
+6: RustyCrab
+_: Random (one type will be chosen at random from among the possible ones)
+```
 
-#### Done
+Write in it this topology:
+```
+0, 4, 1, 2, 3, 4
+1, 4, 2, 3, 4
+2, 4, 3
+3, 4
+4, 4
+```
+The adjacency matrix should look like this:
+```
+[false, true, true, true, true]
+[true, false, true, true, true]
+[true, true, false, true, false]
+[true, true, true, false, false]
+[true, true, false, false, false]
+```
 
-#### To do
-- Manage the messages of the planet
-- Manage the messages of the explorer
-- Using a proper data structer to contain the galaxy comunication 
-- Using a proper data structer to contain the galaxy topology
+## How to run it (at the moment)
+Go in `orch-example`, after that you can use `cargo run` or `cargo run --features omc-galaxy/debug-prints` to se all the debug messages. 
 
-### CrabRave Planet
-It implement planetAI in order to manage correctly to all external messages that could be:
-- Sunray/Asteroid arrival
-- Rocket creation/use
-- Explorer Request
+## Tests
+Use `cargo nextest run`
 
-#### Done
+>Tests run with `cargo test` are considered as the same process. Therefore we cannot istanciate orchestrator multiple times in different test.
 
-#### To do
-- Manage Sunray/Asteroid arrival
-- Test Sunray/Asteroid arrival
-- Manage Rocket creation and use
-- Test Rocket creation and use
 
-### Explorer 
-We need to implement to internal AI in order to manage all the possible states and actions:
-(We could use a state machine, we talkend in the seminar the 1th Decemeber)
-- Greedy Explorer, takes all resources and try to combine them, goes around randomly
-- Greedy Better, it makes sure to go an intersting planet for its purpose
-- Best path, it map the topology and then it takes the best path to maximize AI-partner
-- Best path + purpose changes, if it realize that cannot maximaze AI-partner then it tries to do dolphin
+
+# Task for each member
+- Davide Da Col => UI
+- Mattia Pistollato => Explorer
+- Tommaso Ascolani => Explorer
+- Marco Adami => Explorer
 
 
 
