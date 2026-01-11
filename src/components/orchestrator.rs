@@ -129,9 +129,11 @@ impl Orchestrator {
 
     //Check and init orchestrator for the test, the comms with the ui are fake
     pub(crate) fn new() -> Result<Self, String> {
+        env_logger::init();
         //Log
         log_orch_fn!("new()");
         //LOG
+
 
         let (sender_planet_orch, recevier_orch_planet) = unbounded();
         let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
