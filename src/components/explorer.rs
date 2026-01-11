@@ -274,6 +274,7 @@ pub fn move_to_planet(explorer: &mut Explorer, sender_to_new_planet: Option<Send
             println!("[EXPLORER DEBUG] Sender channel set correctly");
         }
         None => {
+            explorer.planet_id = explorer.old_planet_id.clone();
             println!("[EXPLORER DEBUG] Sender channel is None.");
         }
     }
