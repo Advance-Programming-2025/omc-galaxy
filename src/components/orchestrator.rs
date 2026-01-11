@@ -7,7 +7,7 @@ use crate::utils::registry::{PLANET_REGISTRY, PlanetType};
 use crate::utils::state_enums::Status;
 use crate::utils::types::GalaxyTopology;
 use common_game::components::forge::Forge;
-use common_game::logging::{Channel, EventType, LogEvent, Participant};
+use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
@@ -129,6 +129,7 @@ impl Orchestrator {
 
     //Check and init orchestrator for the test, the comms with the ui are fake
     pub(crate) fn new() -> Result<Self, String> {
+        //env_logger initialization
         env_logger::init();
         //Log
         log_orch_fn!("new()");
@@ -550,6 +551,12 @@ impl Orchestrator {
         &mut self,
         adj_list: Vec<Vec<u32>>,
     ) -> Result<(), String> {
+        //LOG
+        log_orch_fn!(
+            "initialize_galaxy_by_adj_list()",
+            "adj_list"=>format!("{:?}",adj_list)
+        );
+        //LOG
         let num_planets = adj_list.len();
         //Print the result
         debug_println!("Init file content:");
@@ -576,6 +583,13 @@ impl Orchestrator {
             }
         }
 
+        //LOG
+        log_orch_internal!({
+            "action"=>"adj matrix created",
+            "matrix"=>format!("{:?}",new_topology),
+        });
+        //LOG
+
         debug_println!("full adj matrix:");
         new_topology
             .iter()
@@ -586,11 +600,30 @@ impl Orchestrator {
         let lock_try = match self.galaxy_topology.write() {
             Ok(mut gtop) => {
                 *gtop = new_topology;
+
+                //LOG
+                log_orch_internal!({"update galaxy_topology"});
+                //LOG
+
                 //drops the lock just in case
                 drop(gtop);
+
                 Ok(())
             }
             Err(_e) => {
+                //LOG
+                let event=LogEvent::self_directed(
+                    Participant::new(ActorType::Orchestrator, 0u32),
+                    EventType::InternalOrchestratorAction,
+                    Channel::Warning,
+                    payload!(
+                        "Warning"=>"ERROR galaxy topology lock failed.",
+                        "specific_error"=>_e
+                    )
+
+                );
+                event.emit();
+                //LOG
                 debug_println!("ERROR galaxy topology lock failed.");
                 Err(())
             }
@@ -602,7 +635,7 @@ impl Orchestrator {
             self.initialize_planets_by_ids_list(ids_list.clone())?;
             Ok(())
         } else {
-            Err("rwlock error".to_string())
+            Err("ERROR galaxy topology lock failed.".to_string())
         }
     }
 
@@ -610,23 +643,35 @@ impl Orchestrator {
         &mut self,
         ids_list: Vec<u32>,
     ) -> Result<(), String> {
-        let mut err = false;
+        //LOG
+        log_orch_fn!(
+            "initialize_planets_by_ids_list()",
+            "ids_list"=>format!("{:?}",ids_list),
+        );
+        //LOG
         for planet_id in ids_list {
             //TODO we need to initialize the other planets randomly or precisely
             match self.galaxy_lookup.get(&planet_id) {
                 None => {
-                    err = true;
-                    break;
+                    //LOG
+                    let event=LogEvent::self_directed(
+                        Participant::new(ActorType::Orchestrator, 0u32),
+                        EventType::InternalOrchestratorAction,
+                        Channel::Warning,
+                        payload!(
+                            "Warning"=>format!("Planet ID '{}' not found", planet_id),
+                        )
+                    );
+                    event.emit();
+                    //LOG
+                    return Err(format!("Planet ID '{}' not found", planet_id));
                 }
                 Some((_, typ)) => {
                     self.add_planet(planet_id, typ.clone())?;
                 }
             };
         }
-        match err {
-            false => Ok(()),
-            true => Err("no planet type found".to_string()),
-        }
+        Ok(())
     }
 }
 
