@@ -6,21 +6,26 @@ use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, Orch
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
 
+// the type that is returned to the orchestrator when he asks for the explorer's bag
 pub type BagType = Vec<ResourceType>;
 
+// struct of the bag for explorer's internal use
 struct Bag {
     resources: Vec<GenericResource>,
 }
 
 impl Bag {
+    // creates an empty bag
     fn new() -> Self {
         Self { resources: Vec::new() }
     }
 
+    // inserts a resource in the bag
     fn insert(&mut self, res: GenericResource) {
         self.resources.push(res);
     }
 
+    // takes a resource from the bag if it exists
     fn take_resource(&mut self, ty: ResourceType) -> Option<GenericResource> {
         let idx = self.resources
             .iter()
@@ -28,16 +33,22 @@ impl Bag {
         Some(self.resources.remove(idx))
     }
 
+    // tells if a resource is contained in the bag
     fn contains(&self, ty: ResourceType) -> bool {
         self.resources.iter().any(|r| r.get_type() == ty)
     }
 
+    // returns a BagType containing all the ResourceType in the bag
+
+    // this is needed because the bag cannot give his ownership to the orchestrator and cannot be passed as a reference
     fn to_resource_types(&self) -> Vec<ResourceType> {
         self.resources.iter()
             .map(|r| r.get_type())
             .collect()
     }
 
+    // the following methods are the ones to combine resources
+    //they are all used in order to avoid code duplication
     fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
         // Check that the explorer has 2 carbons before taking any
         let carbon_count = self.resources
@@ -149,7 +160,7 @@ impl Bag {
 
 }
 
-
+// struct that contains some 
 struct PlanetInfo {
     basic_resources: Option<HashSet<BasicResourceType>>,
     complex_resources: Option<HashSet<ComplexResourceType>>,
@@ -158,15 +169,7 @@ struct PlanetInfo {
 
 // TODO memorizzare topologia, celle libere (utili per AI se non ci sono 2 explorer), risorse generate/combinate per ogni pianeta
 
-// qui sotto c'è il flow dell'implementazione ideale -> state machine
-// Stato = WaitingForMessage (stato iniziale)
-// ↓
-// select! ascolta orchestrator + planet (+ tick -> permetterebbe di temporizzare le ricezioni/risposte)
-// ↓
-// arriva msg orchestrator/planet → viene letto (e si agisce di conseguenza se è un messaggio critico, sennò si cambia lo stato)
-// ↓
-// si decide cosa fare in base allo stato
-
+// these are the states of the explorer state machine
 pub enum ExplorerState {
     Idle,
     WaitingToStartExplorerAI,
@@ -180,6 +183,7 @@ pub enum ExplorerState {
     Killed,
 }
 
+// this function checks if the orchestrator message received is the one expected (based on the explorer state)
 pub fn orch_msg_match_state(explorer_state: &ExplorerState, msg: &OrchestratorToExplorer) -> bool {
     match (explorer_state, msg) {
         (ExplorerState::Idle, _) => true,
@@ -189,6 +193,8 @@ pub fn orch_msg_match_state(explorer_state: &ExplorerState, msg: &OrchestratorTo
         _ => false
     }
 }
+
+// this function checks if the planet message received is the one expected (based on the explorer state)
 pub fn planet_msg_match_state(explorer_state: &ExplorerState, msg: &PlanetToExplorer) -> bool {
     match (explorer_state, msg) {
         (ExplorerState::Idle, _) => true,
@@ -201,6 +207,8 @@ pub fn planet_msg_match_state(explorer_state: &ExplorerState, msg: &PlanetToExpl
     }
 }
 
+// this function put the explorer in the condition to receive messages (idle state),
+// it is called when the explorer receives the StartExplorerAI message
 pub fn start_explorer_ai(explorer: &mut Explorer){
     match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::StartExplorerAIResult { explorer_id: explorer.explorer_id }) {
         Ok(_) => {
@@ -213,6 +221,9 @@ pub fn start_explorer_ai(explorer: &mut Explorer){
         }
     }
 }
+
+// this function resets the topology known by the explorer,
+// it is called when the explorer receives the ResetExplorerAI message
 pub fn reset_explorer_ai(explorer: &mut Explorer){
     match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::ResetExplorerAIResult { explorer_id: explorer.explorer_id }) {
         Ok(_) => {
@@ -226,6 +237,9 @@ pub fn reset_explorer_ai(explorer: &mut Explorer){
         }
     }
 }
+
+// this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
+// it is called when the explorer receives the StopExplorerAI message
 pub fn stop_explorer_ai(explorer: &mut Explorer){
     match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::StopExplorerAIResult { explorer_id: explorer.explorer_id }) {
         Ok(_) => {
@@ -237,6 +251,8 @@ pub fn stop_explorer_ai(explorer: &mut Explorer){
         }
     }
 }
+
+// this function puts the explorer in the Killed state waiting for the thread to be killed
 pub fn kill_explorer(explorer: &mut Explorer){
     match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::KillExplorerResult { explorer_id: explorer.explorer_id }) {
         Ok(_) => {
@@ -248,6 +264,8 @@ pub fn kill_explorer(explorer: &mut Explorer){
         }
     }
 }
+
+// this function sets the sender_to_planet of the explorer struct
 pub fn move_to_planet(explorer: &mut Explorer, sender_to_new_planet: Option<Sender<ExplorerToPlanet>>) {
     explorer.state = ExplorerState::Idle;
     match sender_to_new_planet {
@@ -260,6 +278,8 @@ pub fn move_to_planet(explorer: &mut Explorer, sender_to_new_planet: Option<Send
         }
     }
 }
+
+// this function sends the current planet id to the orchestrator
 pub fn current_planet_request(explorer: &mut Explorer){
     match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::CurrentPlanetResult { explorer_id: explorer.explorer_id, planet_id: explorer.planet_id }) {
         Ok(_) => {
@@ -271,6 +291,10 @@ pub fn current_planet_request(explorer: &mut Explorer){
         }
     }
 }
+
+// this function sends the basic resources supported by the current planet to the orchestrator
+// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
+// response and then send it back to the orchestrator)
 pub fn supperted_resource_request(explorer: &mut Explorer){
     let mut supported_resources = HashSet::new();
     if explorer.topology_info.contains_key(&explorer.planet_id) && let Some(planet_info) = explorer.topology_info.get(&explorer.planet_id) {
@@ -315,6 +339,10 @@ pub fn supperted_resource_request(explorer: &mut Explorer){
         }
     }
 }
+
+// this function sends the complex resources supported by the current planet to the orchestrator
+// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
+// response and then send it back to the orchestrator)
 pub fn supported_combination_request(explorer: &mut Explorer){
     let mut supported_combinations = HashSet::new();
     if explorer.topology_info.contains_key(&explorer.planet_id) && let Some(planet_info) = explorer.topology_info.get(&explorer.planet_id) {
@@ -360,6 +388,8 @@ pub fn supported_combination_request(explorer: &mut Explorer){
     }
 }
 
+// this function sends the GenerateResourceRequest, waits for the planet response, and,
+// if successful puts the resource in the bag
 pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResourceType){
     match explorer.planet_channels.1.send(ExplorerToPlanet::GenerateResourceRequest {explorer_id: explorer.explorer_id, resource: to_generate}) {
         Ok(_) => {
@@ -384,6 +414,7 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
     }
 }
 
+// this function puts a basic resource in the explorer bag
 pub fn put_basic_resource_in_the_bag(explorer: &mut Explorer, resource: Option<BasicResource>) {
     if let Some(resource) = resource {
         let new_resource = match resource {
@@ -396,6 +427,8 @@ pub fn put_basic_resource_in_the_bag(explorer: &mut Explorer, resource: Option<B
     }
 }
 
+// this function sends the CombineResourceRequest, waits for the planet response, and,
+// if successful puts the resource in the bag
 pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexResourceType){
     let complex_resource_req = match to_generate {
         // TODO provide the requested resources from the bag for each combination
@@ -464,6 +497,7 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
     }
 }
 
+// this function puts a complex resource in the explorer bag
 pub fn put_complex_resource_in_the_bag(explorer: &mut Explorer, complex_response: Result<ComplexResource, (String, GenericResource, GenericResource)>) {
     if let Ok(complex_resource) = complex_response {
         let new_resource = match complex_resource {
@@ -478,24 +512,27 @@ pub fn put_complex_resource_in_the_bag(explorer: &mut Explorer, complex_response
     }
 }
 
-pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>){
+// this function updates the neighbours of the current planet
+pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
     explorer.state = ExplorerState::Idle;
-    for neighbour in &neighbors {
-        explorer.topology_info.insert(*neighbour, PlanetInfo{ basic_resources: None, complex_resources: None ,neighbours: None });
+    for &neighbour in &neighbors {
+        explorer.topology_info.entry(neighbour).or_insert(
+            PlanetInfo {
+                basic_resources: None,
+                complex_resources: None,
+                neighbours: None,
+            }
+        );
+    }
+    let planet_info = explorer
+        .topology_info
+        .get_mut(&explorer.planet_id)
+        .expect("Planet should already be in topology"); // TODO se non è nella topologia aggiornare la topologia e ripetere
 
-    }
-    if let Some(planet_info) = explorer.topology_info.get_mut(&explorer.planet_id) {
-        let mut new_neighbours = HashSet::new();
-        for neighbour in &neighbors {
-            new_neighbours.insert(*neighbour);
-        }
-        planet_info.neighbours = Some(new_neighbours);
-    } else {
-        // this shouldn't happen (we expect that the planet is already inserted in the HashSet when asking for neighbours)
-        println!("[EXPLORER DEBUG] No planet with id {} in the topology of the explorer.", explorer.planet_id);
-        // TODO if it happens (for some reason) we can add the planet to the HashSet and add the neighbours all in one here
-    }
+    planet_info.neighbours = Some(neighbors.into_iter().collect());
 }
+
+// this is the struct of the explorer
 pub struct Explorer {
     explorer_id: u32,
     planet_id: u32, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
@@ -508,13 +545,13 @@ pub struct Explorer {
     topology_info: HashMap<ID, PlanetInfo>,
     state: ExplorerState,
     bag: Bag,
-    energy_cells: u32,
-    buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>,
-    buffer_planet_msg: VecDeque<PlanetToExplorer>,
+    energy_cells: u32, // of the current planet
+    buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
+    buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
 }
 
 impl Explorer {
-    //At creation, an Explorer should be connected to Orchestrator and the starting Planet
+    // at creation, an Explorer should be connected to Orchestrator and the starting Planet
     pub fn new(
         explorer_id: u32,
         planet_id: u32,
@@ -541,11 +578,18 @@ impl Explorer {
             buffer_planet_msg: VecDeque::new(),
         }
     }
+
+    // getter function for the id
     pub fn id(&self) -> u32 {
         self.explorer_id
     }
 
+    // the explorer loop
     pub fn run(&mut self) {
+        // every iteration the explorer receives messages from both planet and orchestrator channels,
+        // then it behaves based on the message received, if the message received and the explorer state
+        // do not match together the message is pushed into the corresponding buffer, and it will be read
+        // when the explorer will be in an "Idle" state
         loop {
             select! {
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
@@ -694,7 +738,13 @@ impl Explorer {
     }
 }
 
+// this function manages all the messages that were put in the buffers
+// (in the same way the explorer usually manages them)
 pub fn manage_buffer_msg(explorer: &mut Explorer){
+    match explorer.state {
+        ExplorerState::Idle => {}
+        _ => return
+    }
     while let Some(msg) = explorer.buffer_orchestrator_msg.pop_front() {
         match msg {
             OrchestratorToExplorer::StartExplorerAI => {
@@ -746,6 +796,14 @@ pub fn manage_buffer_msg(explorer: &mut Explorer){
                 neighbours_response(explorer, neighbors);
             }
         }
+        match explorer.state {
+            ExplorerState::Idle => {}
+            _ => return
+        }
+    }
+    match explorer.state {
+        ExplorerState::Idle => {}
+        _ => return
     }
     while let Some(msg) = explorer.buffer_planet_msg.pop_front() {
         match msg {
@@ -782,6 +840,10 @@ pub fn manage_buffer_msg(explorer: &mut Explorer){
                 // TODO gestire in base all'ai dell'explorer
                 explorer.state = ExplorerState::Idle;
             }
+        }
+        match explorer.state {
+            ExplorerState::Idle => {}
+            _ => return
         }
     }
 }
