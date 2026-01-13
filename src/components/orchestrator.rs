@@ -39,6 +39,30 @@ macro_rules! payload {
         p
     }};
 }
+#[macro_export]
+macro_rules! warning_payload {
+    ($warn:expr, $err:expr, $func:expr $(,$param:ident )*$(; $($key:expr => $val:expr),*)?) => {{
+        let mut p = std::collections::BTreeMap::new();
+
+        p.insert("Warning".to_string(), $warn.to_string());
+        p.insert("returned error".to_string(), $err.to_string());
+        p.insert("fn".to_string(), $func.to_string());
+
+        // adds every argument
+        $(
+            p.insert(
+                stringify!($param).to_string(),
+                format!("{:?}", $param)
+            );
+        )*
+        // generic key-value
+        $($(
+            p.insert($key.to_string(), $val.to_string());
+        )*)?
+
+        p
+    }};
+}
 
 #[macro_export]
 macro_rules! log_orch_internal {
@@ -59,15 +83,36 @@ macro_rules! log_orch_internal {
 }
 #[macro_export]
 macro_rules! log_orch_fn {
-    ($fn_name:expr $(, $key:expr => $val:expr)* $(,)?) => {{
+    (
+        $fn_name:expr
+        // section that accept the function arguments
+        $(, $param:ident)* // section for generic key-value elements (introduced by ';')
+        $(; $($key:expr => $val:expr),*)?
+        $(,)?
+    ) => {{
         use common_game::logging::{LogEvent, Participant, ActorType, EventType};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        // adding function arguments
+        $(
+            p.insert(
+                stringify!($param).to_string(),
+                format!("{:?}", $param)
+            );
+        )*
+
+        // generic key-value
+        $($(
+            p.insert($key.to_string(), $val.to_string());
+        )*)?
+
         LogEvent::self_directed(
             Participant::new(ActorType::Orchestrator, 0u32),
             EventType::InternalOrchestratorAction,
             LOG_FN_CALL_CHNL,
-            $crate::payload! {
-                "fn" => $fn_name,
-                $($key => $val),* }
+            p
         ).emit();
     }};
 }
@@ -120,7 +165,7 @@ impl Orchestrator {
     /// galaxy topology instance
     fn new_gtop() -> GalaxyTopology {
         //Log
-        log_orch_fn!("new_gtop()");
+        log_orch_fn!("new_gtop()",);
         //LOG
 
 
@@ -132,7 +177,7 @@ impl Orchestrator {
         //env_logger initialization
         env_logger::init();
         //Log
-        log_orch_fn!("new()");
+        log_orch_fn!("new()",);
         //LOG
 
 
@@ -166,7 +211,7 @@ impl Orchestrator {
     pub(crate) fn reset(&mut self) -> Result<(), String> {
         //Log
         log_orch_fn!(
-            "reset()",
+            "reset()";
             "procedure"=>"started"
         );
         //LOG
@@ -180,15 +225,16 @@ impl Orchestrator {
                 recv(self.recevier_orch_planet)->msg=>{
                     let msg_unwraped = match msg{
                         Ok(res)=>res,
-                        Err(_)=>{
+                        Err(e)=>{
                             //Log
                             let event=LogEvent::self_directed(
                                 Participant::new(logging::ActorType::Orchestrator, 0u32),
                                 EventType::InternalOrchestratorAction,
                                 Channel::Warning,
-                                payload!(
-                                    "fn"=>"reset",
-                                    "Warning"=>"No more sender connected and no messages in the buffer"
+                                warning_payload!(
+                                    "No more sender connected and no messages in the buffer",
+                                    e,
+                                    "reset()"
                                 )
                             );
                             event.emit();
@@ -239,10 +285,11 @@ impl Orchestrator {
                                 Some(Participant::new(logging::ActorType::Planet, *id)),
                                 EventType::MessageOrchestratorToPlanet,
                                 Channel::Warning,
-                                payload!(
-                                    "fn"=>"reset",
-                                    "Warning"=>"Timeout",
-                                    "duration_ms"=>TIMEOUT_DURATION.as_millis(),
+                                warning_payload!(
+                                    "Timeout",
+                                    "_",
+                                    "reset()";
+                                    "duration_ms"=>TIMEOUT_DURATION.as_millis()
                                 )
                             );
                             event.emit();
@@ -267,7 +314,7 @@ impl Orchestrator {
         log_orch_internal!({"orchestrator reinitialized"=>"galaxy_topology, planets_status, explorer_status, planet_channels, explorer_channels"});
 
         log_orch_fn!(
-            "reset()",
+            "reset()";
             "procedure"=>"Completed"
         );
         //LOG
@@ -361,8 +408,8 @@ impl Orchestrator {
         //LOG
         log_orch_fn!(
             "add_planet()",
-            "id"=>id,
-            "type_id"=>format!("{:?}", type_id),
+            id,
+            type_id,
         );
         //LOG
 
@@ -424,9 +471,9 @@ impl Orchestrator {
     ) {
         log_orch_fn!(
             "add_explorer()",
-            "explorer_id"=>explorer_id,
-            "planet_id"=>planet_id,
-            "free_cells"=>free_cells,
+            explorer_id,
+            planet_id,
+            free_cells;
             "sender_explorer"=>"Sender<ExplorerToPlanet>"
         );
         //Create the comms for the new explorer
@@ -475,7 +522,7 @@ impl Orchestrator {
         //At the moment are allowed only id from 0 to MAX u32
         log_orch_fn!(
             "initialize_galaxy_by_file()",
-            "path"=>path,
+            path,
         );
 
         //Read the input file and handle it
@@ -554,7 +601,7 @@ impl Orchestrator {
         //LOG
         log_orch_fn!(
             "initialize_galaxy_by_adj_list()",
-            "adj_list"=>format!("{:?}",adj_list)
+            adj_list
         );
         //LOG
         let num_planets = adj_list.len();
@@ -616,9 +663,11 @@ impl Orchestrator {
                     Participant::new(ActorType::Orchestrator, 0u32),
                     EventType::InternalOrchestratorAction,
                     Channel::Warning,
-                    payload!(
-                        "Warning"=>"ERROR galaxy topology lock failed.",
-                        "specific_error"=>_e
+                    warning_payload!(
+                        "ERROR galaxy topology lock failed.",
+                        _e,
+                        "initialize_galaxy_by_adj_list()",
+                        adj_list
                     )
 
                 );
@@ -646,10 +695,10 @@ impl Orchestrator {
         //LOG
         log_orch_fn!(
             "initialize_planets_by_ids_list()",
-            "ids_list"=>format!("{:?}",ids_list),
+            ids_list,
         );
         //LOG
-        for planet_id in ids_list {
+        for planet_id in ids_list.iter() {
             //TODO we need to initialize the other planets randomly or precisely
             match self.galaxy_lookup.get(&planet_id) {
                 None => {
@@ -658,8 +707,11 @@ impl Orchestrator {
                         Participant::new(ActorType::Orchestrator, 0u32),
                         EventType::InternalOrchestratorAction,
                         Channel::Warning,
-                        payload!(
-                            "Warning"=>format!("Planet ID '{}' not found", planet_id),
+                        warning_payload!(
+                            format!("Planet ID '{}' not found", planet_id),
+                            "_",
+                            "initialize_planets_by_ids_list()",
+                            ids_list
                         )
                     );
                     event.emit();
@@ -667,7 +719,7 @@ impl Orchestrator {
                     return Err(format!("Planet ID '{}' not found", planet_id));
                 }
                 Some((_, typ)) => {
-                    self.add_planet(planet_id, typ.clone())?;
+                    self.add_planet(*planet_id, typ.clone())?;
                 }
             };
         }
@@ -689,18 +741,64 @@ impl Orchestrator {
         planet_one_pos: usize,
         planet_two_pos: usize,
     ) -> Result<(), String> {
+        //LOG
+        log_orch_fn!(
+            "destroy_topology_link()",
+            planet_one_pos,
+            planet_two_pos,
+        );
+        //LOG
+
         match self.galaxy_topology.write() {
             Ok(mut gtop) => {
-                if planet_one_pos < gtop.len() && planet_two_pos < gtop.len() {
+                let gtop_len=gtop.len();
+                if planet_one_pos < gtop_len && planet_two_pos < gtop_len {
                     gtop[planet_one_pos][planet_two_pos] = false;
                     gtop[planet_two_pos][planet_one_pos] = false;
+                    //LOG
+                    log_orch_internal!({
+                        "action"=>"adj link destroyed",
+                        "updated topology"=>format!("{:?}",gtop),
+                    });
+                    //LOG
                     drop(gtop);
                     Ok(())
                 } else {
+                    //LOG
+                    let event=LogEvent::self_directed(
+                        Participant::new(ActorType::Orchestrator, 0u32),
+                        EventType::InternalOrchestratorAction,
+                        Channel::Warning,
+                        warning_payload!(
+                            format!("One of the indexes is out of bounds. upper bound: {}", gtop_len-1),
+                            "_",
+                            "destroy_topology_link()",
+                            planet_one_pos,
+                            planet_two_pos
+                        ),
+                    );
+                    event.emit();
+                    //LOG
                     Err("index out of bounds (too large)".to_string())
                 }
             }
             Err(e) => {
+                //LOG
+                let event=LogEvent::self_directed(
+                    Participant::new(ActorType::Orchestrator, 0u32),
+                    EventType::InternalOrchestratorAction,
+                    Channel::Warning,
+                    warning_payload!(
+                        "ERROR galaxy topology lock failed.",
+                        e,
+                        "destroy_topology_link()",
+                        planet_one_pos,
+                        planet_two_pos
+                    )
+
+                );
+                event.emit();
+                //LOG
                 debug_println!("RwLock failed for destroy_topology_link");
                 Err(e.to_string())
             }
