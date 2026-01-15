@@ -27,8 +27,16 @@ use common_game::logging::Channel::Error;
 const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
 const LOG_FN_INT_OPERATIONS: Channel = Channel::Trace;
 const LOG_ACTORS_ACTIVITY: Channel = Channel::Info;
-/// LOG macros
-/// needed to reduce code duplication when writing log code
+//LOG macros
+//in order to reduce code duplication
+
+/// Creates a structured metadata map for log events.
+///
+/// This macro abstracts the boilerplate of manual BTreeMap instantiation
+/// and string conversion. It ensures that all log metadata follows a
+/// consistent key-value format.
+///
+/// * `$key => $val` - pairs of data to be stored as the event's payload
 #[macro_export] //make this macro visible outside
 macro_rules! payload {
     ($($key:expr => $val:expr),* $(,)?) => {{
@@ -39,6 +47,15 @@ macro_rules! payload {
         p
     }};
 }
+/// Generates a standardized payload for system warnings and errors.
+///
+/// This macro captures the context of an error alongside the function
+/// name and live variables.
+///
+/// * `$warn` - the high-level warning category or message
+/// * `$err` - the specific error or exception returned by the system
+/// * `$func` - the name of the function where the failure occurred
+/// * `$param` - local variables to be stringified for debugging context
 #[macro_export]
 macro_rules! warning_payload {
     ($warn:expr, $err:expr, $func:expr $(,$param:ident )*$(; $($key:expr => $val:expr),*)?) => {{
@@ -63,7 +80,12 @@ macro_rules! warning_payload {
         p
     }};
 }
-
+/// Logs Orchestrator functions internal actions.
+///
+/// This macro specializes self-directed logging for the Orchestrator (ID 0).
+///
+/// * `$key => $val` - internal state data to be recorded
+/// * `$msg` - shorthand for a simple action description
 #[macro_export]
 macro_rules! log_orch_internal {
     ({ $($key:expr => $val:expr),* $(,)? }) => {{
@@ -81,6 +103,14 @@ macro_rules! log_orch_internal {
         $crate::log_orch_internal!({ "action" => $msg });
     };
 }
+/// Records Orchestrator function execution and input arguments.
+///
+/// This macro automatically captures the function name and its parameters.
+/// It helps to verify if functions are called with the expected values.
+///
+/// * `$fn_name` - the name of the function being executed
+/// * `$param` - identifiers of the variables to be captured as arguments
+/// * `$key => $val` - optional extra metadata for the call
 #[macro_export]
 macro_rules! log_orch_fn {
     (
@@ -116,7 +146,15 @@ macro_rules! log_orch_fn {
         ).emit();
     }};
 }
-
+/// Traces communication and message flow between different actors.
+///
+/// This macro unifies the logging of messages to visualize the
+/// interaction flow between game entities.
+///
+/// * `$from_actor / $from_id` - the source of the message
+/// * `$to_actor / $to_id` - the intended recipient
+/// * `$event_type` - the nature of the event
+/// * `$message` - the content or identifier of the message sent/received
 #[macro_export]
 macro_rules! log_message {
     (
