@@ -117,6 +117,46 @@ macro_rules! log_orch_fn {
     }};
 }
 
+#[macro_export]
+macro_rules! log_message {
+    (
+        $from_actor:expr, $from_id:expr,
+        $to_actor:expr, $to_id:expr,
+        $event_type:expr,
+        $message:expr
+        $(, $param:ident)*
+        $(; $($key:expr => $val:expr),*)?
+        $(,)?
+    ) => {{
+        use common_game::logging::{LogEvent, Participant};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("message".to_string(), $message.to_string());
+
+        // adding parameters
+        $(
+            p.insert(
+                stringify!($param).to_string(),
+                format!("{:?}", $param)
+            );
+        )*
+
+        // generic key-value pairs
+        $($(
+            p.insert($key.to_string(), $val.to_string());
+        )*)?
+
+        let event = LogEvent::new(
+            Some(Participant::new($from_actor, $from_id)),
+            Some(Participant::new($to_actor, $to_id)),
+            $event_type,
+            Channel::Debug,
+            p
+        );
+        event.emit();
+    }};
+}
+
 const TIMEOUT_DURATION: Duration = Duration::from_millis(2000);
 
 #[cfg(feature = "debug-prints")]
@@ -806,16 +846,36 @@ impl Orchestrator {
     }
 
     pub(crate) fn start_all_planet_ais(&mut self) -> Result<(), String> {
+        //LOG
+        log_orch_fn!("start_all_planet_ais()");
+        //LOG
+
         for (_id, (from_orch, _)) in &self.planet_channels {
             from_orch
                 .try_send(OrchestratorToPlanet::StartPlanetAI)
                 .map_err(|_| "Cannot send message to {_id}".to_string())?;
+
+            //LOG
+            log_message!(
+                ActorType::Orchestrator, 0u32,
+                ActorType::Planet, *_id,
+                EventType::MessageOrchestratorToPlanet,
+                "StartPlanetAI";
+                "planet_id"=>_id
+            );
+            //LOG
         }
 
         let mut count = 0;
-        //REVIEW is it possible that this loop could block forevere the game?
+        //TODO REVIEW is it possible that this loop could block forevere the game?
         loop {
             if count == self.planet_channels.len() {
+                //LOG
+                log_orch_internal!({
+                    "action"=>"all planets started",
+                    "count"=>count
+                });
+                //LOG
                 break;
             }
             let receive_channel = self
@@ -825,6 +885,22 @@ impl Orchestrator {
             match receive_channel {
                 PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
                     debug_println!("Started Planet AI: {}", planet_id);
+
+                    //LOG
+                    let event=LogEvent::new(
+                        Some(Participant::new(ActorType::Planet, planet_id)),
+                        Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                        EventType::MessagePlanetToOrchestrator,
+                        LOG_ACTORS_ACTIVITY,
+                        payload!(
+                            "message"=>"StartPlanetAIResult",
+                            "planet_id"=>planet_id,
+                            "status"=>"Running"
+                        )
+                    );
+                    event.emit();
+                    //LOG
+                    //TODO unwrap così potrebbe panicare
                     self.planets_status.write().unwrap().insert(planet_id, Status::Running);
                     count += 1;
                 }
@@ -838,52 +914,189 @@ impl Orchestrator {
         &mut self,
         msg: PlanetToOrchestrator,
     ) -> Result<(), String> {
+        //LOG
+        log_orch_fn!(
+            "handle_planet_message()";
+            "message_type"=>format!("{:?}", msg)
+        );
+        //LOG
+
         match msg {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
-                debug_println!("SunrayAck from: {}", planet_id)
+                debug_println!("SunrayAck from: {}", planet_id);
+
+                //LOG
+                log_message!(
+                    ActorType::Planet, planet_id,
+                    ActorType::Orchestrator, 0u32,
+                    EventType::MessagePlanetToOrchestrator,
+                    "SunrayAck",
+                    planet_id
+                );
+                //LOG
             }
             PlanetToOrchestrator::AsteroidAck { planet_id, rocket } => {
                 debug_println!("AsteroidAck from: {}", planet_id);
+                //LOG
+                log_message!(
+                    ActorType::Planet, planet_id,
+                    ActorType::Orchestrator, 0u32,
+                    EventType::MessagePlanetToOrchestrator,
+                    "AsteroidAck",
+                    planet_id;
+                    "has_rocket"=>rocket.is_some()
+                );
+                //LOG
                 match rocket {
                     Some(_) => {
-                        //TODO some logging function
                     }
                     None => {
                         //If you have the id then surely that planet exist so we can unwrap without worring
+                        //TODO it seems fine to me but just to be more precise we could add error handling
                         let sender = &self.planet_channels.get(&planet_id).unwrap().0;
                         sender
                             .send(OrchestratorToPlanet::KillPlanet)
                             .map_err(|_| "Unable to send to planet: {planet_id}")?;
 
+                        //LOG
+                        log_message!(
+                            ActorType::Orchestrator, 0u32,
+                            ActorType::Planet, planet_id,
+                            EventType::MessageOrchestratorToPlanet,
+                            "KillPlanet",
+                            planet_id;
+                            "reason"=>"no rocket to deflect asteroid"
+                        );
+                        //LOG
+
                         //Update planet State
                         self.planets_status.write().unwrap().insert(planet_id, Status::Dead);
+                        //LOG
+                        log_orch_internal!({
+                            "action"=>"planet status updated to Dead",
+                            "planet_id"=>planet_id
+                        });
+                        //LOG
                         //TODO we need to do a check if some explorer is on that planet
                     }
                 }
             }
             // PlanetToOrchestrator::IncomingExplorerResponse { planet_id, res }=>{},
+            //TODO at this point this functions don't do anything at all
             PlanetToOrchestrator::InternalStateResponse {
                 planet_id,
                 planet_state,
-            } => {}
+            } => {
+                //LOG
+                log_message!(
+                    ActorType::Planet, planet_id,
+                    ActorType::Orchestrator, 0u32,
+                    EventType::MessagePlanetToOrchestrator,
+                    "InternalStateResponse",
+                    planet_id,
+                    planet_state,
+                );
+                //LOG
+            }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
                 debug_println!("Planet killed: {}", planet_id);
+                let event=LogEvent::new(
+                    Some(Participant::new(ActorType::Planet, planet_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                    EventType::MessagePlanetToOrchestrator,
+                    LOG_ACTORS_ACTIVITY,
+                    payload!(
+                        "Message"=>"KillPlanetResult",
+                        "planet_id"=>planet_id,
+                    )
+                );
+                event.emit();
             }
             // PlanetToOrchestrator::OutgoingExplorerResponse { planet_id, res }=>{},
-            PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {}
-            PlanetToOrchestrator::StopPlanetAIResult { planet_id } => {}
-            PlanetToOrchestrator::Stopped { planet_id } => {}
-            _ => {}
+            PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
+                //LOG
+                let event=LogEvent::new(
+                    Some(Participant::new(ActorType::Planet, planet_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                    EventType::MessagePlanetToOrchestrator,
+                    LOG_ACTORS_ACTIVITY,
+                    payload!(
+                        "message"=>"StartPlanetAIResult",
+                        "planet_id"=>planet_id
+                    )
+                );
+                event.emit();
+                //LOG
+            }
+            PlanetToOrchestrator::StopPlanetAIResult { planet_id } => {
+                //LOG
+                let event=LogEvent::new(
+                    Some(Participant::new(ActorType::Planet, planet_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                    EventType::MessagePlanetToOrchestrator,
+                    LOG_ACTORS_ACTIVITY,
+                    payload!(
+                        "message"=>"StopPlanetAIResult",
+                        "planet_id"=>planet_id
+                    )
+                );
+                event.emit();
+                //LOG
+            }
+            PlanetToOrchestrator::Stopped { planet_id } => {
+                log_message!(
+                    ActorType::Planet, planet_id,
+                    ActorType::Orchestrator, 0u32,
+                    EventType::MessagePlanetToOrchestrator,
+                    "Stopped",
+                    planet_id
+                )
+            }
+            _ => {
+                let event=LogEvent::self_directed(
+                    Participant::new(ActorType::Orchestrator, 0u32),
+                    EventType::MessagePlanetToOrchestrator,
+                    Channel::Warning,
+                    warning_payload!(
+                        "unhandled planet message",
+                        "_",
+                        "handle_planet_message()";
+                    )
+                );
+                event.emit();
+            }
         }
         Ok(())
     }
 
+    //TODO missing planet id in this function, maybe is useful for the logs
     pub(crate) fn send_sunray(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+        //LOG
+        log_orch_fn!(
+            "send_sunray()";
+            "sender"=>"Sender<OrchestratorToPlanet>"
+        );
+        //LOG
         sender
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
-            .map_err(|_| "Unable to send a sunray to planet: {id}".to_string())
+            .map_err(|_| "Unable to send a sunray to planet: {id}".to_string())?;
+
+        //LOG
+        log_message!(
+            ActorType::Orchestrator, 0u32,
+            ActorType::Planet, 0u32, //TODO missing planet id
+            EventType::MessageOrchestratorToPlanet,
+            "Sunray",
+
+        );
+        //LOG
+        Ok(())
+
     }
     pub(crate) fn send_sunray_to_all(&self) -> Result<(), String> {
+        //LOG
+        log_orch_fn!("send_sunray_to_all()");
+        //LOG
         for (id, (sender, _)) in &self.planet_channels {
             if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
                 self.send_sunray(sender)?;
@@ -896,14 +1109,36 @@ impl Orchestrator {
         &self,
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
+        //LOG
+        log_orch_fn!(
+            "send_asteroid()";
+            "sender"=>"Sender<OrchestratorToPlanet>"
+        );
+        //LOG
+
         sender
             .send(OrchestratorToPlanet::Asteroid(
                 self.forge.generate_asteroid(),
             ))
-            .map_err(|_| "Unable to send sunray to planet: {id}".to_string())
+            .map_err(|_| "Unable to send sunray to planet: {id}".to_string())?;
+
+        //LOG
+        log_message!(
+            ActorType::Orchestrator, 0u32,
+            ActorType::Planet, 0u32, //TODO missing planet id
+            EventType::MessageOrchestratorToPlanet,
+            "Asteroid",
+
+        );
+        //LOG
+        Ok(())
     }
     pub(crate) fn send_asteroid_to_all(&self) -> Result<(), String> {
-        //unwrap cannot fail because every id is contained in the map
+        //LOG
+        log_orch_fn!("send_asteroid_to_all()");
+        //LOG
+
+        //TODO unwrap cannot fail because every id is contained in the map
         for (id, (sender, _)) in &self.planet_channels {
             if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
                 self.send_asteroid(sender)?;
@@ -916,11 +1151,28 @@ impl Orchestrator {
         &self,
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
+        //LOG
+        log_orch_fn!(
+            "send_planet_kill()";
+            "sender"=>"Sender<OrchestratorToPlanet>"
+        );
+        //LOG
         sender
             .send(OrchestratorToPlanet::KillPlanet)
-            .map_err(|_| "Unable to send kill message to planet: {id}".to_string())
+            .map_err(|_| "Unable to send kill message to planet: {id}".to_string())?;
+
+        log_message!(
+            ActorType::Orchestrator, 0u32,
+            ActorType::Planet, 0u32, //TODO missing planet id
+            EventType::MessageOrchestratorToPlanet,
+            "KillPlanet",
+        );
+        Ok(())
     }
     pub(crate) fn send_planet_kill_to_all(&self) -> Result<(), String> {
+        //LOG
+        log_orch_fn!("send_planet_kill_to_all()");
+        //LOG
         for (id, (sender, _)) in &self.planet_channels {
             //unwrap cannot fail because every id is contained in the map
             if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
@@ -932,15 +1184,34 @@ impl Orchestrator {
 
     /// Run by the game loop, it should handle the messages from planets and explorers
     pub(crate) fn handle_game_messages(&mut self) -> Result<(), String> {
+        //LOG
+        log_orch_fn!("handle_game_messages()");
+        //LOG
         select! {
             recv(self.recevier_orch_planet)->msg=>{
                 let msg_unwraped = match msg{
                     Ok(res)=>res,
-                    Err(_)=>return Err("Cannot receive message from planets".to_string()),
+                    Err(e)=>{
+                        //LOG
+                        let event=LogEvent::self_directed(
+                            Participant::new(ActorType::Orchestrator, 0u32),
+                            EventType::InternalOrchestratorAction,
+                            Channel::Warning,
+                            warning_payload!(
+                                "Cannot receive message from planets",
+                                e,
+                                "handle_game_messages()"
+                            )
+                        );
+                        event.emit();
+                        //LOG
+                        return Err("Cannot receive message from planets".to_string())
+                    },
                 };
                 self.handle_planet_message(msg_unwraped)?;
             }
             recv(self.receiver_orch_explorer)->msg=>{
+                //TODO to finish this function
                 todo!()
             }
             default=>{}
@@ -952,10 +1223,29 @@ impl Orchestrator {
 //Functions used by the game
 impl Orchestrator {
     pub(crate) fn start_all(&mut self) -> Result<(), String> {
+        //LOG
+        log_orch_fn!("start_all()");
+        //LOG
         self.start_all_planet_ais()?;
+        //LOG
+        log_orch_internal!({
+            "action"=>"all systems started",
+            "status"=>"success"
+        });
+        //LOG
         Ok(())
     }
     pub(crate) fn stop_all(&mut self) -> Result<(), String> {
+        //LOG
+        log_orch_fn!("stop_all()");
+        //LOG
+        //TODO
+        //LOG
+        log_orch_internal!({
+            "action"=>"stop_all requested",
+            "status"=>"TODO - not implemented" //TODO change thi message
+        });
+        //LOG
         todo!();
         Ok(())
     }
@@ -1001,10 +1291,16 @@ impl Orchestrator {
     /// the topology from the GUI's side in an improper
     /// way that might misalign the internal state
     pub(crate) fn get_topology(&self) -> GalaxyTopology {
+        //LOG
+        log_orch_fn!("get_topology()");
+        //LOG
         self.galaxy_topology.clone()
     }
 
     pub(crate) fn get_game_status(&self) -> Result<(GalaxyTopology, PlanetStatus, ExplorerStatus), String> {
+        //LOG
+        log_orch_fn!("get_game_status()");
+        //LOG
         Ok((Arc::clone(&self.galaxy_topology), Arc::clone(&self.planets_status), Arc::clone(&self.explorer_status)))
     }
 }
