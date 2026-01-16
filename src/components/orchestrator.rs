@@ -211,6 +211,19 @@ macro_rules! debug_println {
     };
 }
 
+///The core of the game.
+/// 
+/// The orchestrator's main responsibility is to handle game state, without directly
+/// affecting the game timeline. The orchestrator can modify the game state via 
+/// automatic predefined behavior or via direct intervention through its API. Its main
+/// responsibilities are:
+/// - generating and eventually updating the galaxy topology
+/// - handling the creation and assignment of communication channels
+/// - directly overseeing the requests of the game's components
+/// - creating and sending both asteroids and sun rays
+/// - coordinating and overseeing the actions of explorers
+/// - ensuring the state of the various elements of the game are congruent with the
+/// game timeline 
 pub struct Orchestrator {
     // Forge sunray and asteroid
     pub forge: Forge,
@@ -228,7 +241,7 @@ pub struct Orchestrator {
 
     //Channel to clone for the planets and for receiving Planet Messages
     pub sender_planet_orch: Sender<PlanetToOrchestrator>,
-    pub recevier_orch_planet: Receiver<PlanetToOrchestrator>,
+    pub receiver_orch_planet: Receiver<PlanetToOrchestrator>,
 
     //Channel to clone for the explorer and for receiving Explorer Messages
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
@@ -237,10 +250,10 @@ pub struct Orchestrator {
 
 //Initialization game functions
 impl Orchestrator {
-    /// Create a new Galaxy Topology
-    /// ` `
-    /// Function used as shorthand to create a new
-    /// galaxy topology instance
+    /// Create a new Galaxy Topology.
+    /// 
+    /// This function is used as shorthand to create a new galaxy topology instance.
+    /// Returns an atomic reference containing the galaxy's structure.
     fn new_gtop() -> GalaxyTopology {
         //Log
         log_orch_fn!("new_gtop()",);
@@ -250,7 +263,7 @@ impl Orchestrator {
         Arc::new(RwLock::new(Vec::new()))
     }
 
-    //Check and init orchestrator for the test, the comms with the ui are fake
+    /// Create a new orchestrator instance.
     pub(crate) fn new() -> Result<Self, String> {
         //env_logger initialization
         env_logger::init();
@@ -259,7 +272,7 @@ impl Orchestrator {
         //LOG
 
 
-        let (sender_planet_orch, recevier_orch_planet) = unbounded();
+        let (sender_planet_orch, receiver_orch_planet) = unbounded();
         let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
 
         //Log
@@ -279,13 +292,19 @@ impl Orchestrator {
             planet_channels: HashMap::new(),
             explorer_channels: HashMap::new(),
             sender_planet_orch,
-            recevier_orch_planet,
+            receiver_orch_planet,
             sender_explorer_orch,
             receiver_orch_explorer,
         };
         Ok(new_orch)
     }
 
+    /// Reset the orchestrator.
+    /// 
+    /// Reset the orchestrator by killing all planets.
+    /// Returns Err if any planet is still alive after one second,
+    /// or if no sender is connected and the message buffer
+    /// is empty.
     pub(crate) fn reset(&mut self) -> Result<(), String> {
         //Log
         log_orch_fn!(
@@ -300,8 +319,8 @@ impl Orchestrator {
         self.send_planet_kill_to_all()?;
         loop {
             select! {
-                recv(self.recevier_orch_planet)->msg=>{
-                    let msg_unwraped = match msg{
+                recv(self.receiver_orch_planet)->msg=>{
+                    let msg_unwrapped = match msg{
                         Ok(res)=>res,
                         Err(e)=>{
                             //Log
@@ -321,7 +340,7 @@ impl Orchestrator {
                             return Err("No more sender connected and no messages in the buffer".to_string())
                         },
                     };
-                    match msg_unwraped{
+                    match msg_unwrapped{
                         PlanetToOrchestrator::KillPlanetResult { planet_id }=>{
                             //Log
                             let event=LogEvent::new(
@@ -400,9 +419,10 @@ impl Orchestrator {
         Ok(())
     }
 
-    ///initialize communication channels for planets
-    /// needed as a shorthand to initialize OrchestratorToPlanet and ExplorerToPlanet channels
-    /// just tu remember: these channels are simplex
+    /// Initialize communication channels for planets.
+    /// 
+    /// needed as a shorthand to initialize the OrchestratorToPlanet and ExplorerToPlanet channels | 
+    /// NOTE: these channels are simplex.
     pub(crate) fn init_comms_planet() -> (
         Sender<OrchestratorToPlanet>,
         Receiver<OrchestratorToPlanet>,
@@ -441,15 +461,16 @@ impl Orchestrator {
         )
     }
 
-    ///initialize communication channels for explorer.
+    /// Initialize the communication channels for an explorer.
     ///
-    /// needed as a shorthand to initialize OrchestratorToExplorer and PlanetToExplorer
+    /// Needed as a shorthand to initialize OrchestratorToExplorer and PlanetToExplorer.
     ///
-    /// Remember that when an explorer goes from a planet to another first the new planet is connected
-    /// to the sender side and only after the previous planet is disconnected from the channel. No new channel is created
+    /// This function is NOT supposed to be used when an explorer gets moved: first the
+    ///  new planet is connected to the pre-existing sender side and, only after that
+    /// happens, the previous planet is disconnected from the channel. No new channel
+    /// is created. See function [`add_explorer`](Self::add_explorer).
     ///
-    /// just tu remember: these channels are simplex
-    ///
+    /// NOTE: These channels are simplex.
     pub(crate) fn init_comms_explorers() -> (
         Sender<OrchestratorToExplorer>,
         Receiver<OrchestratorToExplorer>,
@@ -481,6 +502,18 @@ impl Orchestrator {
 
         (sender_orch, receiver_orch, sender_planet, receiver_planet)
     }
+
+    /// Add a new planet to the orchestrator.
+    /// 
+    /// Adds a new planet inside the orchestrator state, using the internal planet
+    /// registry. It first creates the planet object, then adds it to the galaxy lookup
+    /// hashmap and starts the planet thread.
+    /// 
+    /// Returns Err if the planet registry closure fails, which means that the planet
+    /// could not be instantiated.
+    /// 
+    /// * `id` - id of the planet
+    /// * `type_id` - the type of the planet (A,B,C,D)
     pub(crate) fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
 
         //LOG
@@ -495,7 +528,7 @@ impl Orchestrator {
         let (sender_orchestrator, receiver_orchestrator, sender_explorer, receiver_explorer) =
             Orchestrator::init_comms_planet();
 
-        //Planet-end of prchestrator-planet/planet-orchestrator channels
+        //Planet-end of orchestrator-planet/planet-orchestrator channels
         let planet_to_orchestrator_channels =
             (receiver_orchestrator, self.sender_planet_orch.clone());
 
@@ -540,6 +573,17 @@ impl Orchestrator {
         //LOG
         Ok(())
     }
+
+    /// Add a new explorer to the orchestrator.
+    /// 
+    /// Adds a new explorer inside the orchestrator state; it first creates the
+    /// necessary channels and the explorer instance, then adds it to the explorer
+    /// status hashmap and starts the explorer itself.
+    /// 
+    /// * `explorer_id` - id of the new explorer
+    /// * `planet_id` - id of the planet the explorer will be spawned on
+    /// * `free_cells` - the amount of currently free cells in the visiting planet
+    /// * `sender_explorer` - pre-existing explorer to planet channel
     pub(crate) fn add_explorer(
         &mut self,
         explorer_id: u32,
@@ -596,6 +640,18 @@ impl Orchestrator {
             "explorer_id"=>explorer_id,
         });
     }
+
+    /// Initialize the galaxy using a topology file.
+    /// 
+    /// Uses the galaxy topology file (which should be based on the INPUT_FILE 
+    /// environment variable, set in the .env file of the project) and performs
+    /// parsing operations to pass it on to 
+    /// [`initialize_galaxy_by_adj_list`](Self::initialize_galaxy_by_adj_list). 
+    /// 
+    /// Returns Err if the file is formatted incorrectly or if any of the following
+    /// initialization functions return Err as well.
+    /// 
+    /// * `path` - path to the galaxy initialization file
     pub(crate) fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
         //At the moment are allowed only id from 0 to MAX u32
         log_orch_fn!(
@@ -672,6 +728,20 @@ impl Orchestrator {
         Ok(())
     }
 
+    /// Initialize the galaxy using an adjacency list.
+    /// 
+    /// This function is normally called by 
+    /// [`initialize_galaxy_by_file`](`Self::initialize_galaxy_by_file`), who in
+    /// turn hands off control to 
+    /// [`initialize_planets_by_ids_list`](Self::initialize_planets_by_ids_list).
+    /// The function is thread safe thanks to the use of RwLock, even though no
+    /// other threads should request the galaxy topology during initialization.
+    /// 
+    /// Returns Err if RwLock fails to lock on a write or if the following function in
+    /// the initialization chain fails as well. 
+    /// 
+    /// * `adj_list` - a two dimensional matrix,
+    ///  parsed by `initialize_galaxy_by_file`
     pub(crate) fn initialize_galaxy_by_adj_list(
         &mut self,
         adj_list: Vec<Vec<u32>>,
@@ -766,6 +836,17 @@ impl Orchestrator {
         }
     }
 
+    /// Initialize the galaxy using a list of planet IDs.
+    /// 
+    /// This function is normally called by 
+    /// [`initialize_galaxy_by_adj_list`](Self::initialize_galaxy_by_adj_list). The 
+    /// IDs given as input are given to [`add_planet`](Self::add_planet) to start every planet thread
+    /// with the necessary information.
+    /// 
+    /// Returns Err if the planet ID isn't valid or if the [`add planet`]
+    /// function returns Err as well.
+    /// 
+    /// * `ids_list` - list of planet IDs, parsed by `initialize_galaxy_by_adj_list`
     pub(crate) fn initialize_planets_by_ids_list(
         &mut self,
         ids_list: Vec<u32>,
@@ -808,7 +889,7 @@ impl Orchestrator {
 //Game functions
 impl Orchestrator {
     /// Removes the link between two planets if one of them explodes.
-    /// ``
+    /// 
     /// Returns Err if the given indexes are out of bounds, Ok otherwise;
     /// it does NOT currently check wether the link was already set to false beforehand
     ///
@@ -883,6 +964,14 @@ impl Orchestrator {
         }
     }
 
+    /// Starts the AI of every planet.
+    /// 
+    /// Goes through every PlanetToOrchestrator channel and sends the `StartPlanetAI`
+    /// message. As of version 0.1 of the project, the execution of this function is
+    /// non deterministic and might never return in case one of the channels just
+    /// hangs forever.
+    /// 
+    /// Returns Err if any of the communication channels are inaccessible. 
     pub(crate) fn start_all_planet_ais(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("start_all_planet_ais()");
@@ -905,7 +994,7 @@ impl Orchestrator {
         }
 
         let mut count = 0;
-        //TODO REVIEW is it possible that this loop could block forevere the game?
+        //TODO REVIEW is it possible that this loop could block forever the game?
         loop {
             if count == self.planet_channels.len() {
                 //LOG
@@ -917,7 +1006,7 @@ impl Orchestrator {
                 break;
             }
             let receive_channel = self
-                .recevier_orch_planet
+                .receiver_orch_planet
                 .recv()
                 .map_err(|_| "Cannot receive message from planets".to_string())?;
             match receive_channel {
@@ -938,8 +1027,10 @@ impl Orchestrator {
                     );
                     event.emit();
                     //LOG
-                    //TODO unwrap così potrebbe panicare
-                    self.planets_status.write().unwrap().insert(planet_id, Status::Running);
+                    //TODO this unwrap is needlessly dangerous. safer alternative?
+                    self.planets_status.write()
+                        .unwrap()
+                        .insert(planet_id, Status::Running);
                     count += 1;
                 }
                 _ => {}
@@ -948,6 +1039,14 @@ impl Orchestrator {
         Ok(())
     }
 
+    /// Handle the planet messages that are sent through the orchestrator's
+    /// communication channels.
+    /// 
+    /// This function serves as an entry point to all the messages that originate
+    /// from the planets that need the orchestrator's intervention; no logic is
+    /// actually present.
+    /// 
+    /// * `msg` - the message to pass along to other functions
     pub(crate) fn handle_planet_message(
         &mut self,
         msg: PlanetToOrchestrator,
@@ -1108,6 +1207,11 @@ impl Orchestrator {
     }
 
     //TODO missing planet id in this function, maybe is useful for the logs
+    /// Send a sun ray to a planet.
+    /// 
+    /// Requests a sun ray through the `forge` and sends it to the planet.
+    /// 
+    /// Returns Err if the planet's channel is inaccessible.
     pub(crate) fn send_sunray(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
         //LOG
         log_orch_fn!(
@@ -1131,6 +1235,10 @@ impl Orchestrator {
         Ok(())
 
     }
+
+    /// Sends a sun ray to all planets.
+    /// 
+    /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
     pub(crate) fn send_sunray_to_all(&self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_sunray_to_all()");
@@ -1143,6 +1251,11 @@ impl Orchestrator {
         Ok(())
     }
 
+    /// Send an asteroid to a planet.
+    /// 
+    /// Requests an asteroid through the `forge` and sends it to the planet.
+    /// 
+    /// Returns Err if the planet's channel is inaccessible.
     pub(crate) fn send_asteroid(
         &self,
         sender: &Sender<OrchestratorToPlanet>,
@@ -1171,6 +1284,11 @@ impl Orchestrator {
         //LOG
         Ok(())
     }
+    
+    /// Sends an asteroid to all planets.
+    /// 
+    /// See [`send_asteroid`](`Self::send_asteroid`) for more details on how an asteroid
+    /// is sent.
     pub(crate) fn send_asteroid_to_all(&self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_asteroid_to_all()");
@@ -1185,6 +1303,13 @@ impl Orchestrator {
         Ok(())
     }
 
+    /// Kill a specific planet.
+    /// 
+    /// Sends a KillPlanet message to the planet, which is required to handle it.
+    /// This function does not check wether the planet has actually died: it only
+    /// sends the message.
+    /// 
+    /// Returns Err if the planet's channel is inaccessible.
     pub(crate) fn send_planet_kill(
         &self,
         sender: &Sender<OrchestratorToPlanet>,
@@ -1207,6 +1332,11 @@ impl Orchestrator {
         );
         Ok(())
     }
+    
+    /// Sends a Kill message to all planets.
+    /// 
+    /// See [`send_planet_kill`](`Self::send_planet_kill`) for more details on how a
+    /// planet kill message is sent.
     pub(crate) fn send_planet_kill_to_all(&self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_planet_kill_to_all()");
@@ -1220,13 +1350,17 @@ impl Orchestrator {
         Ok(())
     }
 
-    /// Run by the game loop, it should handle the messages from planets and explorers
+    /// Handle the planet messages that are sent through the orchestrator's
+    /// communication channels.
+    /// 
+    /// This function serves as an entry point to all the messages that need the
+    /// orchestrator's intervention; no logic is actually present.
     pub(crate) fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("handle_game_messages()");
         //LOG
         select! {
-            recv(self.recevier_orch_planet)->msg=>{
+            recv(self.receiver_orch_planet)->msg=>{
                 let msg_unwraped = match msg{
                     Ok(res)=>res,
                     Err(e)=>{
@@ -1258,8 +1392,13 @@ impl Orchestrator {
         Ok(())
     }
 }
+
 //Functions used by the game
 impl Orchestrator {
+    /// Global start function, starts all of the planets' AIs; wrapper on
+    /// [`start_all_planet_ais`](`Self::start_all_planet_ais`).
+    /// 
+    /// Returns Err if any of the planets fail to start.
     pub(crate) fn start_all(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("start_all()");
@@ -1273,6 +1412,11 @@ impl Orchestrator {
         //LOG
         Ok(())
     }
+
+
+    /// Global stop function.
+    /// 
+    /// The function is yet to be implemented, and WILL panic no matter what. 
     pub(crate) fn stop_all(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("stop_all()");
@@ -1281,11 +1425,11 @@ impl Orchestrator {
         //LOG
         log_orch_internal!({
             "action"=>"stop_all requested",
-            "status"=>"TODO - not implemented" //TODO change thi message
+            "status"=>"TODO - not implemented" //TODO change this message
         });
         //LOG
         todo!();
-        Ok(())
+        //Ok(())
     }
 }
 
@@ -1335,6 +1479,13 @@ impl Orchestrator {
         self.galaxy_topology.clone()
     }
 
+    /// Get the game's current state, as present in the orchestrator.
+    /// 
+    /// Returns a tuple of 3 atomic references to objects that represent
+    /// the game's state:
+    /// - `GalaxyTopology`, the current structure of the galaxy
+    /// - `PlanetStatus`, the status (Running, Paused, ...) of all planets
+    /// - `ExplorerStatus`, the status (Running, Paused, ...) of all explorers
     pub(crate) fn get_game_status(&self) -> Result<(GalaxyTopology, PlanetStatus, ExplorerStatus), String> {
         //LOG
         log_orch_fn!("get_game_status()");
