@@ -611,7 +611,8 @@ impl Explorer {
                                         // TODO this action should be preemptive
                                         kill_explorer(self);
                                     }
-                                    OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet } => {
+                                    OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet, planet_id } => {
+                                        // TODO use the planet_id variable (common crate v3) 
                                         move_to_planet(self, sender_to_new_planet);
                                     }
                                     OrchestratorToExplorer::CurrentPlanetRequest => {
@@ -761,7 +762,8 @@ pub fn manage_buffer_msg(explorer: &mut Explorer){
                 // TODO this action should be preemptive
                 kill_explorer(explorer);
             }
-            OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet } => {
+            OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet, planet_id } => {
+                //TODO: use the new planet_id variable (common crate v3)
                 move_to_planet(explorer, sender_to_new_planet);
             }
             OrchestratorToExplorer::CurrentPlanetRequest => {

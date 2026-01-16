@@ -6,12 +6,12 @@ edition = "2024"
 [dependencies]
 log = "0.4"
 dotenv = "0.15"
-common-game = "2.0.0"
+common-game = "3.0.0"
 black-adidas-shoe = {git="https://github.com/black-adidas-shoe-org/planet.git", package="ara_kees"}
 ciuc_planet = {git = "https://github.com/Pietro-Calvi/ciuc_planet.git"}
 houston-we-have-a-borrow = {git="https://github.com/Houston-we-have-a-borrow/Planet.git", package="Planet"}
 immutable_cosmic_borrow = {git="https://github.com/ImmutableCosmicBorrow/planet.git"}
-one-million-crabs = { git = "https://github.com/Advance-Programming-2025/One_million_crabs.git", branch="dev"}
+one-million-crabs = { git = "https://github.com/Advance-Programming-2025/One_million_crabs.git" }
 rustrelli = {git="https://github.com/Rustrelli/rustrelli.git"}
 rusty-crab = {package = "rusty-crab-ap2025", version = "2.0.0-alpha.1"}
 
