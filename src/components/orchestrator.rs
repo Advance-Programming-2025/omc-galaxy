@@ -1,5 +1,5 @@
 use crate::components::explorer::{BagType, Explorer};
-use crate::utils::{ExplorerStatus, PlanetStatus};
+use crate::utils::{ExplorerStatus, GalaxySnapshot, PlanetStatus};
 use crate::utils::registry::PlanetType::{
     BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
 };
@@ -1472,11 +1472,25 @@ impl Orchestrator {
     /// galaxy topology. This is made to avoid changing
     /// the topology from the GUI's side in an improper
     /// way that might misalign the internal state
-    pub(crate) fn get_topology(&self) -> GalaxyTopology {
+    pub fn get_topology(&self) -> GalaxySnapshot {
         //LOG
         log_orch_fn!("get_topology()");
         //LOG
-        self.galaxy_topology.clone()
+        let topology = self.galaxy_topology.read().unwrap();
+        
+        let mut edges = Vec::new();
+
+        for i in 0..topology.len() {
+            for j in (i + 1)..topology[i].len() {
+                if topology[i][j] {
+                    edges.push((i as u32, j as u32));
+                }
+            }
+        }
+        
+        drop(topology);
+
+        edges
     }
 
     /// Get the game's current state, as present in the orchestrator.
