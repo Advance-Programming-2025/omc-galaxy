@@ -266,7 +266,8 @@ impl Orchestrator {
     /// Create a new orchestrator instance.
     pub fn new() -> Result<Self, String> {
         //env_logger initialization
-        env_logger::init();
+        env_logger::try_init()
+            .map_err(|_| "log panic".to_string())?;
         //Log
         log_orch_fn!("new()",);
         //LOG
