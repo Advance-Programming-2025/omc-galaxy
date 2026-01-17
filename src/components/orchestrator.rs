@@ -1206,13 +1206,12 @@ impl Orchestrator {
         Ok(())
     }
 
-    //TODO missing planet id in this function, maybe is useful for the logs
     /// Send a sun ray to a planet.
     /// 
     /// Requests a sun ray through the `forge` and sends it to the planet.
     /// 
     /// Returns Err if the planet's channel is inaccessible.
-    pub(crate) fn send_sunray(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub(crate) fn send_sunray(&self, planet_id: u32, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
         //LOG
         log_orch_fn!(
             "send_sunray()";
@@ -1226,7 +1225,7 @@ impl Orchestrator {
         //LOG
         log_message!(
             ActorType::Orchestrator, 0u32,
-            ActorType::Planet, 0u32, //TODO missing planet id
+            ActorType::Planet, planet_id,
             EventType::MessageOrchestratorToPlanet,
             "Sunray",
 
@@ -1245,7 +1244,7 @@ impl Orchestrator {
         //LOG
         for (id, (sender, _)) in &self.planet_channels {
             if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
-                self.send_sunray(sender)?;
+                self.send_sunray(*id, sender)?;
             }
         }
         Ok(())
@@ -1258,6 +1257,7 @@ impl Orchestrator {
     /// Returns Err if the planet's channel is inaccessible.
     pub(crate) fn send_asteroid(
         &self,
+        planet_id: u32,
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
@@ -1276,7 +1276,7 @@ impl Orchestrator {
         //LOG
         log_message!(
             ActorType::Orchestrator, 0u32,
-            ActorType::Planet, 0u32, //TODO missing planet id
+            ActorType::Planet, planet_id, 
             EventType::MessageOrchestratorToPlanet,
             "Asteroid",
 
@@ -1297,7 +1297,7 @@ impl Orchestrator {
         //TODO unwrap cannot fail because every id is contained in the map
         for (id, (sender, _)) in &self.planet_channels {
             if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
-                self.send_asteroid(sender)?;
+                self.send_asteroid(*id,sender)?;
             }
         }
         Ok(())
