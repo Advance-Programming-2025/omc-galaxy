@@ -652,7 +652,7 @@ impl Orchestrator {
     /// initialization functions return Err as well.
     /// 
     /// * `path` - path to the galaxy initialization file
-    pub(crate) fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
+    pub fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
         //At the moment are allowed only id from 0 to MAX u32
         log_orch_fn!(
             "initialize_galaxy_by_file()",
