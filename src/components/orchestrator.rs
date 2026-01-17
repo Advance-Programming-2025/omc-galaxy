@@ -266,7 +266,7 @@ impl Orchestrator {
     /// Create a new orchestrator instance.
     pub fn new() -> Result<Self, String> {
         //env_logger initialization
-        env_logger::try_init();
+        let _res = env_logger::try_init();
         //Log
         log_orch_fn!("new()",);
         //LOG
@@ -1472,13 +1472,14 @@ impl Orchestrator {
     /// galaxy topology. This is made to avoid changing
     /// the topology from the GUI's side in an improper
     /// way that might misalign the internal state
-    pub fn get_topology(&self) -> GalaxySnapshot {
+    pub fn get_topology(&self) -> (GalaxySnapshot, usize) {
         //LOG
         log_orch_fn!("get_topology()");
         //LOG
         let topology = self.galaxy_topology.read().unwrap();
         
         let mut edges = Vec::new();
+        let planet_num = topology.len();
 
         for i in 0..topology.len() {
             for j in (i + 1)..topology[i].len() {
@@ -1490,7 +1491,7 @@ impl Orchestrator {
         
         drop(topology);
 
-        edges
+        (edges, planet_num)
     }
 
     /// Get the game's current state, as present in the orchestrator.
