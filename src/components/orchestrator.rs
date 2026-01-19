@@ -14,6 +14,7 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, select, tick, unbounded};
+use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -1430,6 +1431,19 @@ impl Orchestrator {
         //LOG
         let _res = self.send_planet_kill_to_all();
 
+        Ok(())
+    }
+
+    pub fn choose_random_action(&mut self) -> Result<(), String> {
+        let num: u32 = rand::rng().random();
+        let id = num % (self.galaxy_lookup.len() as u32);
+        if let Some(planet) = self.planet_channels.get(&id) {
+            if num % 2 == 0 {
+                self.send_asteroid(id, &planet.0)?;
+            } else {
+                self.send_sunray(id, &planet.0)?;
+            }
+        }
         Ok(())
     }
 }
