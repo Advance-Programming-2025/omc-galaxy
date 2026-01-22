@@ -6,6 +6,7 @@ use crate::utils::registry::PlanetType::{
 use crate::utils::registry::{PLANET_REGISTRY, PlanetType};
 use crate::utils::state_enums::Status;
 use crate::utils::types::GalaxyTopology;
+use bevy_ecs::message::{Message, MessageWriter, Messages};
 use common_game::components::forge::Forge;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
@@ -212,6 +213,15 @@ macro_rules! debug_println {
     };
 }
 
+#[derive(Message)]
+pub struct DestroyedMessage{
+    planet_id: u32
+}
+
+struct BevyMessages {
+    pub destroyed: Messages<DestroyedMessage>
+}
+
 ///The core of the game.
 /// 
 /// The orchestrator's main responsibility is to handle game state, without directly
@@ -247,6 +257,7 @@ pub struct Orchestrator {
     //Channel to clone for the explorer and for receiving Explorer Messages
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
+    pub bevy_message_emitter: Option<BevyMessages>
 }
 
 //Initialization game functions
@@ -296,6 +307,7 @@ impl Orchestrator {
             receiver_orch_planet,
             sender_explorer_orch,
             receiver_orch_explorer,
+            bevy_message_emitter: None
         };
         Ok(new_orch)
     }
@@ -1312,7 +1324,8 @@ impl Orchestrator {
     /// 
     /// Returns Err if the planet's channel is inaccessible.
     pub(crate) fn send_planet_kill(
-        &self,
+        &mut self,
+        planet_id: u32,
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
@@ -1325,9 +1338,12 @@ impl Orchestrator {
             .send(OrchestratorToPlanet::KillPlanet)
             .map_err(|_| "Unable to send kill message to planet: {id}".to_string())?;
 
+        //BEVY
+        self.emit_planet_death(planet_id);
+
         log_message!(
             ActorType::Orchestrator, 0u32,
-            ActorType::Planet, 0u32, //TODO missing planet id
+            ActorType::Planet, planet_id,
             EventType::MessageOrchestratorToPlanet,
             "KillPlanet",
         );
@@ -1338,15 +1354,28 @@ impl Orchestrator {
     /// 
     /// See [`send_planet_kill`](`Self::send_planet_kill`) for more details on how a
     /// planet kill message is sent.
-    pub(crate) fn send_planet_kill_to_all(&self) -> Result<(), String> {
+    pub(crate) fn send_planet_kill_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_planet_kill_to_all()");
         //LOG
-        for (id, (sender, _)) in &self.planet_channels {
-            //unwrap cannot fail because every id is contained in the map
-            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
-                self.send_planet_kill(sender)?;
-            }
+
+        //collect all of the senders in a vector
+        let senders_to_kill: Vec<(u32, Sender<OrchestratorToPlanet>)> =
+        self.planet_channels
+            .iter()
+            .filter_map(|(id, (sender, _))| {
+                let status = self.planets_status.read().unwrap();
+                if status.get(id) != Some(&Status::Dead) {
+                    Some((*id, sender.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // actually send the messages
+        for (id, sender) in senders_to_kill {
+            self.send_planet_kill(id, &sender)?;
         }
         Ok(())
     }
@@ -1507,6 +1536,22 @@ impl Orchestrator {
         drop(topology);
 
         (edges, planet_num)
+    }
+
+    /// Emits a Bevy event if a planet has died
+    /// 
+    /// If the orchestrator's Bevy Message buffer is not None,
+    /// It sends a message that signals the death of planet
+    /// `planet_id`
+    fn emit_planet_death(&mut self, planet_id: u32){
+
+        println!("THIS FUNCTION IS STILL BEING BUILT");
+        if self.bevy_message_emitter.is_some() {
+            
+            if let Some(msg) = &mut self.bevy_message_emitter {
+                msg.destroyed.write(DestroyedMessage{planet_id});
+            }
+        }
     }
 
     /// Get the game's current state, as present in the orchestrator.
