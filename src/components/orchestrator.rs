@@ -1063,6 +1063,7 @@ impl Orchestrator {
         &mut self,
         msg: PlanetToOrchestrator,
     ) -> Result<(), String> {
+        // TODO remove the info! logs, they're for gui debug purposes
         //LOG
         log_orch_fn!(
             "handle_planet_message()";
@@ -1096,9 +1097,11 @@ impl Orchestrator {
                     planet_id;
                     "has_rocket"=>rocket.is_some()
                 );
+                info!("asteroid acked!");
                 //LOG
                 match rocket {
                     Some(_) => {
+                        info!("asteroid was deflected!");
                     }
                     None => {
                         //If you have the id then surely that planet exist so we can unwrap without worring
@@ -1117,6 +1120,7 @@ impl Orchestrator {
                             planet_id;
                             "reason"=>"no rocket to deflect asteroid"
                         );
+                        info!("asteroid was NOT deflected!");
                         //LOG
 
                         //Update planet State
