@@ -1,11 +1,13 @@
+use crate::ExplorerStatusNotLock;
 use crate::components::explorer::{BagType, Explorer};
-use crate::utils::{ExplorerStatus, GalaxySnapshot, PlanetStatus};
+use crate::utils::{ExplorerStatus, GalaxySnapshot, PlanetStatus, PlanetStatusNotLock};
 use crate::utils::registry::PlanetType::{
     BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
 };
 use crate::utils::registry::{PLANET_REGISTRY, PlanetType};
 use crate::utils::state_enums::Status;
 use crate::utils::types::GalaxyTopology;
+use black_adidas_shoe::planet;
 use common_game::components::forge::Forge;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
@@ -1507,6 +1509,20 @@ impl Orchestrator {
         drop(topology);
 
         (edges, planet_num)
+    }
+    pub fn get_planet_states(&self)-> PlanetStatusNotLock {
+        //LOG
+        log_orch_fn!("planet_states()");
+        //LOG
+        let planets_status = self.planets_status.read().unwrap().clone();
+        planets_status
+    }
+    pub fn get_explorer_states(&self)-> ExplorerStatusNotLock {
+        //LOG
+        log_orch_fn!("explorer_states()");
+        //LOG
+        let explorer_status = self.explorer_status.read().unwrap().clone();
+        explorer_status
     }
 
     /// Get the game's current state, as present in the orchestrator.
