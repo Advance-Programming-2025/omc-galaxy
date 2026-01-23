@@ -6,7 +6,6 @@ use crate::utils::registry::PlanetType::{
 use crate::utils::registry::{PLANET_REGISTRY, PlanetType};
 use crate::utils::state_enums::Status;
 use crate::utils::types::GalaxyTopology;
-use bevy_ecs::message::{Message, MessageWriter, Messages};
 use common_game::components::forge::Forge;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
@@ -24,7 +23,6 @@ use std::sync::RwLock;
 use std::time::{Duration};
 use std::{fs, thread};
 use common_game::logging;
-use common_game::logging::Channel::Error;
 
 const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
 const LOG_FN_INT_OPERATIONS: Channel = Channel::Trace;
@@ -213,13 +211,10 @@ macro_rules! debug_println {
     };
 }
 
-#[derive(Message)]
-pub struct DestroyedMessage{
-    planet_id: u32
-}
-
-struct BevyMessages {
-    pub destroyed: Messages<DestroyedMessage>
+pub enum OrchestratorEvent {
+    PlanetDestroyed { planet_id: u32 },
+    AsteroidSent { destination: u32 },
+    ExplorerMoved { origin: u32, destination: u32 }
 }
 
 ///The core of the game.
@@ -257,7 +252,7 @@ pub struct Orchestrator {
     //Channel to clone for the explorer and for receiving Explorer Messages
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
-    pub bevy_message_emitter: Option<BevyMessages>
+    pub gui_messages: Vec<OrchestratorEvent>
 }
 
 //Initialization game functions
@@ -307,7 +302,7 @@ impl Orchestrator {
             receiver_orch_planet,
             sender_explorer_orch,
             receiver_orch_explorer,
-            bevy_message_emitter: None
+            gui_messages: Vec::new()
         };
         Ok(new_orch)
     }
@@ -318,7 +313,7 @@ impl Orchestrator {
     /// Returns Err if any planet is still alive after one second,
     /// or if no sender is connected and the message buffer
     /// is empty.
-    pub(crate) fn reset(&mut self) -> Result<(), String> {
+    pub fn reset(&mut self) -> Result<(), String> {
         //Log
         log_orch_fn!(
             "reset()";
@@ -1546,12 +1541,7 @@ impl Orchestrator {
     fn emit_planet_death(&mut self, planet_id: u32){
 
         println!("THIS FUNCTION IS STILL BEING BUILT");
-        if self.bevy_message_emitter.is_some() {
-            
-            if let Some(msg) = &mut self.bevy_message_emitter {
-                msg.destroyed.write(DestroyedMessage{planet_id});
-            }
-        }
+        self.gui_messages.push(OrchestratorEvent::PlanetDestroyed{planet_id});
     }
 
     /// Get the game's current state, as present in the orchestrator.
