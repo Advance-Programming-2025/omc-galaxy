@@ -15,6 +15,7 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, select, tick, unbounded};
+use log::info;
 use rand::{Rng, seq::IteratorRandom};
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
@@ -1582,25 +1583,25 @@ impl Orchestrator {
     /// `planet_id`
     fn emit_planet_death(&mut self, planet_id: u32){
 
-        log_orch_internal!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
+        info!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::PlanetDestroyed{planet_id});
     }
 
     fn emit_sunray_ack(&mut self, planet_id: u32){
 
-        log_orch_internal!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
+        info!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::SunrayReceived { planet_id });
     }
 
     fn emit_sunray_send(&mut self, planet_id: u32){
 
-        log_orch_internal!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
+        info!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::SunraySent { planet_id });
     }
 
     fn emit_asteroid_send(&mut self, planet_id: u32){
 
-        log_orch_internal!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
+        info!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::AsteroidSent { planet_id });
     }
 
