@@ -1580,19 +1580,19 @@ impl Orchestrator {
     /// `planet_id`
     fn emit_planet_death(&mut self, planet_id: u32){
 
-        println!("THIS FUNCTION IS STILL BEING BUILT");
+        println!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::PlanetDestroyed{planet_id});
     }
 
     fn emit_sunray_ack(&mut self, planet_id: u32){
 
-        println!("THIS FUNCTION IS STILL BEING BUILT");
+        println!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::SunrayReceived { planet_id });
     }
 
     fn emit_sunray_send(&mut self, planet_id: u32){
 
-        println!("THIS FUNCTION IS STILL BEING BUILT");
+        println!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::SunraySent { planet_id });
     }
 
