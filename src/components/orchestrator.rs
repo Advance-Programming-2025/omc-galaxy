@@ -216,7 +216,7 @@ pub enum OrchestratorEvent {
     PlanetDestroyed { planet_id: u32 },
     SunraySent { planet_id: u32 },
     SunrayReceived { planet_id: u32 },
-    AsteroidSent { destination: u32 },
+    AsteroidSent { planet_id: u32 },
     ExplorerMoved { origin: u32, destination: u32 }
 }
 
@@ -1300,6 +1300,8 @@ impl Orchestrator {
             ))
             .map_err(|_| "Unable to send sunray to planet: {id}".to_string())?;
 
+        self.emit_asteroid_send(planet_id);
+
         //LOG
         log_message!(
             ActorType::Orchestrator, 0u32,
@@ -1580,20 +1582,26 @@ impl Orchestrator {
     /// `planet_id`
     fn emit_planet_death(&mut self, planet_id: u32){
 
-        println!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
+        log_orch_internal!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::PlanetDestroyed{planet_id});
     }
 
     fn emit_sunray_ack(&mut self, planet_id: u32){
 
-        println!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
+        log_orch_internal!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::SunrayReceived { planet_id });
     }
 
     fn emit_sunray_send(&mut self, planet_id: u32){
 
-        println!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
+        log_orch_internal!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::SunraySent { planet_id });
+    }
+
+    fn emit_asteroid_send(&mut self, planet_id: u32){
+
+        log_orch_internal!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
+        self.gui_messages.push(OrchestratorEvent::AsteroidSent { planet_id });
     }
 
     /// Get the game's current state, as present in the orchestrator.
