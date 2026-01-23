@@ -7,6 +7,7 @@ use crate::utils::registry::{PLANET_REGISTRY, PlanetType};
 use crate::utils::state_enums::Status;
 use crate::utils::types::GalaxyTopology;
 use common_game::components::forge::Forge;
+use common_game::components::planet;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -14,7 +15,7 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, select, tick, unbounded};
-use rand::Rng;
+use rand::{Rng, seq::IteratorRandom};
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
@@ -213,6 +214,8 @@ macro_rules! debug_println {
 
 pub enum OrchestratorEvent {
     PlanetDestroyed { planet_id: u32 },
+    SunraySent { planet_id: u32 },
+    SunrayReceived { planet_id: u32 },
     AsteroidSent { destination: u32 },
     ExplorerMoved { origin: u32, destination: u32 }
 }
@@ -1069,6 +1072,7 @@ impl Orchestrator {
         match msg {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
                 debug_println!("SunrayAck from: {}", planet_id);
+                self.emit_sunray_ack(planet_id);
 
                 //LOG
                 log_message!(
@@ -1219,7 +1223,7 @@ impl Orchestrator {
     /// Requests a sun ray through the `forge` and sends it to the planet.
     /// 
     /// Returns Err if the planet's channel is inaccessible.
-    pub(crate) fn send_sunray(&self, planet_id: u32, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub(crate) fn send_sunray(&mut self, planet_id: u32, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
         //LOG
         log_orch_fn!(
             "send_sunray()";
@@ -1229,6 +1233,8 @@ impl Orchestrator {
         sender
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
             .map_err(|_| "Unable to send a sunray to planet: {id}".to_string())?;
+
+        self.emit_sunray_send(planet_id);
 
         //LOG
         log_message!(
@@ -1246,14 +1252,27 @@ impl Orchestrator {
     /// Sends a sun ray to all planets.
     /// 
     /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
-    pub(crate) fn send_sunray_to_all(&self) -> Result<(), String> {
+    pub(crate) fn send_sunray_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_sunray_to_all()");
         //LOG
-        for (id, (sender, _)) in &self.planet_channels {
-            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
-                self.send_sunray(*id, sender)?;
-            }
+        //collect all of the senders in a vector
+        let senders_sunray: Vec<(u32, Sender<OrchestratorToPlanet>)> =
+        self.planet_channels
+            .iter()
+            .filter_map(|(id, (sender, _))| {
+                let status = self.planets_status.read().unwrap();
+                if status.get(id) != Some(&Status::Dead) {
+                    Some((*id, sender.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // actually send the messages
+        for (id, sender) in senders_sunray {
+            self.send_sunray(id, &sender)?;
         }
         Ok(())
     }
@@ -1264,7 +1283,7 @@ impl Orchestrator {
     /// 
     /// Returns Err if the planet's channel is inaccessible.
     pub(crate) fn send_asteroid(
-        &self,
+        &mut self,
         planet_id: u32,
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
@@ -1297,16 +1316,29 @@ impl Orchestrator {
     /// 
     /// See [`send_asteroid`](`Self::send_asteroid`) for more details on how an asteroid
     /// is sent.
-    pub(crate) fn send_asteroid_to_all(&self) -> Result<(), String> {
+    pub(crate) fn send_asteroid_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_asteroid_to_all()");
         //LOG
 
         //TODO unwrap cannot fail because every id is contained in the map
-        for (id, (sender, _)) in &self.planet_channels {
-            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
-                self.send_asteroid(*id,sender)?;
-            }
+        //collect all of the senders in a vector
+        let sender_asteroid: Vec<(u32, Sender<OrchestratorToPlanet>)> =
+        self.planet_channels
+            .iter()
+            .filter_map(|(id, (sender, _))| {
+                let status = self.planets_status.read().unwrap();
+                if status.get(id) != Some(&Status::Dead) {
+                    Some((*id, sender.clone()))
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // actually send the messages
+        for (id, sender) in sender_asteroid {
+            self.send_asteroid(id, &sender)?;
         }
         Ok(())
     }
@@ -1458,18 +1490,26 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub fn choose_random_action(&mut self) -> Result<(), String> {
-        let num: u32 = rand::rng().random();
-        let id = num % (self.galaxy_lookup.len() as u32);
-        if let Some(planet) = self.planet_channels.get(&id) {
-            if num % 2 == 0 {
-                self.send_asteroid(id, &planet.0)?;
-            } else {
-                self.send_sunray(id, &planet.0)?;
-            }
-        }
-        Ok(())
+    
+pub fn choose_random_action(&mut self) -> Result<(), String> {
+    let mut rng = rand::rng();
+
+    // Pick a random planet from the HashMap with the choose method
+    let (planet_id, (orch_tx, _expl_tx)) = match
+        self.planet_channels.iter().choose(&mut rng)
+    {
+        Some((id, chans)) => (*id, chans.clone()),
+        None => return Ok(()), // REVIEW: is this correct or a silent fail?
+    };
+
+    if rng.random_bool(0.5) {
+        self.send_asteroid(planet_id, &orch_tx)?;
+    } else {
+        self.send_sunray(planet_id, &orch_tx)?;
     }
+
+    Ok(())
+}
 }
 
 // REVIEW function used for testing or to eliminate
@@ -1542,6 +1582,18 @@ impl Orchestrator {
 
         println!("THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::PlanetDestroyed{planet_id});
+    }
+
+    fn emit_sunray_ack(&mut self, planet_id: u32){
+
+        println!("THIS FUNCTION IS STILL BEING BUILT");
+        self.gui_messages.push(OrchestratorEvent::SunrayReceived { planet_id });
+    }
+
+    fn emit_sunray_send(&mut self, planet_id: u32){
+
+        println!("THIS FUNCTION IS STILL BEING BUILT");
+        self.gui_messages.push(OrchestratorEvent::SunraySent { planet_id });
     }
 
     /// Get the game's current state, as present in the orchestrator.
