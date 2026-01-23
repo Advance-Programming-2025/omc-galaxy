@@ -1,9 +1,3 @@
-// #[cfg(test)]
-// use std::sync::Mutex;
-
-// #[cfg(test)]
-// use once_cell::sync::Lazy;
-
 #[cfg(test)]
 use crate::components::orchestrator::Orchestrator;
 use crate::utils::registry::PlanetType;
@@ -40,7 +34,6 @@ mod tests_core_lifecycle {
 #[cfg(test)]
 mod tests_actor_management {
     use super::*;
-    use crate::utils::registry::PlanetType;
 
     #[test]
     fn test_membership_add_planet_updates_status_to_paused() {

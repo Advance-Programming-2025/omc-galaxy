@@ -1,5 +1,3 @@
-use common_game::components::planet::Planet;
-
 use crate::utils::{ExplorerStatus, GalaxyTopology, PlanetStatus};
 
 #[derive(Debug)]
