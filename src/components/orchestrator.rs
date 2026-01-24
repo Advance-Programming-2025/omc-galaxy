@@ -1094,9 +1094,12 @@ impl Orchestrator {
                         //If you have the id then surely that planet exist so we can unwrap without worring
                         //TODO it seems fine to me but just to be more precise we could add error handling
                         let sender = &self.planet_channels.get(&planet_id).unwrap().0;
+
+                        //Send KillPlanet message, if it returns Err then the planet it's already killed
+                        //TODO we could log this too
                         sender
                             .send(OrchestratorToPlanet::KillPlanet)
-                            .map_err(|_| "Unable to send to planet: {planet_id}")?;
+                            .map_err(|_| format!("Unable to send to planet: {}", planet_id));
 
                         //LOG
                         log_message!(
@@ -1214,7 +1217,7 @@ impl Orchestrator {
     /// Requests a sun ray through the `forge` and sends it to the planet.
     /// 
     /// Returns Err if the planet's channel is inaccessible.
-    pub(crate) fn send_sunray(&self, planet_id: u32, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub fn send_sunray(&self, planet_id: u32, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
         //LOG
         log_orch_fn!(
             "send_sunray()";
@@ -1241,7 +1244,7 @@ impl Orchestrator {
     /// Sends a sun ray to all planets.
     /// 
     /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
-    pub(crate) fn send_sunray_to_all(&self) -> Result<(), String> {
+    pub fn send_sunray_to_all(&self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_sunray_to_all()");
         //LOG
@@ -1258,7 +1261,7 @@ impl Orchestrator {
     /// Requests an asteroid through the `forge` and sends it to the planet.
     /// 
     /// Returns Err if the planet's channel is inaccessible.
-    pub(crate) fn send_asteroid(
+    pub fn send_asteroid(
         &self,
         planet_id: u32,
         sender: &Sender<OrchestratorToPlanet>,
@@ -1292,7 +1295,7 @@ impl Orchestrator {
     /// 
     /// See [`send_asteroid`](`Self::send_asteroid`) for more details on how an asteroid
     /// is sent.
-    pub(crate) fn send_asteroid_to_all(&self) -> Result<(), String> {
+    pub fn send_asteroid_to_all(&self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_asteroid_to_all()");
         //LOG
@@ -1358,7 +1361,7 @@ impl Orchestrator {
     /// 
     /// This function serves as an entry point to all the messages that need the
     /// orchestrator's intervention; no logic is actually present.
-    pub(crate) fn handle_game_messages(&mut self) -> Result<(), String> {
+    pub fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("handle_game_messages()");
         //LOG

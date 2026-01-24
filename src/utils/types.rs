@@ -9,14 +9,15 @@ use crossbeam_channel::{Receiver, Sender};
 use crate::utils::Status;
 
 pub type PlanetFactory = Box<
-    dyn Fn(
+     dyn Fn(
             Receiver<OrchestratorToPlanet>,
             Sender<PlanetToOrchestrator>,
             Receiver<ExplorerToPlanet>,
             u32,
         ) -> Result<Planet, String>
         + Send
-        + Sync,
+        + Sync
+        + 'static,
 >;
 
 
