@@ -3,12 +3,10 @@ use common_game::{
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
 use crossbeam_channel::select;
-
+use logging_utils::{debug_println, log_message, log_orch_fn, log_orch_internal, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
 use crate::{
-    components::orchestrator::{Orchestrator, macros::LOG_ACTORS_ACTIVITY},
-    debug_println, log_message, log_orch_fn, log_orch_internal, payload,
+    components::orchestrator::{Orchestrator},
     utils::Status,
-    warning_payload,
 };
 
 impl Orchestrator {
@@ -26,6 +24,7 @@ impl Orchestrator {
     ) -> Result<(), String> {
         //LOG
         log_orch_fn!(
+            self,
             "handle_planet_message()";
             "message_type"=>format!("{:?}", msg)
         );
@@ -89,10 +88,11 @@ impl Orchestrator {
                             .unwrap()
                             .insert(planet_id, Status::Dead);
                         //LOG
-                        log_orch_internal!({
+                        log_orch_internal!(
+                            self,
                             "action"=>"planet status updated to Dead",
                             "planet_id"=>planet_id
-                        });
+                        );
                         //LOG
                         //TODO we need to do a check if some explorer is on that planet
                     }
@@ -197,7 +197,7 @@ impl Orchestrator {
     /// orchestrator's intervention; no logic is actually present.
     pub fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("handle_game_messages()");
+        log_orch_fn!(self, "handle_game_messages()");
         //LOG
         select! {
             recv(self.receiver_orch_planet)->msg=>{

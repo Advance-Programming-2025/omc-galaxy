@@ -10,7 +10,9 @@ use crate::components::explorer::BagType;
 use crate::utils::PlanetStatus;
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
-use crate::{ExplorerStatus, log_orch_fn, log_orch_internal};
+use crate::{ExplorerStatus};
+use logging_utils::{log_orch_internal, log_orch_fn};
+use logging_utils::LoggableActor;
 use common_game::components::forge::Forge;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -18,6 +20,7 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, unbounded};
+use common_game::logging::{ActorType};
 use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
@@ -67,18 +70,20 @@ impl Orchestrator {
         //env_logger initialization
         env_logger::init();
         //Log
-        log_orch_fn!("new()",);
+        log_orch_fn!(dir ActorType::Orchestrator, 0u32, "new()",);
         //LOG
 
         let (sender_planet_orch, receiver_orch_planet) = unbounded();
         let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
 
         //Log
-        log_orch_internal!({
+        log_orch_internal!(dir
+            ActorType::Orchestrator,
+            0u32,
             "action"=>"channels initialized",
             "from"=>"planet, explorer",
             "to"=>"orchestrator"
-        });
+        );
         //LOG
 
         let new_orch = Self {
@@ -99,10 +104,15 @@ impl Orchestrator {
 
     fn get_random_planet_id(&self) -> Result<u32, String> {
         //LOG
-        log_orch_fn!("get_random_planet_id()");
+        log_orch_fn!(self, "get_random_planet_id()");
         //LOG
         let num: u32 = rand::rng().random();
         let id = num % (self.planets_status.read().unwrap().len() as u32);
         Ok(id)
     }
+}
+
+impl LoggableActor for Orchestrator {
+    fn actor_type(&self) -> ActorType { ActorType::Orchestrator }
+    fn actor_id(&self) -> u32 { 0 }
 }
