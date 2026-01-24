@@ -1,14 +1,34 @@
-use std::{fs, sync::{Arc, RwLock}, thread};
+use std::{
+    fs,
+    sync::{Arc, RwLock},
+    thread,
+};
 
-use common_game::{logging::{ActorType, Channel, EventType, LogEvent, Participant}, protocols::{orchestrator_explorer::OrchestratorToExplorer, orchestrator_planet::OrchestratorToPlanet, planet_explorer::{ExplorerToPlanet, PlanetToExplorer}}};
+use common_game::{
+    logging::{ActorType, Channel, EventType, LogEvent, Participant},
+    protocols::{
+        orchestrator_explorer::OrchestratorToExplorer,
+        orchestrator_planet::OrchestratorToPlanet,
+        planet_explorer::{ExplorerToPlanet, PlanetToExplorer},
+    },
+};
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use rustc_hash::FxHashMap;
 
-use crate::{GalaxyTopology, components::explorer::Explorer, debug_println, log_orch_fn, log_orch_internal, utils::{Status, registry::{PLANET_REGISTRY, PlanetType}}, warning_payload};
-use crate::utils::registry::PlanetType::{BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli};
 use super::Orchestrator;
-
-
+use crate::utils::registry::PlanetType::{
+    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
+};
+use crate::{
+    GalaxyTopology,
+    components::explorer::Explorer,
+    debug_println, log_orch_fn, log_orch_internal,
+    utils::{
+        Status,
+        registry::{PLANET_REGISTRY, PlanetType},
+    },
+    warning_payload,
+};
 
 //Initialization game functions
 impl Orchestrator {

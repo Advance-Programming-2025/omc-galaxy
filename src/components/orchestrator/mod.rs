@@ -1,20 +1,16 @@
-
-pub mod planets_comms;
 pub mod debug;
 pub mod gui_comms;
 pub mod handlers;
 pub mod init;
 pub mod macros;
+pub mod planets_comms;
 pub mod update;
 
-
-
-
-use crate::{ExplorerStatus, log_orch_fn, log_orch_internal};
-use crate::components::explorer::{BagType};
-use crate::utils::registry::{PlanetType};
+use crate::components::explorer::BagType;
+use crate::utils::PlanetStatus;
+use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
-use crate::utils::{PlanetStatus};
+use crate::{ExplorerStatus, log_orch_fn, log_orch_internal};
 use common_game::components::forge::Forge;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -22,12 +18,12 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, unbounded};
+use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-
 
 ///The core of the game.
 ///
@@ -65,40 +61,48 @@ pub struct Orchestrator {
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
 }
-impl Orchestrator{
+impl Orchestrator {
     /// Create a new orchestrator instance.
-pub(crate) fn new() -> Result<Self, String> {
-    //env_logger initialization
-    env_logger::init();
-    //Log
-    log_orch_fn!("new()",);
-    //LOG
+    pub(crate) fn new() -> Result<Self, String> {
+        //env_logger initialization
+        env_logger::init();
+        //Log
+        log_orch_fn!("new()",);
+        //LOG
 
-    let (sender_planet_orch, receiver_orch_planet) = unbounded();
-    let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
+        let (sender_planet_orch, receiver_orch_planet) = unbounded();
+        let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
 
-    //Log
-    log_orch_internal!({
-        "action"=>"channels initialized",
-        "from"=>"planet, explorer",
-        "to"=>"orchestrator"
-    });
-    //LOG
+        //Log
+        log_orch_internal!({
+            "action"=>"channels initialized",
+            "from"=>"planet, explorer",
+            "to"=>"orchestrator"
+        });
+        //LOG
 
-    let new_orch = Self {
-        forge: Forge::new()?,
-        galaxy_topology: Self::new_gtop(),
-        galaxy_lookup: FxHashMap::default(),
-        planets_status: Arc::new(RwLock::new(BTreeMap::new())),
-        explorer_status: Arc::new(RwLock::new(BTreeMap::new())),
-        planet_channels: HashMap::new(),
-        explorer_channels: HashMap::new(),
-        sender_planet_orch,
-        receiver_orch_planet,
-        sender_explorer_orch,
-        receiver_orch_explorer,
-    };
-    Ok(new_orch)
-}
+        let new_orch = Self {
+            forge: Forge::new()?,
+            galaxy_topology: Self::new_gtop(),
+            galaxy_lookup: FxHashMap::default(),
+            planets_status: Arc::new(RwLock::new(BTreeMap::new())),
+            explorer_status: Arc::new(RwLock::new(BTreeMap::new())),
+            planet_channels: HashMap::new(),
+            explorer_channels: HashMap::new(),
+            sender_planet_orch,
+            receiver_orch_planet,
+            sender_explorer_orch,
+            receiver_orch_explorer,
+        };
+        Ok(new_orch)
+    }
 
+    fn get_random_planet_id(&self) -> Result<u32, String> {
+        //LOG
+        log_orch_fn!("get_random_planet_id()");
+        //LOG
+        let num: u32 = rand::rng().random();
+        let id = num % (self.planets_status.read().unwrap().len() as u32);
+        Ok(id)
+    }
 }

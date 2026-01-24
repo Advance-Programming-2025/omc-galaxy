@@ -1,6 +1,14 @@
-use common_game::{logging::{ActorType, Channel, EventType, LogEvent, Participant}, protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator}};
+use common_game::{
+    logging::{ActorType, Channel, EventType, LogEvent, Participant},
+    protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
+};
 
-use crate::{components::orchestrator::{Orchestrator, macros::LOG_ACTORS_ACTIVITY}, debug_println, log_message, log_orch_fn, log_orch_internal, payload, utils::Status, warning_payload};
+use crate::{
+    components::orchestrator::{Orchestrator, macros::LOG_ACTORS_ACTIVITY},
+    debug_println, log_message, log_orch_fn, log_orch_internal, payload,
+    utils::Status,
+    warning_payload,
+};
 
 impl Orchestrator {
     /// Removes the link between two planets if one of them explodes.

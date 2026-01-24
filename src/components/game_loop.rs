@@ -106,28 +106,10 @@ impl Game {
         select! {
             recv(self.game_tick.ticker) -> _ => {
                 debug_println!("{:?}", self.game_tick.start_time.elapsed());
-                self.process_game_events()?;
+                self.orchestrator.send_sunray_or_asteroid()?;
             }
             default => {
                 // No tick yet
-            }
-        }
-        Ok(())
-    }
-
-    fn process_game_events(&mut self) -> Result<(), String> {
-        // debug_println!("{:?}", self.ticker);
-        match settings::pop_sunray_asteroid_sequence() {
-            Some('S') => {
-                self.orchestrator.send_sunray_to_all()?;
-            }
-            Some('A') => {
-                self.orchestrator.send_asteroid_to_all()?;
-            }
-            msg => {
-                // Probability mode
-                println!("{:?}", msg);
-                self.orchestrator.send_sunray_to_all()?;
             }
         }
         Ok(())

@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::{ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::Orchestrator, log_orch_fn, utils::GalaxySnapshot};
+use crate::{
+    ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::Orchestrator,
+    log_orch_fn, utils::GalaxySnapshot,
+};
 
 impl Orchestrator {
     /// Get a snapshot of the current galaxy topology

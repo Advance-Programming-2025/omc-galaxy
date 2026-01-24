@@ -1,10 +1,41 @@
-use common_game::{logging::{ActorType, EventType}, protocols::orchestrator_planet::OrchestratorToPlanet};
+use common_game::{
+    logging::{ActorType, EventType},
+    protocols::orchestrator_planet::OrchestratorToPlanet,
+};
 use crossbeam_channel::Sender;
 
-use crate::{components::orchestrator::Orchestrator, log_message, log_orch_fn, utils::Status};
-
+use crate::{
+    components::orchestrator::Orchestrator, log_message, log_orch_fn, settings, utils::Status,
+};
 
 impl Orchestrator {
+    pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
+        // debug_println!("{:?}", self.ticker);
+        match settings::pop_sunray_asteroid_sequence() {
+            Some('S') => {
+                self.send_sunray_to_all()?;
+            }
+            Some('A') => {
+                self.send_asteroid_to_all()?;
+            }
+            msg => {
+                // Probability mode
+
+                // Get a random planet
+                let planet_id = self.get_random_planet_id()?;
+                // Get planet communication channel
+                let sender = &self.planet_channels.get(&planet_id).unwrap().0;
+
+                // Decide whether to send sunray or asteroid
+                if settings::does_sunray_spawn() {
+                    self.send_sunray(planet_id, sender)?;
+                } else {
+                    self.send_asteroid(planet_id, sender)?;
+                }
+            }
+        }
+        Ok(())
+    }
     /// Send a sun ray to a planet.
     ///
     /// Requests a sun ray through the `forge` and sends it to the planet.
