@@ -3,8 +3,17 @@ use std::time::Duration;
 use common_game::logging::Channel;
 
 pub const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
+///The events this level should be used for are:
+/// function call (and finish if it is relevant) and parameters.
+/// every interaction between actors that is not covered in Info
+/// such as every other message
 pub const LOG_FN_INT_OPERATIONS: Channel = Channel::Trace;
+/// every operation that it useful to log inside a function
+/// such as to log changes made to variables
 pub const LOG_ACTORS_ACTIVITY: Channel = Channel::Info;
+///The events this level should be used for are:
+///Planet creation,destruction,start,stop
+///Explorer movement,death,start/stop
 
 //LOG macros
 //in order to reduce code duplication
