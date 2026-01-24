@@ -65,9 +65,12 @@ impl Orchestrator {
                         //If you have the id then surely that planet exist so we can unwrap without worring
                         //TODO it seems fine to me but just to be more precise we could add error handling
                         let sender = &self.planet_channels.get(&planet_id).unwrap().0;
-                        sender
+
+                        //Send KillPlanet message, if it returns Err then the planet it's already killed
+                        //TODO we could log this too
+                        let _log = sender
                             .send(OrchestratorToPlanet::KillPlanet)
-                            .map_err(|_| "Unable to send to planet: {planet_id}")?;
+                            .map_err(|_| "Unable to send to planet: {planet_id}");
 
                         //LOG
                         log_message!(
@@ -192,7 +195,7 @@ impl Orchestrator {
     ///
     /// This function serves as an entry point to all the messages that need the
     /// orchestrator's intervention; no logic is actually present.
-    pub(crate) fn handle_game_messages(&mut self) -> Result<(), String> {
+    pub fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("handle_game_messages()");
         //LOG

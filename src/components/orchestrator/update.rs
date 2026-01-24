@@ -165,7 +165,7 @@ impl Orchestrator {
     /// [`start_all_planet_ais`](`Self::start_all_planet_ais`).
     ///
     /// Returns Err if any of the planets fail to start.
-    pub(crate) fn start_all(&mut self) -> Result<(), String> {
+    pub fn start_all(&mut self) -> Result<(), String> {
         //LOG
         log_orch_fn!("start_all()");
         //LOG

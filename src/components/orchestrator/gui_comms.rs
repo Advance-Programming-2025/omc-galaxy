@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::Orchestrator,
-    log_orch_fn, utils::GalaxySnapshot,
+    log_orch_fn, utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
 };
 
 impl Orchestrator {
@@ -51,5 +51,22 @@ impl Orchestrator {
             Arc::clone(&self.planets_status),
             Arc::clone(&self.explorer_status),
         ))
+    }
+
+    // Getter functions necessary for Ratatui-gui
+    
+    pub fn get_planet_states(&self) -> PlanetStatusNotLock {
+        //LOG
+        log_orch_fn!("planet_states()");
+        //LOG
+        let planets_status = self.planets_status.read().unwrap().clone();
+        planets_status
+    }
+    pub fn get_explorer_states(&self) -> ExplorerStatusNotLock {
+        //LOG
+        log_orch_fn!("explorer_states()");
+        //LOG
+        let explorer_status = self.explorer_status.read().unwrap().clone();
+        explorer_status
     }
 }

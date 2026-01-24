@@ -63,7 +63,7 @@ pub struct Orchestrator {
 }
 impl Orchestrator {
     /// Create a new orchestrator instance.
-    pub(crate) fn new() -> Result<Self, String> {
+    pub fn new() -> Result<Self, String> {
         //env_logger initialization
         env_logger::init();
         //Log

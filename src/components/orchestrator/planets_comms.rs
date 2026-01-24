@@ -41,7 +41,7 @@ impl Orchestrator {
     /// Requests a sun ray through the `forge` and sends it to the planet.
     ///
     /// Returns Err if the planet's channel is inaccessible.
-    pub(crate) fn send_sunray(
+    pub fn send_sunray(
         &self,
         planet_id: u32,
         sender: &Sender<OrchestratorToPlanet>,
@@ -72,7 +72,7 @@ impl Orchestrator {
     /// Sends a sun ray to all planets.
     ///
     /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
-    pub(crate) fn send_sunray_to_all(&self) -> Result<(), String> {
+    pub fn send_sunray_to_all(&self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_sunray_to_all()");
         //LOG
@@ -89,7 +89,7 @@ impl Orchestrator {
     /// Requests an asteroid through the `forge` and sends it to the planet.
     ///
     /// Returns Err if the planet's channel is inaccessible.
-    pub(crate) fn send_asteroid(
+    pub fn send_asteroid(
         &self,
         planet_id: u32,
         sender: &Sender<OrchestratorToPlanet>,
@@ -124,7 +124,7 @@ impl Orchestrator {
     ///
     /// See [`send_asteroid`](`Self::send_asteroid`) for more details on how an asteroid
     /// is sent.
-    pub(crate) fn send_asteroid_to_all(&self) -> Result<(), String> {
+    pub fn send_asteroid_to_all(&self) -> Result<(), String> {
         //LOG
         log_orch_fn!("send_asteroid_to_all()");
         //LOG
@@ -145,7 +145,7 @@ impl Orchestrator {
     /// sends the message.
     ///
     /// Returns Err if the planet's channel is inaccessible.
-    pub(crate) fn send_planet_kill(
+    pub fn send_planet_kill(
         &self,
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
