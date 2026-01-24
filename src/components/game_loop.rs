@@ -2,13 +2,11 @@ use crossbeam_channel::select;
 use crossbeam_channel::{Receiver, Sender, select_biased, tick};
 use std::time::Duration;
 
-
 use crate::components::orchestrator::Orchestrator;
 use crate::debug_println;
 use crate::messages::{GameToUi, UiToGame};
 use crate::settings;
 use crate::utils::GameState;
-
 
 struct GameTick {
     ticker: Receiver<std::time::Instant>,
@@ -79,7 +77,6 @@ impl Game {
                 debug_println!("The game should start or restart");
                 self.game_tick = GameTick::new(Duration::from_millis(1000));
                 self.state = GameState::Running;
-                
                 // self.notify_ui(GameToUi::GameStarted)?;
                 // self.orchestrator.start_all()?;
             }

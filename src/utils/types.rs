@@ -16,13 +16,12 @@ pub type PlanetFactory = Box<
             u32,
         ) -> Result<Planet, String>
         + Send
-        + Sync,
+        + Sync
+        + 'static,
 >;
-
 
 pub type GalaxyTopology = Arc<RwLock<Vec<Vec<bool>>>>;
 pub type PlanetStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
 pub type ExplorerStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
 
 pub type GalaxySnapshot = Vec<(u32, u32)>;
-
