@@ -13,6 +13,7 @@ pub use components::orchestrator::Orchestrator;
 
 //Bevy-GUI
 pub use utils::GalaxySnapshot;
+pub use components::orchestrator::OrchestratorEvent;
 //Ratatui-GUI
 pub use utils::{ExplorerStatusNotLock, PlanetStatusNotLock, Status};
 
