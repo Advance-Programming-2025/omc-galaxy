@@ -125,6 +125,7 @@ impl Orchestrator {
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
                 debug_println!("Planet killed: {}", planet_id);
+                self.emit_planet_death(planet_id);
                 let event = LogEvent::new(
                     Some(Participant::new(ActorType::Planet, planet_id)),
                     Some(Participant::new(ActorType::Orchestrator, 0u32)),

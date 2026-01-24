@@ -190,7 +190,6 @@ impl Orchestrator {
             .send(OrchestratorToPlanet::KillPlanet)
             .map_err(|_| "Unable to send kill message to planet: {id}".to_string())?;
 
-        self.emit_planet_death(planet_id);
         log_message!(
             ActorType::Orchestrator,
             0u32,
