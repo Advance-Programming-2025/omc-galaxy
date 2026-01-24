@@ -2,13 +2,11 @@ use crossbeam_channel::select;
 use crossbeam_channel::{Receiver, Sender, select_biased, tick};
 use std::time::Duration;
 
-
 use crate::components::orchestrator::Orchestrator;
 use crate::debug_println;
 use crate::messages::{GameToUi, UiToGame};
 use crate::settings;
 use crate::utils::GameState;
-
 
 struct GameTick {
     ticker: Receiver<std::time::Instant>,
@@ -28,16 +26,23 @@ pub struct Game {
     state: GameState,
     orchestrator: Orchestrator,
     game_tick: GameTick,
+    // UI communication
+    receiver_game_ui: Receiver<UiToGame>,
+    sender_game_ui: Sender<GameToUi>,
 }
 
 impl Game {
     pub fn new(
         orchestrator: Orchestrator,
+        receiver_game_ui: Receiver<UiToGame>,
+        sender_game_ui: Sender<GameToUi>,
     ) -> Self {
         Self {
             state: GameState::WaitingStart,
             game_tick: GameTick::new(Duration::from_millis(1000)),
             orchestrator,
+            receiver_game_ui,
+            sender_game_ui,
         }
     }
 
@@ -59,7 +64,12 @@ impl Game {
 
                 //Send the update to UI
                 let update = self.orchestrator.get_game_status()?;
+                let handle_err = self.sender_game_ui.send(GameToUi::GameStatusUpdate { galaxy_topology: update.0, planets_status: update.1, explorer_status: update.2 }).map_err(|_|"Unable to send messages to UI");
 
+                // handle case error
+                if let Err(e) = handle_err {
+                    debug_println!("Error sending game status update to UI: {}", e);
+                }
                 // self.notify_ui(GameToUi::GameStarted)?;
                 self.orchestrator.start_all()?;
             }
@@ -67,7 +77,6 @@ impl Game {
                 debug_println!("The game should start or restart");
                 self.game_tick = GameTick::new(Duration::from_millis(1000));
                 self.state = GameState::Running;
-                
                 // self.notify_ui(GameToUi::GameStarted)?;
                 // self.orchestrator.start_all()?;
             }
@@ -97,28 +106,10 @@ impl Game {
         select! {
             recv(self.game_tick.ticker) -> _ => {
                 debug_println!("{:?}", self.game_tick.start_time.elapsed());
-                self.process_game_events()?;
+                self.orchestrator.send_sunray_or_asteroid()?;
             }
             default => {
                 // No tick yet
-            }
-        }
-        Ok(())
-    }
-
-    fn process_game_events(&mut self) -> Result<(), String> {
-        // debug_println!("{:?}", self.ticker);
-        match settings::pop_sunray_asteroid_sequence() {
-            Some('S') => {
-                self.orchestrator.send_sunray_to_all()?;
-            }
-            Some('A') => {
-                self.orchestrator.send_asteroid_to_all()?;
-            }
-            msg => {
-                // Probability mode
-                println!("{:?}", msg);
-                self.orchestrator.send_sunray_to_all()?;
             }
         }
         Ok(())
@@ -127,7 +118,9 @@ impl Game {
 
 /// Entry point for running the game with UI
 pub fn run_with_ui(
-    file_path: String
+    file_path: String,
+    sender_game_ui: Sender<GameToUi>,
+    receiver_game_ui: Receiver<UiToGame>,
 ) -> Result<(), String> {
     // Initialize orchestrator
     let mut orchestrator = Orchestrator::new()?;
@@ -135,7 +128,7 @@ pub fn run_with_ui(
     orchestrator.initialize_galaxy_by_file(file_path.as_str().trim())?;
 
     // Create and run game loop
-    let game_loop = Game::new(orchestrator);
+    let game_loop = Game::new(orchestrator, receiver_game_ui, sender_game_ui);
 
     game_loop.run()
 }
@@ -155,7 +148,13 @@ impl Game {
     /// Loop dedicato esclusivamente alla fase di attesa iniziale
     fn waiting_loop(&mut self) -> Result<(), String> {
         // Qui non facciamo calcoli di tempo, aspettiamo solo lo Start
-        todo!()
+        let msg = self
+            .receiver_game_ui
+            .recv()
+            .map_err(|_| "UI Channel Error")?;
+
+        self.handle_ui_command(msg)?;
+        Ok(())
     }
 
     /// Loop ad alte prestazioni: gestione tick e orchestrator
@@ -164,6 +163,10 @@ impl Game {
 
         while self.state == GameState::Running {
             select_biased! {
+                recv(self.receiver_game_ui) -> msg => {
+                    let msg = msg.map_err(|_| "UI Error")?;
+                    self.handle_ui_command(msg)?;
+                }
                 default => {
 
                     self.asteroid_sunray_sender()?;
@@ -180,6 +183,11 @@ impl Game {
     /// Loop di pausa: consuma solo messaggi UI, tempo fermo
     fn paused_loop(&mut self) -> Result<(), String> {
         debug_println!("Game is paused. Waiting for resume...");
+
+        // Qui usiamo una recv() bloccante: non c'è bisogno di loopare a vuoto
+        // perché il tempo di gioco è fermo.
+        let msg = self.receiver_game_ui.recv().map_err(|_| "UI Error")?;
+        self.handle_ui_command(msg)?;
 
         Ok(())
     }

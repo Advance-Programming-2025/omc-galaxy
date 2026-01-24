@@ -9,7 +9,7 @@ use crossbeam_channel::{Receiver, Sender};
 use crate::utils::Status;
 
 pub type PlanetFactory = Box<
-     dyn Fn(
+    dyn Fn(
             Receiver<OrchestratorToPlanet>,
             Sender<PlanetToOrchestrator>,
             Receiver<ExplorerToPlanet>,
@@ -20,14 +20,12 @@ pub type PlanetFactory = Box<
         + 'static,
 >;
 
-
 pub type GalaxyTopologyNotLock = Vec<Vec<bool>>;
 pub type PlanetStatusNotLock = BTreeMap<u32, Status>;
 pub type ExplorerStatusNotLock = BTreeMap<u32, Status>;
 
-pub type GalaxyTopology = Arc<RwLock<GalaxyTopologyNotLock>>;
-pub type PlanetStatus = Arc<RwLock<PlanetStatusNotLock>>;
-pub type ExplorerStatus = Arc<RwLock<ExplorerStatusNotLock>>;
+pub type GalaxyTopology = Arc<RwLock<Vec<Vec<bool>>>>;
+pub type PlanetStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
+pub type ExplorerStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
 
 pub type GalaxySnapshot = Vec<(u32, u32)>;
-
