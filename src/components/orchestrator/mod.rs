@@ -25,6 +25,14 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
 
+pub enum OrchestratorEvent {
+    PlanetDestroyed { planet_id: u32 },
+    SunraySent { planet_id: u32 },
+    SunrayReceived { planet_id: u32 },
+    AsteroidSent { planet_id: u32 },
+    ExplorerMoved { origin: u32, destination: u32 }
+}
+
 ///The core of the game.
 ///
 /// The orchestrator's main responsibility is to handle game state, without directly
@@ -60,6 +68,8 @@ pub struct Orchestrator {
     //Channel to clone for the explorer and for receiving Explorer Messages
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
+
+    pub gui_messages: Vec<OrchestratorEvent>
 }
 impl Orchestrator {
     /// Create a new orchestrator instance.
@@ -93,6 +103,7 @@ impl Orchestrator {
             receiver_orch_planet,
             sender_explorer_orch,
             receiver_orch_explorer,
+            gui_messages: Vec::new()
         };
         Ok(new_orch)
     }

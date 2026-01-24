@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
+use log::info;
+
 use crate::{
-    ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::Orchestrator,
+    ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::{Orchestrator, OrchestratorEvent},
     log_orch_fn, utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
 };
 
@@ -68,5 +70,36 @@ impl Orchestrator {
         //LOG
         let explorer_status = self.explorer_status.read().unwrap().clone();
         explorer_status
+    }
+
+    // Bevy stuff
+
+    /// Emits a Bevy event if a planet has died
+    /// 
+    /// If the orchestrator's Bevy Message buffer is not None,
+    /// It sends a message that signals the death of planet
+    /// `planet_id`
+    pub(crate) fn emit_planet_death(&mut self, planet_id: u32){
+
+        info!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
+        self.gui_messages.push(OrchestratorEvent::PlanetDestroyed{planet_id});
+    }
+
+    pub(crate) fn emit_sunray_ack(&mut self, planet_id: u32){
+
+        info!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
+        self.gui_messages.push(OrchestratorEvent::SunrayReceived { planet_id });
+    }
+
+    pub(crate) fn emit_sunray_send(&mut self, planet_id: u32){
+
+        info!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
+        self.gui_messages.push(OrchestratorEvent::SunraySent { planet_id });
+    }
+
+    pub(crate) fn emit_asteroid_send(&mut self, planet_id: u32){
+
+        info!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
+        self.gui_messages.push(OrchestratorEvent::AsteroidSent { planet_id });
     }
 }

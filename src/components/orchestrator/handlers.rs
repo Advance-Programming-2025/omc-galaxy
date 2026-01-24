@@ -34,7 +34,8 @@ impl Orchestrator {
         match msg {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
                 debug_println!("SunrayAck from: {}", planet_id);
-
+                
+                self.emit_sunray_ack(planet_id);
                 //LOG
                 log_message!(
                     ActorType::Planet,
