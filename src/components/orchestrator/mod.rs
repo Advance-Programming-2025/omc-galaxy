@@ -75,7 +75,7 @@ impl Orchestrator {
     /// Create a new orchestrator instance.
     pub fn new() -> Result<Self, String> {
         //env_logger initialization
-        env_logger::init();
+        let _res = env_logger::try_init();
         //Log
         log_orch_fn!("new()",);
         //LOG
