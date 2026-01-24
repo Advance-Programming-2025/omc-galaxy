@@ -3,9 +3,9 @@ use common_game::{
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
 use crossbeam_channel::Sender;
-
+use logging_utils::{log_message, log_fn_call, LoggableActor};
 use crate::{
-    components::orchestrator::Orchestrator, log_message, log_orch_fn, settings, utils::Status,
+    components::orchestrator::Orchestrator, settings, utils::Status,
 };
 
 impl Orchestrator {
@@ -47,7 +47,8 @@ impl Orchestrator {
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!(
+        log_fn_call!(
+            self,
             "send_sunray()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
@@ -74,7 +75,7 @@ impl Orchestrator {
     /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
     pub fn send_sunray_to_all(&self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("send_sunray_to_all()");
+        log_fn_call!(self, "send_sunray_to_all()");
         //LOG
         for (id, (sender, _)) in &self.planet_channels {
             if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
@@ -95,7 +96,8 @@ impl Orchestrator {
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!(
+        log_fn_call!(
+            self,
             "send_asteroid()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
@@ -126,7 +128,7 @@ impl Orchestrator {
     /// is sent.
     pub fn send_asteroid_to_all(&self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("send_asteroid_to_all()");
+        log_fn_call!(self, "send_asteroid_to_all()");
         //LOG
 
         //TODO unwrap cannot fail because every id is contained in the map
@@ -150,7 +152,8 @@ impl Orchestrator {
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!(
+        log_fn_call!(
+            self, 
             "send_planet_kill()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
@@ -176,7 +179,7 @@ impl Orchestrator {
     /// planet kill message is sent.
     pub fn send_planet_kill_to_all(&self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("send_planet_kill_to_all()");
+        log_fn_call!(self, "send_planet_kill_to_all()");
         //LOG
         for (id, (sender, _)) in &self.planet_channels {
             //unwrap cannot fail because every id is contained in the map

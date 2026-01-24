@@ -75,16 +75,16 @@ macro_rules! warning_payload {
 /// * `$key => $val` - internal state data to be recorded
 /// * `$msg` - shorthand for a simple action description
 #[macro_export]
-macro_rules! log_orch_internal {
+macro_rules! log_internal_op {
     // requires self
     ($self:ident,  $($key:expr => $val:expr),* $(,)? ) => {{
-        $crate::log_orch_internal!(dir $self.actor_type(), $self.actor_id(), $($key => $val),* )
+        $crate::log_internal_op!(dir $self.actor_type(), $self.actor_id(), $($key => $val),* )
     }};
 
     // direct. requires ActorType and ID
     (dir $actor:expr, $id:expr, $($key:expr => $val:expr),* $(,)? ) => {{
         use common_game::logging::{LogEvent, Participant, EventType};
-        
+
         //selecting actor type
         let event_type=match $actor {
             ActorType::Orchestrator=>{
@@ -112,7 +112,7 @@ macro_rules! log_orch_internal {
 
     // single message (require self)
     ($self:ident, $msg:expr) => {
-        $crate::log_orch_internal!($self, { "action" => $msg });
+        $crate::log_internal_op!($self, "action" => $msg );
     };
 }
 /// Records Orchestrator function execution and input arguments.
@@ -124,16 +124,16 @@ macro_rules! log_orch_internal {
 /// * `$param` - identifiers of the variables to be captured as arguments
 /// * `$key => $val` - optional extra metadata for the call
 #[macro_export]
-macro_rules! log_orch_fn{
+macro_rules! log_fn_call {
     // requires self
     ($self:ident, $fn_name:expr $(, $param:ident)* $(; $($key:expr => $val:expr),*)? $(,)?) => {{
-        $crate::log_orch_fn!(dir $self.actor_type(), $self.actor_id(), $fn_name $(, $param)* $(; $($key => $val),*)?)
+        $crate::log_fn_call!(dir $self.actor_type(), $self.actor_id(), $fn_name $(, $param)* $(; $($key => $val),*)?)
     }};
 
     // direct. requires ActorType and ID
     (dir $actor:expr, $id:expr, $fn_name:expr $(, $param:ident)* $(; $($key:expr => $val:expr),*)? $(,)?) => {{
         use common_game::logging::{LogEvent, Participant, ActorType, EventType};
-        
+
         //selecting actor type
         let event_type = match $actor {
             ActorType::Orchestrator => EventType::InternalOrchestratorAction,

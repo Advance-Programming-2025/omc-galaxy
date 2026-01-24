@@ -2,7 +2,6 @@ pub mod debug;
 pub mod gui_comms;
 pub mod handlers;
 pub mod init;
-pub mod macros;
 pub mod planets_comms;
 pub mod update;
 
@@ -11,7 +10,7 @@ use crate::utils::PlanetStatus;
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
 use crate::{ExplorerStatus};
-use logging_utils::{log_orch_internal, log_orch_fn};
+use logging_utils::{log_internal_op, log_fn_call};
 use logging_utils::LoggableActor;
 use common_game::components::forge::Forge;
 use common_game::protocols::orchestrator_explorer::{
@@ -70,14 +69,14 @@ impl Orchestrator {
         //env_logger initialization
         env_logger::init();
         //Log
-        log_orch_fn!(dir ActorType::Orchestrator, 0u32, "new()",);
+        log_fn_call!(dir ActorType::Orchestrator, 0u32, "new()",);
         //LOG
 
         let (sender_planet_orch, receiver_orch_planet) = unbounded();
         let (sender_explorer_orch, receiver_orch_explorer) = unbounded();
 
         //Log
-        log_orch_internal!(dir
+        log_internal_op!(dir
             ActorType::Orchestrator,
             0u32,
             "action"=>"channels initialized",
@@ -104,7 +103,7 @@ impl Orchestrator {
 
     fn get_random_planet_id(&self) -> Result<u32, String> {
         //LOG
-        log_orch_fn!(self, "get_random_planet_id()");
+        log_fn_call!(self, "get_random_planet_id()");
         //LOG
         let num: u32 = rand::rng().random();
         let id = num % (self.planets_status.read().unwrap().len() as u32);

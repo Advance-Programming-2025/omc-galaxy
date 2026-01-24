@@ -3,7 +3,7 @@ use common_game::{
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
 use crossbeam_channel::select;
-use logging_utils::{debug_println, log_message, log_orch_fn, log_orch_internal, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
+use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
 use crate::{
     components::orchestrator::{Orchestrator},
     utils::Status,
@@ -23,7 +23,7 @@ impl Orchestrator {
         msg: PlanetToOrchestrator,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!(
+        log_fn_call!(
             self,
             "handle_planet_message()";
             "message_type"=>format!("{:?}", msg)
@@ -88,7 +88,7 @@ impl Orchestrator {
                             .unwrap()
                             .insert(planet_id, Status::Dead);
                         //LOG
-                        log_orch_internal!(
+                        log_internal_op!(
                             self,
                             "action"=>"planet status updated to Dead",
                             "planet_id"=>planet_id
@@ -197,7 +197,7 @@ impl Orchestrator {
     /// orchestrator's intervention; no logic is actually present.
     pub fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!(self, "handle_game_messages()");
+        log_fn_call!(self, "handle_game_messages()");
         //LOG
         select! {
             recv(self.receiver_orch_planet)->msg=>{
