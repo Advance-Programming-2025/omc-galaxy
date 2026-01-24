@@ -16,7 +16,7 @@ mod tests_core_lifecycle {
     #[test]
     fn test_lifecycle_new_initializes_empty_state() {
         let orch = Orchestrator::new().unwrap();
-        assert!(orch.planets_status.read().unwrap().is_empty());
+        assert!(orch.planets_info.is_empty());
         assert!(orch.explorer_status.read().unwrap().is_empty());
         assert!(orch.galaxy_lookup.is_empty());
     }
@@ -25,7 +25,7 @@ mod tests_core_lifecycle {
     fn test_lifecycle_reset_clears_internal_maps() {
         let mut orch = Orchestrator::new().unwrap();
         // Manually pollute state
-        orch.planets_status.write().unwrap().insert(1, Status::Dead);
+        orch.planets_info.insert_status(1, Status::Dead);
         orch.explorer_status
             .write()
             .unwrap()
@@ -33,7 +33,7 @@ mod tests_core_lifecycle {
 
         orch.reset().unwrap();
 
-        assert!(orch.planets_status.read().unwrap().is_empty());
+        assert!(orch.planets_info.is_empty());
         assert!(orch.explorer_status.read().unwrap().is_empty());
         assert!(orch.planet_channels.is_empty());
     }
@@ -52,9 +52,8 @@ mod tests_actor_management {
         orch.add_planet(planet_id, PlanetType::OneMillionCrabs)
             .unwrap();
 
-        assert_eq!(
-            orch.planets_status.read().unwrap().get(&planet_id),
-            Some(&Status::Paused)
+        assert!(
+            orch.planets_info.is_paused(&planet_id)
         );
         assert!(orch.planet_channels.contains_key(&planet_id));
     }
@@ -135,9 +134,8 @@ mod tests_messaging_protocol {
         };
         orch.handle_planet_message(msg).unwrap();
 
-        assert_eq!(
-            orch.planets_status.read().unwrap().get(&planet_id),
-            Some(&Status::Dead)
+        assert!(
+            orch.planets_info.is_dead(&planet_id)
         );
     }
 
@@ -145,7 +143,7 @@ mod tests_messaging_protocol {
     fn test_messaging_send_sunray_to_all_skips_dead_planets() {
         let mut orch = Orchestrator::new().unwrap();
         orch.add_planet(1, PlanetType::OneMillionCrabs).unwrap();
-        orch.planets_status.write().unwrap().insert(1, Status::Dead); // Force dead
+        orch.planets_info.insert_status(1, Status::Dead); // Force dead
 
         // This should not fail even if the channel is technically "broken" for the dead planet
         let result = orch.send_sunray_to_all();
@@ -234,14 +232,8 @@ mod tests {
             orch.handle_game_messages().unwrap();
 
             // Verification: A should be Alive/Running, B should be Dead
-            assert_eq!(
-                *orch.planets_status.read().unwrap().get(&p_id_a).unwrap(),
-                Status::Running
-            );
-            assert_eq!(
-                *orch.planets_status.read().unwrap().get(&p_id_b).unwrap(),
-                Status::Dead
-            );
+            assert!(orch.planets_info.is_running(&p_id_a));
+            assert!(orch.planets_info.is_dead(&p_id_b));
         }
     }
 
@@ -284,10 +276,10 @@ mod tests {
             // Validation logic based on your rules:
             // Type A/C (Ciuc, ImmutableCosmicBorrow) should survive.
             // Type B/D (Houston, BlackAdidas, OneMillionCrabs) should be Dead.
-            for (id, status) in orch.planets_status.read().unwrap().iter() {
+            for (id, info) in orch.planets_info.iter() {
                 // This is a high-level check. Depending on specific AI timing,
                 // some might still be Alive if they didn't finish processing the death.
-                println!("Planet {} status: {:?}", id, status);
+                println!("Planet {} status: {:?}", id, info.status);
             }
         }
     }
@@ -326,16 +318,12 @@ mod tests {
 
             // Check how many survived the onslaught
             let survivors = orch
-                .planets_status
-                .read()
-                .unwrap()
-                .values()
-                .filter(|&s| *s == Status::Running)
-                .count();
+                .planets_info
+                .count_survivors();
 
             println!("Survivors: {}/{}", survivors, n_planets);
             // In a heavy scenario, we just want to ensure the Orchestrator didn't crash
-            assert!(orch.planets_status.read().unwrap().len() == n_planets as usize);
+            assert!(orch.planets_info.len() == n_planets as usize);
         }
 
         #[test]

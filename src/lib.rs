@@ -6,7 +6,8 @@ mod utils;
 //Orchestrator example 
 pub use components::Game;
 pub use components::game_loop::run_with_ui;
-pub use utils::{ExplorerStatus, GalaxyTopology, PlanetStatus};
+
+pub use utils::{ExplorerStatus, GalaxyTopology, PlanetStatus, PlanetInfoMap};
 
 //Both GUIs
 pub use components::orchestrator::Orchestrator;

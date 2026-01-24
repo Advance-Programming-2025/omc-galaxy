@@ -7,7 +7,7 @@ pub mod planets_comms;
 pub mod update;
 
 use crate::components::explorer::BagType;
-use crate::utils::PlanetStatus;
+use crate::utils::{PlanetStatus,Status, PlanetInfoMap};
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
 use crate::{ExplorerStatus, log_orch_fn, log_orch_internal};
@@ -38,6 +38,9 @@ use std::sync::RwLock;
 /// - coordinating and overseeing the actions of explorers
 /// - ensuring the state of the various elements of the game are congruent with the
 /// game timeline
+/// 
+/// 
+
 pub struct Orchestrator {
     // Forge sunray and asteroid
     pub forge: Forge,
@@ -47,7 +50,7 @@ pub struct Orchestrator {
     pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
 
     //Status for each planets and explorers, BTreeMaps are useful for printing
-    pub planets_status: PlanetStatus,
+    pub planets_info: PlanetInfoMap,
     pub explorer_status: ExplorerStatus,
     //Communication channels for sending messages to planets and explorers
     pub planet_channels: HashMap<u32, (Sender<OrchestratorToPlanet>, Sender<ExplorerToPlanet>)>,
@@ -85,7 +88,7 @@ impl Orchestrator {
             forge: Forge::new()?,
             galaxy_topology: Self::new_gtop(),
             galaxy_lookup: FxHashMap::default(),
-            planets_status: Arc::new(RwLock::new(BTreeMap::new())),
+            planets_info: PlanetInfoMap::new(),
             explorer_status: Arc::new(RwLock::new(BTreeMap::new())),
             planet_channels: HashMap::new(),
             explorer_channels: HashMap::new(),
@@ -102,7 +105,7 @@ impl Orchestrator {
         log_orch_fn!("get_random_planet_id()");
         //LOG
         let num: u32 = rand::rng().random();
-        let id = num % (self.planets_status.read().unwrap().len() as u32);
+        let id = num % (self.planets_info.len() as u32);
         Ok(id)
     }
 }

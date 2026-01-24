@@ -5,8 +5,10 @@ use common_game::{
 use crossbeam_channel::Sender;
 
 use crate::{
-    components::orchestrator::Orchestrator, log_message, log_orch_fn, settings, utils::Status,
+    log_message, log_orch_fn, settings, utils::Status,
 };
+use crate::components::orchestrator::Orchestrator;
+
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
@@ -52,9 +54,13 @@ impl Orchestrator {
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
         //LOG
+        //send sunray
         sender
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
             .map_err(|_| "Unable to send a sunray to planet: {id}".to_string())?;
+
+        //send update request
+        self.send_internal_state_request(sender)?;
 
         //LOG
         log_message!(
@@ -77,7 +83,7 @@ impl Orchestrator {
         log_orch_fn!("send_sunray_to_all()");
         //LOG
         for (id, (sender, _)) in &self.planet_channels {
-            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
+            if self.planets_info.get_status(id) != Status::Dead {
                 self.send_sunray(*id, sender)?;
             }
         }
@@ -100,12 +106,15 @@ impl Orchestrator {
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
         //LOG
-
+        //send asteroid
         sender
             .send(OrchestratorToPlanet::Asteroid(
                 self.forge.generate_asteroid(),
             ))
             .map_err(|_| "Unable to send sunray to planet: {id}".to_string())?;
+        
+        //send update request
+        self.send_internal_state_request(sender)?;
 
         //LOG
         log_message!(
@@ -131,7 +140,7 @@ impl Orchestrator {
 
         //TODO unwrap cannot fail because every id is contained in the map
         for (id, (sender, _)) in &self.planet_channels {
-            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
+            if self.planets_info.get_status(id) != Status::Dead {
                 self.send_asteroid(*id, sender)?;
             }
         }
@@ -180,10 +189,32 @@ impl Orchestrator {
         //LOG
         for (id, (sender, _)) in &self.planet_channels {
             //unwrap cannot fail because every id is contained in the map
-            if *self.planets_status.read().unwrap().get(id).unwrap() != Status::Dead {
+            if self.planets_info.get_status(id) != Status::Dead {
                 self.send_planet_kill(sender)?;
             }
         }
         Ok(())
     }
+
+    pub fn send_internal_state_request(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+        //LOG
+        log_orch_fn!(
+            "send_internal_state_request()";
+            "sender"=>"Sender<OrchestratorToPlanet>"
+        );
+        //LOG
+        sender
+            .send(OrchestratorToPlanet::InternalStateRequest)
+            .map_err(|_| "Unable to send planet state request".to_string())?;
+
+        log_message!(
+            ActorType::Orchestrator,
+            0u32,
+            ActorType::Planet,
+            0u32, //TODO missing planet id
+            EventType::MessageOrchestratorToPlanet,
+            "RequestPlanetState",
+        );
+        Ok(())
+    }       
 }

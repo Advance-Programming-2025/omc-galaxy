@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use crate::PlanetInfoMap;
 
 use crate::{
     ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::Orchestrator,
@@ -42,25 +43,24 @@ impl Orchestrator {
     /// - `ExplorerStatus`, the status (Running, Paused, ...) of all explorers
     pub(crate) fn get_game_status(
         &self,
-    ) -> Result<(GalaxyTopology, PlanetStatus, ExplorerStatus), String> {
+    ) -> Result<(GalaxyTopology, PlanetInfoMap, ExplorerStatus), String> {
         //LOG
         log_orch_fn!("get_game_status()");
         //LOG
         Ok((
             Arc::clone(&self.galaxy_topology),
-            Arc::clone(&self.planets_status),
+            self.planets_info.clone(),
             Arc::clone(&self.explorer_status),
         ))
     }
 
     // Getter functions necessary for Ratatui-gui
     
-    pub fn get_planet_states(&self) -> PlanetStatusNotLock {
+    pub fn get_planets_info(&self) -> PlanetInfoMap {
         //LOG
-        log_orch_fn!("planet_states()");
+        log_orch_fn!("planets_info()");
         //LOG
-        let planets_status = self.planets_status.read().unwrap().clone();
-        planets_status
+        self.planets_info.clone()
     }
     pub fn get_explorer_states(&self) -> ExplorerStatusNotLock {
         //LOG

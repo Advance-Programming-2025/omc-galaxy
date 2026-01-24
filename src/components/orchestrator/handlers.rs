@@ -84,10 +84,7 @@ impl Orchestrator {
                         //LOG
 
                         //Update planet State
-                        self.planets_status
-                            .write()
-                            .unwrap()
-                            .insert(planet_id, Status::Dead);
+                        self.planets_info.insert_status(planet_id, Status::Dead);
                         //LOG
                         log_orch_internal!({
                             "action"=>"planet status updated to Dead",
@@ -116,6 +113,8 @@ impl Orchestrator {
                     planet_state,
                 );
                 //LOG
+                self.planets_info
+                    .update_from_planet_state(planet_id, planet_state);
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
                 debug_println!("Planet killed: {}", planet_id);

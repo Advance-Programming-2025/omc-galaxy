@@ -5,7 +5,7 @@ impl Orchestrator {
         // for (id, status) in &self.planets_status{
         //     print!("({}, {:?})",id, status);
         // }
-        debug_println!("{:?}", self.planets_status);
+        debug_println!("{:?}", self.planets_info);
     }
     pub(crate) fn print_galaxy_topology(&self) {
         debug_println!("{:?}", self.galaxy_topology);
