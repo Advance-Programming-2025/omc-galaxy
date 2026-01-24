@@ -3,6 +3,7 @@ use common_game::{
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
 use crossbeam_channel::Sender;
+use log::info;
 
 use crate::{
     components::orchestrator::{Orchestrator}, log_message, log_orch_fn, settings, utils::Status
@@ -182,6 +183,8 @@ impl Orchestrator {
             "send_planet_kill()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
+
+        info!("killing planet {planet_id}");
         //LOG
         sender
             .send(OrchestratorToPlanet::KillPlanet)

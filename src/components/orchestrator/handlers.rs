@@ -3,6 +3,7 @@ use common_game::{
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
 use crossbeam_channel::select;
+use log::info;
 
 use crate::{
     components::orchestrator::{Orchestrator, macros::LOG_ACTORS_ACTIVITY},
@@ -34,7 +35,7 @@ impl Orchestrator {
         match msg {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
                 debug_println!("SunrayAck from: {}", planet_id);
-                
+
                 self.emit_sunray_ack(planet_id);
                 //LOG
                 log_message!(
@@ -59,10 +60,14 @@ impl Orchestrator {
                     planet_id;
                     "has_rocket"=>rocket.is_some()
                 );
+                
                 //LOG
                 match rocket {
-                    Some(_) => {}
+                    Some(_) => {
+                        info!("I'm planet {planet_id} and I got an asteroid. Got rocket!");
+                    }
                     None => {
+                        info!("I'm planet {planet_id} and I got an asteroid. NO rocket!");
                         //If you have the id then surely that planet exist so we can unwrap without worring
                         //TODO it seems fine to me but just to be more precise we could add error handling
                         let sender = &self.planet_channels.get(&planet_id).unwrap().0;
