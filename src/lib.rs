@@ -1,9 +1,18 @@
 mod components;
+pub mod messages;
 pub mod settings;
 mod utils;
-pub mod messages;
 
+//Orchestrator example 
 pub use components::Game;
 pub use components::game_loop::run_with_ui;
-pub use utils::{GalaxyTopology, PlanetStatus, ExplorerStatus};
-pub use components::orchestrator::{Orchestrator, OrchestratorEvent};
+pub use utils::{ExplorerStatus, GalaxyTopology, PlanetStatus};
+
+//Both GUIs
+pub use components::orchestrator::Orchestrator;
+
+//Bevy-GUI
+pub use utils::GalaxySnapshot;
+//Ratatui-GUI
+pub use utils::{ExplorerStatusNotLock, PlanetStatusNotLock, Status};
+
