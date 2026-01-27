@@ -324,7 +324,7 @@ macro_rules! log_orch_to_planet {
         $($pre_k:expr => $pre_v:expr),+ ;
         result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
     ) => {{
-        $crate::log_orch_to_planet_fn_call!(
+        $crate::log_orch_to_planet!(
             dir $self.actor_id(),
             $fn_name $(, $param)* ;
             $($pre_k => $pre_v),+ ;
@@ -336,7 +336,7 @@ macro_rules! log_orch_to_planet {
     ($self:ident, $fn_name:expr $(, $param:ident)* ;
         result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
     ) => {{
-        $crate::log_orch_to_planet_fn_call!(
+        $crate::log_orch_to_planet!(
             dir $self.actor_id(),
             $fn_name $(, $param)* ;
             result = $result $(, $($post_k => $post_v),* )?
@@ -347,7 +347,7 @@ macro_rules! log_orch_to_planet {
     ($self:ident, $fn_name:expr $(, $param:ident)* ;
         $($pre_k:expr => $pre_v:expr),+ $(,)?
     ) => {{
-        $crate::log_orch_to_planet_fn_call!(
+        $crate::log_orch_to_planet!(
             dir $self.actor_id(),
             $fn_name $(, $param)* ;
             $($pre_k => $pre_v),+
@@ -356,7 +356,7 @@ macro_rules! log_orch_to_planet {
 
     // self: nothing extra
     ($self:ident, $fn_name:expr $(, $param:ident)* $(,)?) => {{
-        $crate::log_orch_to_planet_fn_call!(
+        $crate::log_orch_to_planet!(
             dir $self.actor_id(),
             $fn_name $(, $param)*
         )
