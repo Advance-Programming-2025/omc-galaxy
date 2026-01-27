@@ -1,11 +1,13 @@
+use logging_utils::LoggableActor;
 use std::sync::Arc;
 
 use log::info;
 
 use crate::{
     ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::{Orchestrator, OrchestratorEvent},
-    log_orch_fn, utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
+    utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
 };
+use logging_utils::log_fn_call;
 
 impl Orchestrator {
     /// Get a snapshot of the current galaxy topology
@@ -16,7 +18,7 @@ impl Orchestrator {
     /// way that might misalign the internal state
     pub fn get_topology(&self) -> (GalaxySnapshot, usize) {
         //LOG
-        log_orch_fn!("get_topology()");
+        log_fn_call!(self, "get_topology()");
         //LOG
         let topology = self.galaxy_topology.read().unwrap();
         
@@ -47,7 +49,7 @@ impl Orchestrator {
         &self,
     ) -> Result<(GalaxyTopology, PlanetStatus, ExplorerStatus), String> {
         //LOG
-        log_orch_fn!("get_game_status()");
+        log_fn_call!(self, "get_game_status()");
         //LOG
         Ok((
             Arc::clone(&self.galaxy_topology),
@@ -60,14 +62,14 @@ impl Orchestrator {
     
     pub fn get_planet_states(&self) -> PlanetStatusNotLock {
         //LOG
-        log_orch_fn!("planet_states()");
+        log_fn_call!(self, "planet_states()");
         //LOG
         let planets_status = self.planets_status.read().unwrap().clone();
         planets_status
     }
     pub fn get_explorer_states(&self) -> ExplorerStatusNotLock {
         //LOG
-        log_orch_fn!("explorer_states()");
+        log_fn_call!(self, "explorer_states()");
         //LOG
         let explorer_status = self.explorer_status.read().unwrap().clone();
         explorer_status

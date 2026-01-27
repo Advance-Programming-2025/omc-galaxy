@@ -4,9 +4,9 @@ use common_game::{
 };
 use crossbeam_channel::Sender;
 use log::info;
-
+use logging_utils::{log_message, log_fn_call, LoggableActor};
 use crate::{
-    components::orchestrator::{Orchestrator}, log_message, log_orch_fn, settings, utils::Status
+    components::orchestrator::Orchestrator, settings, utils::Status,
 };
 
 impl Orchestrator {
@@ -48,7 +48,8 @@ impl Orchestrator {
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!(
+        log_fn_call!(
+            self,
             "send_sunray()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
@@ -76,7 +77,7 @@ impl Orchestrator {
     /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
     pub(crate) fn send_sunray_to_all(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("send_sunray_to_all()");
+        log_fn_call!(self, "send_sunray_to_all()");
         //LOG
         //collect all of the senders in a vector
         let senders_sunray: Vec<(u32, Sender<OrchestratorToPlanet>)> =
@@ -110,7 +111,8 @@ impl Orchestrator {
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!(
+        log_fn_call!(
+            self,
             "send_asteroid()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
@@ -141,7 +143,7 @@ impl Orchestrator {
     /// is sent.
     pub(crate) fn send_asteroid_to_all(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("send_asteroid_to_all()");
+        log_fn_call!(self, "send_asteroid_to_all()");
         //LOG
 
         //TODO unwrap cannot fail because every id is contained in the map
@@ -179,7 +181,8 @@ impl Orchestrator {
         sender: &Sender<OrchestratorToPlanet>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!(
+        log_fn_call!(
+            self, 
             "send_planet_kill()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
@@ -207,7 +210,7 @@ impl Orchestrator {
     /// planet kill message is sent.
     pub(crate) fn send_planet_kill_to_all(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("send_planet_kill_to_all()");
+        log_fn_call!(self, "send_planet_kill_to_all()");
         //LOG
 
         //collect all of the senders in a vector

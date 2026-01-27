@@ -1,0 +1,8 @@
+[package]
+name = "logging_utils"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+common-game = "3.0.0"
+crossbeam-channel = "0.5.15"

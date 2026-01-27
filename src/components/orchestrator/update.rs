@@ -2,13 +2,12 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
+use logging_utils::{log_fn_call, log_message, log_internal_op, warning_payload, payload, LoggableActor, debug_println, LOG_ACTORS_ACTIVITY};
 use rand::{Rng, seq::IteratorRandom};
 
 use crate::{
-    components::orchestrator::{Orchestrator, macros::LOG_ACTORS_ACTIVITY},
-    debug_println, log_message, log_orch_fn, log_orch_internal, payload,
+    components::orchestrator::{Orchestrator},
     utils::Status,
-    warning_payload,
 };
 
 impl Orchestrator {
@@ -25,7 +24,7 @@ impl Orchestrator {
         planet_two_pos: usize,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!("destroy_topology_link()", planet_one_pos, planet_two_pos,);
+        log_fn_call!(self, "destroy_topology_link()", planet_one_pos, planet_two_pos,);
         //LOG
 
         match self.galaxy_topology.write() {
@@ -35,10 +34,11 @@ impl Orchestrator {
                     gtop[planet_one_pos][planet_two_pos] = false;
                     gtop[planet_two_pos][planet_one_pos] = false;
                     //LOG
-                    log_orch_internal!({
+                    log_internal_op!(
+                        self, 
                         "action"=>"adj link destroyed",
                         "updated topology"=>format!("{:?}",gtop),
-                    });
+                    );
                     //LOG
                     drop(gtop);
                     Ok(())
@@ -96,7 +96,7 @@ impl Orchestrator {
     /// Returns Err if any of the communication channels are inaccessible.
     pub(crate) fn start_all_planet_ais(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("start_all_planet_ais()");
+        log_fn_call!(self, "start_all_planet_ais()");
         //LOG
 
         for (_id, (from_orch, _)) in &self.planet_channels {
@@ -120,10 +120,11 @@ impl Orchestrator {
         loop {
             if count == self.planet_channels.len() {
                 //LOG
-                log_orch_internal!({
+                log_internal_op!(
+                    self, 
                     "action"=>"all planets started",
                     "count"=>count
-                });
+                );
                 //LOG
                 break;
             }
@@ -168,14 +169,15 @@ impl Orchestrator {
     /// Returns Err if any of the planets fail to start.
     pub fn start_all(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("start_all()");
+        log_fn_call!(self, "start_all()");
         //LOG
         self.start_all_planet_ais()?;
         //LOG
-        log_orch_internal!({
+        log_internal_op!(
+            self, 
             "action"=>"all systems started",
             "status"=>"success"
-        });
+        );
         //LOG
         Ok(())
     }
@@ -185,14 +187,15 @@ impl Orchestrator {
     /// The function is yet to be implemented, and WILL panic no matter what.
     pub(crate) fn stop_all(&mut self) -> Result<(), String> {
         //LOG
-        log_orch_fn!("stop_all()");
+        log_fn_call!(self, "stop_all()");
         //LOG
         //TODO
         //LOG
-        log_orch_internal!({
+        log_internal_op!(
+            self, 
             "action"=>"stop_all requested",
             "status"=>"TODO - not implemented" //TODO change this message
-        });
+        );
         //LOG
         todo!();
         //Ok(())
