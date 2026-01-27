@@ -20,7 +20,7 @@ pub fn pop_sunray_asteroid_sequence() -> Option<char> {
 }
 
 /// Global variable to store the Sunray spawn probability, default is 100 (100%)
-static SUNRAY_SPAWN_PROBABILITY: LazyLock<RwLock<u32>> = LazyLock::new(|| RwLock::new(100));
+static SUNRAY_SPAWN_PROBABILITY: LazyLock<RwLock<u32>> = LazyLock::new(|| RwLock::new(50));
 
 /// Get the current Sunray spawn probability
 pub fn get_sunray_probability() -> u32 {
