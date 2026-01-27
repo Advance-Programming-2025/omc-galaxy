@@ -3,6 +3,8 @@ use common_game::{
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
 use logging_utils::{log_fn_call, log_message, log_internal_op, warning_payload, payload, LoggableActor, debug_println, LOG_ACTORS_ACTIVITY};
+use rand::{Rng, seq::IteratorRandom};
+
 use crate::{
     components::orchestrator::{Orchestrator},
     utils::Status,
@@ -194,5 +196,25 @@ impl Orchestrator {
         //LOG
         todo!();
         //Ok(())
+    }
+
+    pub fn choose_random_action(&mut self) -> Result<(), String> {
+        let mut rng = rand::rng();
+
+        // Pick a random planet from the HashMap with the choose method
+        let (planet_id, (orch_tx, _expl_tx)) = match
+            self.planet_channels.iter().choose(&mut rng)
+        {
+            Some((id, chans)) => (*id, chans.clone()),
+            None => return Ok(()), // REVIEW: is this correct or a silent fail?
+        };
+
+        if rng.random_bool(0.5) {
+            self.send_asteroid(planet_id, &orch_tx)?;
+        } else {
+            self.send_sunray(planet_id, &orch_tx)?;
+        }
+
+        Ok(())
     }
 }

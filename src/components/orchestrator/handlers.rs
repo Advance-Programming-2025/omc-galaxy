@@ -3,12 +3,13 @@ use common_game::{
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
 use crossbeam_channel::select;
+use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
+use log::info;
 
 use crate::{
     components::orchestrator::{Orchestrator},
     utils::Status,
 };
-use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -35,6 +36,7 @@ impl Orchestrator {
             PlanetToOrchestrator::SunrayAck { planet_id } => {
                 debug_println!("SunrayAck from: {}", planet_id);
 
+                self.emit_sunray_ack(planet_id);
                 //LOG
                 log_message!(
                     ActorType::Planet,
@@ -58,10 +60,14 @@ impl Orchestrator {
                     planet_id;
                     "has_rocket"=>rocket.is_some()
                 );
+                
                 //LOG
                 match rocket {
-                    Some(_) => {}
+                    Some(_) => {
+                        info!("I'm planet {planet_id} and I got an asteroid. Got rocket!");
+                    }
                     None => {
+                        info!("I'm planet {planet_id} and I got an asteroid. NO rocket!");
                         //If you have the id then surely that planet exist so we can unwrap without worring
                         //TODO it seems fine to me but just to be more precise we could add error handling
                         let sender = &self.planet_channels.get(&planet_id).unwrap().0;
@@ -119,6 +125,7 @@ impl Orchestrator {
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
                 debug_println!("Planet killed: {}", planet_id);
+                self.emit_planet_death(planet_id);
                 let event = LogEvent::new(
                     Some(Participant::new(ActorType::Planet, planet_id)),
                     Some(Participant::new(ActorType::Orchestrator, 0u32)),
