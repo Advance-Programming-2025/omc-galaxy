@@ -47,7 +47,10 @@ The adjacency matrix should look like this:
 
 ## How to run it (at the moment)
 Go in `orch-example`, after that you can use `cargo run` or `cargo run --features omc-galaxy/debug-prints` to se all the debug messages. 
-
+In order to see the logs you have first to set RUST_LOG variable to whatever level you want (Error, Warning, Info, Debug, Trace)
+For Windows: `$env:RUST_LOG="debug";`
+For Unix: `RUST_LOG=debug`
+By default env_logger filters out everything below Info
 ## Tests
 Use `cargo nextest run`
 
