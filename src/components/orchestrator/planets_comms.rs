@@ -52,11 +52,11 @@ impl Orchestrator {
             "send_sunray()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
-        //LOG
+        //LOG if the planet is dead we do not send the sunray
         //send sunray
-        sender
+        let handle_by_log = sender
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
-            .map_err(|_| "Unable to send a sunray to planet: {id}".to_string())?;
+            .map_err(|_| "Unable to send a sunray to planet: {id}".to_string());
         self.emit_sunray_send(planet_id);
         
         //send update request
@@ -120,12 +120,12 @@ impl Orchestrator {
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
         //LOG
-        //send asteroid
-        sender
+        //send asteroid LOG if the asteroid wasn't sent we still log it because the attempt was made
+        let handle_by_log = sender
             .send(OrchestratorToPlanet::Asteroid(
                 self.forge.generate_asteroid(),
             ))
-            .map_err(|_| "Unable to send sunray to planet: {id}".to_string())?;
+            .map_err(|_| "Unable to send asteroid to planet: {id}".to_string());
         self.emit_asteroid_send(planet_id);        
         //send update request
         self.send_internal_state_request(sender)?;
@@ -247,10 +247,10 @@ impl Orchestrator {
             "send_internal_state_request()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
-        //LOG
-        sender
+        //LOG if the planet is dead we do not send the request
+        let handle_by_log = sender
             .send(OrchestratorToPlanet::InternalStateRequest)
-            .map_err(|_| "Unable to send planet state request".to_string())?;
+            .map_err(|_| "Unable to send planet state request".to_string());
 
         log_message!(
             ActorType::Orchestrator,
