@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/one-million-crabs.iml" filepath="$PROJECT_DIR$/.idea/one-million-crabs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/omc-galaxy.iml" filepath="$PROJECT_DIR$/.idea/omc-galaxy.iml" />
     </modules>
   </component>
 </project>

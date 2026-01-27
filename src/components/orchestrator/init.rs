@@ -1,3 +1,4 @@
+use logging_utils::LoggableActor;
 use std::{
     fs,
     sync::{Arc, RwLock},
@@ -22,13 +23,14 @@ use crate::utils::registry::PlanetType::{
 use crate::{
     GalaxyTopology,
     components::explorer::Explorer,
-    debug_println, log_orch_fn, log_orch_internal,
     utils::{
         Status,
         registry::{PLANET_REGISTRY, PlanetType},
     },
-    warning_payload,
 };
+
+use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
+
 
 //Initialization game functions
 impl Orchestrator {
@@ -38,7 +40,7 @@ impl Orchestrator {
     /// Returns an atomic reference containing the galaxy's structure.
     pub fn new_gtop() -> GalaxyTopology {
         //Log
-        log_orch_fn!("new_gtop()",);
+        log_fn_call!(dir ActorType::Orchestrator, 0u32, "new_gtop()",);
         //LOG
         Arc::new(RwLock::new(Vec::new()))
     }
@@ -174,7 +176,7 @@ impl Orchestrator {
         Receiver<ExplorerToPlanet>,
     ) {
         //LOG
-        log_orch_fn!("init_comms_planet()");
+        log_fn_call!(dir ActorType::Orchestrator, 0u32, "init_comms_planet()");
         //LOG
 
         //orch-planet
@@ -190,11 +192,11 @@ impl Orchestrator {
         ) = unbounded();
 
         //Log
-        log_orch_internal!({
+        log_internal_op!(dir ActorType::Orchestrator, 0u32,
                 "action"=>"channels initialized",
                 "from"=>"orchestrator, explorer",
                 "to"=>"planet"
-        });
+        );
         //LOG
 
         (
@@ -222,7 +224,7 @@ impl Orchestrator {
         Receiver<PlanetToExplorer>,
     ) {
         //LOG
-        log_orch_fn!("init_comms_explorers()");
+        log_fn_call!(dir ActorType::Orchestrator, 0u32, "init_comms_explorers()");
         //LOG
 
         let (sender_orch, receiver_orch): (
@@ -236,11 +238,11 @@ impl Orchestrator {
         ) = unbounded();
 
         //Log
-        log_orch_internal!({
+        log_internal_op!(dir ActorType::Orchestrator, 0u32, 
             "action"=>"channels initialized",
             "from"=>"orchestrator, planet",
             "to"=>"explorer"
-        });
+        );
         //LOG
 
         (sender_orch, receiver_orch, sender_planet, receiver_planet)
@@ -259,7 +261,7 @@ impl Orchestrator {
     /// * `type_id` - the type of the planet (A,B,C,D)
     pub(crate) fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
         //LOG
-        log_orch_fn!("add_planet()", id, type_id,);
+        log_fn_call!(self, "add_planet()", id, type_id,);
         //LOG
 
         //Init comms OrchestratorToPlanet, ExplorerToPlanet
@@ -271,12 +273,13 @@ impl Orchestrator {
             (receiver_orchestrator, self.sender_planet_orch.clone());
 
         //LOG
-        log_orch_internal!({
+        log_internal_op!(
+            self,
             "action"=>"channel initialized",
             "from"=>"planet",
             "id"=>id,
             "to"=>"orchestrator"
-        });
+        );
         //LOG
 
         //creation of the planet
@@ -289,10 +292,11 @@ impl Orchestrator {
         )?;
 
         //LOG
-        log_orch_internal!({
+        log_internal_op!(
+                self,
                 "action"=>"planet created",
                 "id"=>id
-        });
+        );
         //LOG
 
         //Update HashMaps
@@ -304,10 +308,11 @@ impl Orchestrator {
         thread::spawn(move || -> Result<(), String> { new_planet.run() });
 
         //LOG
-        log_orch_internal!({
+        log_internal_op!(
+            self, 
             "action"=>"planet thread started",
             "planet_id"=>id
-        });
+        );
         //LOG
         Ok(())
     }
@@ -329,7 +334,8 @@ impl Orchestrator {
         free_cells: u32,
         sender_explorer: Sender<ExplorerToPlanet>,
     ) {
-        log_orch_fn!(
+        log_fn_call!(
+            self,
             "add_explorer()",
             explorer_id,
             planet_id,
@@ -349,34 +355,38 @@ impl Orchestrator {
             free_cells,
         );
 
-        log_orch_internal!({
+        log_internal_op!(
+            self,
             "action"=>"explorer created",
             "explorer_id"=>explorer_id,
-        });
+        );
 
         //Update HashMaps
         self.explorer_status
             .write()
             .unwrap()
             .insert(new_explorer.id(), Status::Paused);
-        log_orch_internal!({
+        log_internal_op!(
+            self,
             "action"=>"explorer_status hashmap updated",
-        });
+        );
         self.explorer_channels
             .insert(new_explorer.id(), (sender_orch, sender_planet));
-        log_orch_internal!({
+        log_internal_op!(
+            self,
             "action"=>"saved channels: sender_orch, sender_planet",
-        });
+        );
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(|| -> Result<(), String> {
             let _ = new_explorer; //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
-        log_orch_internal!({
+        log_internal_op!(
+            self, 
             "action"=>"explorer thread created",
             "explorer_id"=>explorer_id,
-        });
+        );
     }
 
     /// Initialize the galaxy using a topology file.
@@ -392,7 +402,7 @@ impl Orchestrator {
     /// * `path` - path to the galaxy initialization file
     pub fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
         //At the moment are allowed only id from 0 to MAX u32
-        log_orch_fn!("initialize_galaxy_by_file()", path,);
+        log_fn_call!(self, "initialize_galaxy_by_file()", path,);
 
         //Read the input file and handle it
         let input = fs::read_to_string(path)
@@ -482,7 +492,7 @@ impl Orchestrator {
         adj_list: Vec<Vec<u32>>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!("initialize_galaxy_by_adj_list()", adj_list);
+        log_fn_call!(self, "initialize_galaxy_by_adj_list()", adj_list);
         //LOG
         let num_planets = adj_list.len();
         //Print the result
@@ -511,10 +521,11 @@ impl Orchestrator {
         }
 
         //LOG
-        log_orch_internal!({
+        log_internal_op!(
+            self,
             "action"=>"adj matrix created",
             "matrix"=>format!("{:?}",new_topology),
-        });
+        );
         //LOG
 
         debug_println!("full adj matrix:");
@@ -529,7 +540,7 @@ impl Orchestrator {
                 *gtop = new_topology;
 
                 //LOG
-                log_orch_internal!({ "update galaxy_topology" });
+                log_internal_op!(self, "update galaxy_topology" );
                 //LOG
 
                 //drops the lock just in case
@@ -583,7 +594,7 @@ impl Orchestrator {
         ids_list: Vec<u32>,
     ) -> Result<(), String> {
         //LOG
-        log_orch_fn!("initialize_planets_by_ids_list()", ids_list,);
+        log_fn_call!(self, "initialize_planets_by_ids_list()", ids_list,);
         //LOG
         for planet_id in ids_list.iter() {
             //TODO we need to initialize the other planets randomly or precisely

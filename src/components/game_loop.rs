@@ -3,7 +3,7 @@ use crossbeam_channel::{Receiver, Sender, select_biased, tick};
 use std::time::Duration;
 
 use crate::components::orchestrator::Orchestrator;
-use crate::debug_println;
+use logging_utils::debug_println;
 use crate::messages::{GameToUi, UiToGame};
 use crate::settings;
 use crate::utils::GameState;
