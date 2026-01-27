@@ -476,6 +476,177 @@ macro_rules! log_orch_to_planet {
     }};
 }
 
+#[macro_export]
+macro_rules! log_explorer_to_planet {
+    // ===== self FORMS =====
+
+    // self: pre-kvs ; result ; post-kvs
+    ($self:ident, $explorer_id:expr, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
+        $crate::log_explorer_to_planet!(
+            dir $explorer_id,
+            $self.actor_id(),
+            $fn_name $(, $param)* ;
+            $($pre_k => $pre_v),+ ;
+            result = $result $(, $($post_k => $post_v),* )?
+        )
+    }};
+
+    // self: result ; post
+    ($self:ident, $explorer_id:expr, $fn_name:expr $(, $param:ident)* ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
+        $crate::log_explorer_to_planet!(
+            dir $explorer_id,
+            $self.actor_id(),
+            $fn_name $(, $param)* ;
+            result = $result $(, $($post_k => $post_v),* )?
+        )
+    }};
+
+    // self: only pre
+    ($self:ident, $explorer_id:expr, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ $(,)?
+    ) => {{
+        $crate::log_explorer_to_planet!(
+            dir $explorer_id,
+            $self.actor_id(),
+            $fn_name $(, $param)* ;
+            $($pre_k => $pre_v),+
+        )
+    }};
+
+    // self: nothing extra
+    ($self:ident, $explorer_id:expr, $fn_name:expr $(, $param:ident)* $(,)?) => {{
+        $crate::log_explorer_to_planet!(
+            dir $explorer_id,
+            $self.actor_id(),
+            $fn_name $(, $param)*
+        )
+    }};
+
+    // ===== DIR FORMS =====
+
+    // dir: pre ; result ; post
+    (dir $explorer_id:expr, $planet_id:expr, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
+        use $crate::{LogEvent, Participant, EventType, ActorType};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        // params (nome -> Debug)
+        $(
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
+        )*
+
+        // pre key-value pairs
+        $(
+            p.insert($pre_k.to_string(), $pre_v.to_string());
+        )+
+
+        // result
+        p.insert("Result".to_string(), $result.to_string());
+
+        // post key-value pairs (if any)
+        $(
+            $(
+                p.insert($post_k.to_string(), $post_v.to_string());
+            )*
+        )?
+
+        LogEvent::new(
+            Some(Participant::new(ActorType::Explorer, $explorer_id)),
+            Some(Participant::new(ActorType::Planet, $planet_id)),
+            EventType::MessageExplorerToPlanet,
+            $crate::LOG_FN_CALL_CHNL,
+            p
+        ).emit();
+    }};
+
+    // dir: result ; post
+    (dir $explorer_id:expr, $planet_id:expr, $fn_name:expr $(, $param:ident)* ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
+        use $crate::{LogEvent, Participant, EventType, ActorType};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        $(
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
+        )*
+
+        p.insert("Result".to_string(), $result.to_string());
+
+        $(
+            $(
+                p.insert($post_k.to_string(), $post_v.to_string());
+            )*
+        )?
+
+        LogEvent::new(
+            Some(Participant::new(ActorType::Explorer, $explorer_id)),
+            Some(Participant::new(ActorType::Planet, $planet_id)),
+            EventType::MessageExplorerToPlanet,
+            $crate::LOG_FN_CALL_CHNL,
+            p
+        ).emit();
+    }};
+
+    // dir: only pre
+    (dir $explorer_id:expr, $planet_id:expr, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ $(,)?
+    ) => {{
+        use $crate::{LogEvent, Participant, EventType, ActorType};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        $(
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
+        )*
+
+
+        $(
+            p.insert($pre_k.to_string(), $pre_v.to_string());
+        )+
+
+        LogEvent::new(
+            Some(Participant::new(ActorType::Explorer, $explorer_id)),
+            Some(Participant::new(ActorType::Planet, $planet_id)),
+            EventType::MessageExplorerToPlanet,
+            $crate::LOG_FN_CALL_CHNL,
+            p
+        ).emit();
+    }};
+
+    // dir: nothing extra
+    (dir $explorer_id:expr, $planet_id:expr, $fn_name:expr $(, $param:ident)* $(,)?) => {{
+        use $crate::{LogEvent, Participant, EventType, ActorType};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        $(
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
+        )*
+
+
+        LogEvent::new(
+            Some(Participant::new(ActorType::Explorer, $explorer_id)),
+            Some(Participant::new(ActorType::Planet, $planet_id)),
+            EventType::MessageExplorerToPlanet,
+            $crate::LOG_FN_CALL_CHNL,
+            p
+        ).emit();
+    }};
+}
+
 
 /// Traces communication and message flow between different actors.
 ///
