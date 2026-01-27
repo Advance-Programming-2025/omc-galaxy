@@ -31,6 +31,7 @@ use crate::{
 
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
 
+
 //Initialization game functions
 impl Orchestrator {
     /// Create a new Galaxy Topology.
@@ -299,10 +300,7 @@ impl Orchestrator {
         //LOG
 
         //Update HashMaps
-        self.planets_status
-            .write()
-            .unwrap()
-            .insert(new_planet.id(), Status::Paused);
+        self.planets_info.insert_status(new_planet.id(), Status::Paused);
         self.planet_channels
             .insert(new_planet.id(), (sender_orchestrator, sender_explorer));
 

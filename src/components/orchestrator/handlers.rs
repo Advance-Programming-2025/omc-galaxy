@@ -3,11 +3,12 @@ use common_game::{
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
 use crossbeam_channel::select;
-use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
+
 use crate::{
     components::orchestrator::{Orchestrator},
     utils::Status,
 };
+use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -83,10 +84,7 @@ impl Orchestrator {
                         //LOG
 
                         //Update planet State
-                        self.planets_status
-                            .write()
-                            .unwrap()
-                            .insert(planet_id, Status::Dead);
+                        self.planets_info.insert_status(planet_id, Status::Dead);
                         //LOG
                         log_internal_op!(
                             self,
@@ -116,6 +114,8 @@ impl Orchestrator {
                     planet_state,
                 );
                 //LOG
+                self.planets_info
+                    .update_from_planet_state(planet_id, planet_state);
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
                 debug_println!("Planet killed: {}", planet_id);

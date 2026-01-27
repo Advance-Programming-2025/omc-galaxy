@@ -149,10 +149,7 @@ impl Orchestrator {
                     event.emit();
                     //LOG
                     //TODO this unwrap is needlessly dangerous. safer alternative?
-                    self.planets_status
-                        .write()
-                        .unwrap()
-                        .insert(planet_id, Status::Running);
+                    self.planets_info.insert_status(planet_id, Status::Running);
                     count += 1;
                 }
                 _ => {}
