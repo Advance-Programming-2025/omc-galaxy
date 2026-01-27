@@ -127,16 +127,62 @@ macro_rules! log_internal_op {
 /// * `$key => $val` - optional extra metadata for the call
 #[macro_export]
 macro_rules! log_fn_call {
-    // requires self
-    ($self:ident, $fn_name:expr $(, $param:ident)* $(; $($key:expr => $val:expr),*)? $(,)?) => {{
-        $crate::log_fn_call!(dir $self.actor_type(), $self.actor_id(), $fn_name $(, $param)* $(; $($key => $val),*)?)
+    // ----- self: pre-kvs ; result = ... ; post-kvs -----
+    ($self:ident, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
+        $crate::log_fn_call!(
+            dir $self.actor_type(),
+            $self.actor_id(),
+            $fn_name $(, $param)* ;
+            $($pre_k => $pre_v),+ ;
+            result = $result $(, $($post_k => $post_v),* )?
+        )
     }};
 
-    // direct. requires ActorType and ID
-    (dir $actor:expr, $id:expr, $fn_name:expr $(, $param:ident)* $(; $($key:expr => $val:expr),*)? $(,)?) => {{
+    // ----- self: result = ... , post-kvs (no pre) -----
+    ($self:ident, $fn_name:expr $(, $param:ident)* ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
+        $crate::log_fn_call!(
+            dir $self.actor_type(),
+            $self.actor_id(),
+            $fn_name $(, $param)* ;
+            result = $result $(, $($post_k => $post_v),* )?
+        )
+    }};
+
+    // ----- self: only pre-kvs (no result) -----
+    ($self:ident, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ $(,)?
+    ) => {{
+        $crate::log_fn_call!(
+            dir $self.actor_type(),
+            $self.actor_id(),
+            $fn_name $(, $param)* ;
+            $($pre_k => $pre_v),+
+        )
+    }};
+
+    // ----- self: no kvs/result -----
+    ($self:ident, $fn_name:expr $(, $param:ident)* $(,)?) => {{
+        $crate::log_fn_call!(
+            dir $self.actor_type(),
+            $self.actor_id(),
+            $fn_name $(, $param)*
+        )
+    }};
+
+    // ----------------- DIR FORMS -----------------
+
+    // dir: pre-kvs ; result = ... ; post-kvs
+    (dir $actor:expr, $id:expr, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
         use $crate::{LogEvent, Participant, ActorType, EventType};
 
-        //selecting actor type
         let event_type = match $actor {
             ActorType::Orchestrator => EventType::InternalOrchestratorAction,
             ActorType::Explorer     => EventType::InternalExplorerAction,
@@ -147,17 +193,118 @@ macro_rules! log_fn_call {
         let mut p = std::collections::BTreeMap::new();
         p.insert("fn".to_string(), $fn_name.to_string());
 
-        //inserting parameters in the payload
         $(
-            p.insert(
-                stringify!($param).to_string(),
-                format!("{:?}", $param)
-            );
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
         )*
-        // inserting key-value values
-        $($(
-            p.insert($key.to_string(), $val.to_string());
-        )*)?
+
+        // pre key-value pairs
+        $(
+            p.insert($pre_k.to_string(), $pre_v.to_string());
+        )+
+
+        // result
+        p.insert("Result".to_string(), $result.to_string());
+
+        // post key-value pairs (if any)
+        $(
+            $(
+                p.insert($post_k.to_string(), $post_v.to_string());
+            )*
+        )?
+
+        LogEvent::self_directed(
+            Participant::new($actor, $id),
+            event_type,
+            $crate::LOG_FN_CALL_CHNL,
+            p
+        ).emit();
+    }};
+
+    // dir: result = ... , post-kvs (no pre)
+    (dir $actor:expr, $id:expr, $fn_name:expr $(, $param:ident)* ;
+        result = $result:expr $(, $($post_k:expr => $post_v:expr),* )? $(,)?
+    ) => {{
+        use $crate::{LogEvent, Participant, ActorType, EventType};
+
+        let event_type = match $actor {
+            ActorType::Orchestrator => EventType::InternalOrchestratorAction,
+            ActorType::Explorer     => EventType::InternalExplorerAction,
+            ActorType::Planet       => EventType::InternalPlanetAction,
+            _                       => EventType::InternalOrchestratorAction,
+        };
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        $(
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
+        )*
+
+        p.insert("Result".to_string(), $result.to_string());
+
+        $(
+            $(
+                p.insert($post_k.to_string(), $post_v.to_string());
+            )*
+        )?
+
+        LogEvent::self_directed(
+            Participant::new($actor, $id),
+            event_type,
+            $crate::LOG_FN_CALL_CHNL,
+            p
+        ).emit();
+    }};
+
+    // dir: only pre-kvs (no result)
+    (dir $actor:expr, $id:expr, $fn_name:expr $(, $param:ident)* ;
+        $($pre_k:expr => $pre_v:expr),+ $(,)?
+    ) => {{
+        use $crate::{LogEvent, Participant, ActorType, EventType};
+
+        let event_type = match $actor {
+            ActorType::Orchestrator => EventType::InternalOrchestratorAction,
+            ActorType::Explorer     => EventType::InternalExplorerAction,
+            ActorType::Planet       => EventType::InternalPlanetAction,
+            _                       => EventType::InternalOrchestratorAction,
+        };
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        $(
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
+        )*
+
+        $(
+            p.insert($pre_k.to_string(), $pre_v.to_string());
+        )+
+
+        LogEvent::self_directed(
+            Participant::new($actor, $id),
+            event_type,
+            $crate::LOG_FN_CALL_CHNL,
+            p
+        ).emit();
+    }};
+
+    // dir: no kvs/result (original)
+    (dir $actor:expr, $id:expr, $fn_name:expr $(, $param:ident)* $(,)?) => {{
+        use $crate::{LogEvent, Participant, ActorType, EventType};
+
+        let event_type = match $actor {
+            ActorType::Orchestrator => EventType::InternalOrchestratorAction,
+            ActorType::Explorer     => EventType::InternalExplorerAction,
+            ActorType::Planet       => EventType::InternalPlanetAction,
+            _                       => EventType::InternalOrchestratorAction,
+        };
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("fn".to_string(), $fn_name.to_string());
+
+        $(
+            p.insert(stringify!($param).to_string(), format!("{:?}", $param));
+        )*
 
         LogEvent::self_directed(
             Participant::new($actor, $id),
@@ -167,6 +314,7 @@ macro_rules! log_fn_call {
         ).emit();
     }};
 }
+
 /// Traces communication and message flow between different actors.
 ///
 /// This macro unifies the logging of messages to visualize the

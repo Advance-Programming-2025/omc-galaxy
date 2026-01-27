@@ -12,11 +12,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/one-million-crabs.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/logging_utils/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/logging_utils/Cargo.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/logging_utils/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/logging_utils/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/logging_utils/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/logging_utils/src/lib.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -103,7 +99,7 @@
       <option name="presentableId" value="Default" />
       <updated>1769286643984</updated>
       <workItem from="1769286645283" duration="906000" />
-      <workItem from="1769513365426" duration="5171000" />
+      <workItem from="1769513365426" duration="7510000" />
     </task>
     <servers />
   </component>
