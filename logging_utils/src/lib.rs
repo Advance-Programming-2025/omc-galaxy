@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use common_game::logging::{ActorType, Channel};
+pub use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
+use crossbeam_channel::Receiver;
+pub use crossbeam_channel::Sender;
 
 pub const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
 ///The events this level should be used for are:
@@ -68,7 +70,7 @@ macro_rules! warning_payload {
         p
     }};
 }
-/// Logs Orchestrator functions internal actions.
+/// Logs functions internal actions.
 ///
 /// This macro specializes self-directed logging for the Orchestrator (ID 0).
 ///
@@ -83,7 +85,7 @@ macro_rules! log_internal_op {
 
     // direct. requires ActorType and ID
     (dir $actor:expr, $id:expr, $($key:expr => $val:expr),* $(,)? ) => {{
-        use common_game::logging::{LogEvent, Participant, EventType};
+        use $crate::{LogEvent, Participant, EventType};
 
         //selecting actor type
         let event_type=match $actor {
@@ -132,7 +134,7 @@ macro_rules! log_fn_call {
 
     // direct. requires ActorType and ID
     (dir $actor:expr, $id:expr, $fn_name:expr $(, $param:ident)* $(; $($key:expr => $val:expr),*)? $(,)?) => {{
-        use common_game::logging::{LogEvent, Participant, ActorType, EventType};
+        use $crate::{LogEvent, Participant, ActorType, EventType};
 
         //selecting actor type
         let event_type = match $actor {
@@ -185,7 +187,7 @@ macro_rules! log_message {
         $(; $($key:expr => $val:expr),*)?
         $(,)?
     ) => {{
-        use common_game::logging::{LogEvent, Participant};
+        use $crate::{LogEvent, Participant};
 
         let mut p = std::collections::BTreeMap::new();
         p.insert("message".to_string(), $message.to_string());
@@ -214,7 +216,6 @@ macro_rules! log_message {
     }};
 }
 
-pub const TIMEOUT_DURATION: Duration = Duration::from_millis(2000);
 
 #[cfg(feature = "debug-prints")]
 #[macro_export]
@@ -234,4 +235,13 @@ macro_rules! debug_println {
 pub trait LoggableActor {
     fn actor_type(&self) -> ActorType;
     fn actor_id(&self) -> u32;
+}
+
+pub fn get_sender_id<T>(chan: &Sender<T>) -> usize {
+    // getting memory address of the channel
+    chan as *const _ as *const () as usize
+}
+pub fn get_receiver_id<T>(chan: &Receiver<T>) -> usize {
+    // getting memory address of the channel
+    chan as *const _ as *const () as usize
 }

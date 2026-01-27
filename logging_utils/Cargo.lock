@@ -67,6 +67,7 @@ name = "logging_utils"
 version = "0.1.0"
 dependencies = [
  "common-game",
+ "crossbeam-channel",
 ]
 
 [[package]]
