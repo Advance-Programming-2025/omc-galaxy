@@ -2,14 +2,14 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
+use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
+use common_game::utils::ID;
 use crossbeam_channel::select;
 use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
 use log::info;
 
-use crate::{
-    components::orchestrator::{Orchestrator},
-    utils::Status,
-};
+use crate::{components::orchestrator::{Orchestrator}, utils::Status, ExplorerStatus};
+use crate::components::explorer_tommy::BagType;
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -197,6 +197,241 @@ impl Orchestrator {
         Ok(())
     }
 
+
+    pub fn handle_explorer_message(&mut self, msg: ExplorerToOrchestrator<BagType>) -> Result<(), String> {
+        match msg {
+            ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "StartExplorerAIResult",
+                    explorer_id
+                );
+                //LOG
+
+                if let Some(mut status_map) = self.explorer_status.write().ok() {
+                    status_map.insert(explorer_id, Status::Running);
+                }
+
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action" => "explorer status updated to Active",
+                    "explorer_id" => explorer_id
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::KillExplorerResult { explorer_id } => {
+                debug_println!("Explorer killed: {}", explorer_id);
+
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "KillExplorerResult",
+                    explorer_id
+                );
+                //LOG
+
+                if let Some(mut status_map) = self.explorer_status.write().ok() {
+                    status_map.insert(explorer_id, Status::Dead);
+                }
+
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action" => "explorer status updated to Dead",
+                    "explorer_id" => explorer_id
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::ResetExplorerAIResult { explorer_id } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "ResetExplorerAIResult",
+                    explorer_id
+                );
+                //LOG
+
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action" => "explorer AI reset completed",
+                    "explorer_id" => explorer_id
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::StopExplorerAIResult { explorer_id } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "StopExplorerAIResult",
+                    explorer_id
+                );
+                //LOG
+
+                if let Some(mut status_map) = self.explorer_status.write().ok() {
+                    status_map.insert(explorer_id, Status::Paused);
+                }
+
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action" => "explorer status updated to Paused",
+                    "explorer_id" => explorer_id
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::MovedToPlanetResult { explorer_id, planet_id } => {
+                debug_println!("Explorer {} moved to planet {}", explorer_id, planet_id);
+
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "MovedToPlanetResult",
+                    explorer_id;
+                    "planet_id" => planet_id
+                );
+                //LOG
+                // TODO memorize the position of the explorer? if so, where?
+            }
+            ExplorerToOrchestrator::CurrentPlanetResult { explorer_id, planet_id } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "CurrentPlanetResult",
+                    explorer_id;
+                    "planet_id" => planet_id
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::SupportedResourceResult { explorer_id, supported_resources } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "SupportedResourceResult",
+                    explorer_id;
+                    "resources_count" => supported_resources.len()
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::SupportedCombinationResult { explorer_id, combination_list } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "SupportedCombinationResult",
+                    explorer_id;
+                    "combinations_count" => combination_list.len()
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::GenerateResourceResponse { explorer_id, generated } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "GenerateResourceResponse",
+                    explorer_id;
+                    "success" => generated.is_ok()
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::CombineResourceResponse { explorer_id, generated } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "CombineResourceResponse",
+                    explorer_id;
+                    "success" => generated.is_ok()
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::BagContentResponse { explorer_id, bag_content } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "BagContentResponse",
+                    explorer_id;
+                    "items_count" => bag_content.len()
+                );
+                //LOG
+            }
+            ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
+                if let Some((sender, _)) = self.explorer_channels.get(&explorer_id) {
+
+                    // the neighbors are obtained from the galaxy_topology adjacent matrix
+                    let neighbors: Vec<u32> = {
+                        let guard = self.galaxy_topology.read().unwrap();
+
+                        guard.get(current_planet_id as usize)
+                            .into_iter() // Handles the Option if the ID is out of bounds
+                            .flat_map(|row| {
+                                row.iter()
+                                    .enumerate()
+                                    .filter_map(|(i, &is_connected)| {
+                                        // only return the index if the connection exists (true)
+                                        if is_connected { Some(i as u32) } else { None }
+                                    })
+                            })
+                            .collect()
+                    };
+
+                    let _ = sender.send(OrchestratorToExplorer::NeighborsResponse { neighbors });
+                }
+            }
+            ExplorerToOrchestrator::TravelToPlanetRequest { explorer_id, current_planet_id, dst_planet_id } => {
+                // TODO
+                // verificare che il pianeta esiste
+                // verificare che sia adiacente al current planet dell'explorer
+                // ottieni il sender e invia una move to planet
+            }
+        }
+        Ok(())
+    }
+
     /// Handle the planet messages that are sent through the orchestrator's
     /// communication channels.
     ///
@@ -224,14 +459,23 @@ impl Orchestrator {
                         );
                         event.emit();
                         //LOG
+                        // TODO not using the "e" in Err(e), which version to use? this one or the one used below for explorer msg?
                         return Err("Cannot receive message from planets".to_string())
                     },
                 };
                 self.handle_planet_message(msg_unwraped)?;
             }
-            recv(self.receiver_orch_explorer)->_msg=>{
-                //TODO to finish this function
-                todo!()
+            recv(self.receiver_orch_explorer)->msg=>{
+                let msg_unwraped = match msg{
+                    Ok(res)=>res,
+                    Err(e)=>{
+                        //LOG
+                        // TODO
+                        //LOG
+                        return Err(format!("Cannot receive message from explorers: {}", e));
+                    },
+                };
+                self.handle_explorer_message(msg_unwraped)?;
             }
             default=>{}
         }
