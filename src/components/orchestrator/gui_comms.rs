@@ -1,7 +1,8 @@
 use std::sync::Arc;
-use crate::PlanetInfoMap;
+use crate::{PlanetInfoMap, utils::registry::PlanetType};
 
 use log::info;
+use rustc_hash::FxHashMap;
 
 use crate::{
     ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::{Orchestrator, OrchestratorEvent},
@@ -104,5 +105,12 @@ impl Orchestrator {
 
         info!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages.push(OrchestratorEvent::AsteroidSent { planet_id });
+    }
+
+    /// Returns the galaxy lookup function.
+    /// 
+    /// Used by the GUI to get every planet's type
+    pub(crate) fn get_galaxy_lookup(&self) -> &FxHashMap<u32, (u32, PlanetType)> {
+        &self.galaxy_lookup
     }
 }
