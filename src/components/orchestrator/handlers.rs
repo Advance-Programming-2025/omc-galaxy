@@ -421,14 +421,34 @@ impl Orchestrator {
                             .collect()
                     };
 
+                    // send the NeighborsResponse
                     let _ = sender.send(OrchestratorToExplorer::NeighborsResponse { neighbors });
                 }
             }
             ExplorerToOrchestrator::TravelToPlanetRequest { explorer_id, current_planet_id, dst_planet_id } => {
-                // TODO
-                // verificare che il pianeta esiste
-                // verificare che sia adiacente al current planet dell'explorer
-                // ottieni il sender e invia una move to planet
+                if let Some((sender, _)) = self.explorer_channels.get(&explorer_id) {
+                    // verify that the planet exists
+                    let is_neighbour = {
+                        let guard = self.galaxy_topology.read().unwrap();
+
+                        guard
+                            .get(current_planet_id as usize)
+                            .and_then(|row| row.get(dst_planet_id as usize))
+                            .copied()
+                            .unwrap_or(false)
+                    };
+
+                    if !is_neighbour { return Err("Planet id not found".to_string()) }
+
+                    // retrieve the sender from explorer to planet
+                    let sender_to_new_planet = match self.planet_channels.get(&dst_planet_id) {
+                        Some((_, explorer_sender)) => Some(explorer_sender.clone()),
+                        None => None, // sender does not exist
+                    };
+
+                    // send the MoveToPlanet
+                    let _ = sender.send(OrchestratorToExplorer::MoveToPlanet { sender_to_new_planet, planet_id: dst_planet_id });
+                }
             }
         }
         Ok(())
