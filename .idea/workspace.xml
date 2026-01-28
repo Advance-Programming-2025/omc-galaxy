@@ -12,8 +12,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/components/explorer_mattia.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/explorer_tommy.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/explorer.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/explorer.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/orchestrator/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/handlers.rs" afterDir="false" />
     </list>
@@ -23,13 +24,6 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="RsBuildProfile:test" />
-  <component name="FileTemplateManagerImpl">
-    <option name="RECENT_TEMPLATES">
-      <list>
-        <option value="Rust File" />
-      </list>
-    </option>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
@@ -109,7 +103,7 @@
       <updated>1769286643984</updated>
       <workItem from="1769286645283" duration="906000" />
       <workItem from="1769513365426" duration="14437000" />
-      <workItem from="1769592415580" duration="10036000" />
+      <workItem from="1769592415580" duration="4986000" />
     </task>
     <servers />
   </component>
