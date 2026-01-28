@@ -60,8 +60,8 @@ impl Orchestrator {
                     planet_id;
                     "has_rocket"=>rocket.is_some()
                 );
-                
                 //LOG
+                
                 match rocket {
                     Some(_) => {
                         info!("I'm planet {planet_id} and I got an asteroid. Got rocket!");
@@ -124,6 +124,7 @@ impl Orchestrator {
                     .update_from_planet_state(planet_id, planet_state);
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
+                //LOG
                 debug_println!("Planet killed: {}", planet_id);
                 self.emit_planet_death(planet_id);
                 let event = LogEvent::new(
@@ -137,6 +138,7 @@ impl Orchestrator {
                     ),
                 );
                 event.emit();
+                //LOG
             }
             // PlanetToOrchestrator::OutgoingExplorerResponse { planet_id, res }=>{},
             PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
