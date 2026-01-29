@@ -5,6 +5,7 @@ pub mod init;
 pub mod macros;
 pub mod planets_comms;
 pub mod update;
+mod explorer_comms;
 
 use crate::components::explorer::BagType;
 use crate::utils::{PlanetStatus,Status, PlanetInfoMap};

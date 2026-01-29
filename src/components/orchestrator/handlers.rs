@@ -402,53 +402,25 @@ impl Orchestrator {
                 //LOG
             }
             ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
-                if let Some((sender, _)) = self.explorer_channels.get(&explorer_id) {
-
-                    // the neighbors are obtained from the galaxy_topology adjacent matrix
-                    let neighbors: Vec<u32> = {
-                        let guard = self.galaxy_topology.read().unwrap();
-
-                        guard.get(current_planet_id as usize)
-                            .into_iter() // Handles the Option if the ID is out of bounds
-                            .flat_map(|row| {
-                                row.iter()
-                                    .enumerate()
-                                    .filter_map(|(i, &is_connected)| {
-                                        // only return the index if the connection exists (true)
-                                        if is_connected { Some(i as u32) } else { None }
-                                    })
-                            })
-                            .collect()
-                    };
-
-                    // send the NeighborsResponse
-                    let _ = sender.send(OrchestratorToExplorer::NeighborsResponse { neighbors });
-                }
+                self.send_neighbours_response(explorer_id, current_planet_id)?;
             }
             ExplorerToOrchestrator::TravelToPlanetRequest { explorer_id, current_planet_id, dst_planet_id } => {
-                if let Some((sender, _)) = self.explorer_channels.get(&explorer_id) {
-                    // verify that the planet exists
-                    let is_neighbour = {
-                        let guard = self.galaxy_topology.read().unwrap();
+                // verify that the planet exists and that the destination planet is a neighbour
+                let is_neighbour = {
+                    let guard = self.galaxy_topology.read().unwrap();
 
-                        guard
-                            .get(current_planet_id as usize)
-                            .and_then(|row| row.get(dst_planet_id as usize))
-                            .copied()
-                            .unwrap_or(false)
-                    };
-
-                    if !is_neighbour { return Err("Planet id not found".to_string()) }
-
-                    // retrieve the sender from explorer to planet
-                    let sender_to_new_planet = match self.planet_channels.get(&dst_planet_id) {
-                        Some((_, explorer_sender)) => Some(explorer_sender.clone()),
-                        None => None, // sender does not exist
-                    };
-
-                    // send the MoveToPlanet
-                    let _ = sender.send(OrchestratorToExplorer::MoveToPlanet { sender_to_new_planet, planet_id: dst_planet_id });
-                }
+                    guard
+                        .get(current_planet_id as usize)
+                        .and_then(|row| row.get(dst_planet_id as usize))
+                        .copied()
+                        .unwrap_or(false)
+                };
+                
+                // if not existing or not a neighbour of the current planet return and Err
+                if !is_neighbour { return Err("Planet id not found".to_string()) }
+            
+                // else send the move to planet
+                return self.send_move_to_planet(explorer_id, dst_planet_id)
             }
         }
         Ok(())
