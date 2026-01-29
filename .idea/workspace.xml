@@ -11,10 +11,7 @@
     </cargoProject>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/handlers.rs" afterDir="false" />
-    </list>
+    <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

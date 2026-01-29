@@ -77,8 +77,8 @@ impl Bag {
         Ok(ComplexResourceRequest::Diamond(c1, c2))
     }
     fn make_water_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.contains(ResourceType::Basic(BasicResourceType::Oxygen))
-            && self.contains(ResourceType::Basic(BasicResourceType::Hydrogen))
+        if !(self.contains(ResourceType::Basic(BasicResourceType::Oxygen))
+            && self.contains(ResourceType::Basic(BasicResourceType::Hydrogen)))
         {
             return Err("Missing resource".to_string());
         }
@@ -95,8 +95,8 @@ impl Bag {
         Ok(ComplexResourceRequest::Water(c1, c2))
     }
     fn make_life_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.contains(ResourceType::Complex(ComplexResourceType::Water))
-            && self.contains(ResourceType::Basic(BasicResourceType::Carbon))
+        if !(self.contains(ResourceType::Complex(ComplexResourceType::Water))
+            && self.contains(ResourceType::Basic(BasicResourceType::Carbon)))
         {
             return Err("Missing resource".to_string());
         }
@@ -113,8 +113,8 @@ impl Bag {
         Ok(ComplexResourceRequest::Life(c1, c2))
     }
     fn make_robot_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.contains(ResourceType::Complex(ComplexResourceType::Life))
-            && self.contains(ResourceType::Basic(BasicResourceType::Silicon))
+        if !(self.contains(ResourceType::Complex(ComplexResourceType::Life))
+            && self.contains(ResourceType::Basic(BasicResourceType::Silicon)))
         {
             return Err("Missing resource".to_string());
         }
@@ -131,8 +131,8 @@ impl Bag {
         Ok(ComplexResourceRequest::Robot(c1, c2))
     }
     fn make_dolphin_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.contains(ResourceType::Complex(ComplexResourceType::Life))
-            && self.contains(ResourceType::Complex(ComplexResourceType::Water))
+        if !(self.contains(ResourceType::Complex(ComplexResourceType::Life))
+            && self.contains(ResourceType::Complex(ComplexResourceType::Water)))
         {
             return Err("Missing resource".to_string());
         }
@@ -149,8 +149,8 @@ impl Bag {
         Ok(ComplexResourceRequest::Dolphin(c1, c2))
     }
     fn make_ai_partner_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.contains(ResourceType::Complex(ComplexResourceType::Robot))
-            && self.contains(ResourceType::Complex(ComplexResourceType::Diamond))
+        if !(self.contains(ResourceType::Complex(ComplexResourceType::Robot))
+            && self.contains(ResourceType::Complex(ComplexResourceType::Diamond)))
         {
             return Err("Missing resource".to_string());
         }
