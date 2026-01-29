@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use common_game::components::planet::Planet;
 use common_game::components::resource::{AIPartner, BasicResource, BasicResourceType, Carbon, ComplexResource, ComplexResourceRequest, ComplexResourceType, Diamond, Dolphin, GenericResource, Hydrogen, Life, Oxygen, ResourceType, Robot, Silicon, Water};
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use crossbeam_channel::{Receiver, Sender, select};
@@ -219,6 +220,19 @@ impl Bag {
     }
 }
 
+// this function puts a basic resource in the explorer bag
+pub fn put_basic_resource_in_the_bag(explorer: &mut Explorer, resource: Option<BasicResource>) {
+    if let Some(resource) = resource {
+        let new_resource = match resource {
+            BasicResource::Oxygen(oxygen) => oxygen.to_generic(),
+            BasicResource::Hydrogen(hydrogen) => hydrogen.to_generic(),
+            BasicResource::Carbon(carbon) => carbon.to_generic(),
+            BasicResource::Silicon(silicon) => silicon.to_generic(),
+        };
+        explorer.bag.insert(new_resource);
+    }
+}
+
 // struct that contains some
 struct PlanetInfo {
     basic_resources: Option<HashSet<BasicResourceType>>,
@@ -266,15 +280,235 @@ pub fn planet_msg_match_state(explorer_state: &ExplorerState, msg: &PlanetToExpl
     }
 }
 
+
+// this is the struct of the explorer
+pub struct Explorer {
+    explorer_id: u32,
+    planet_id: u32, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
+    next_planet_id: u32, // needed if the travelToPlanet doesn't go well
+    orchestrator_channels: (
+        Receiver<OrchestratorToExplorer>,
+        Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
+    ),
+    planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
+    topology_info: HashMap<ID, PlanetInfo>,
+    state: ExplorerState,
+    bag: Bag,
+    energy_cells: u32, // of the current planet
+    buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
+    buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
+}
+
+impl Explorer {
+    // at creation, an Explorer should be connected to Orchestrator and the starting Planet
+    pub fn new(
+        explorer_id: u32,
+        planet_id: u32,
+        explorer_to_orchestrator_channels: (
+            Receiver<OrchestratorToExplorer>,
+            Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
+        ),
+        explorer_to_planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
+        energy_cells: u32, // useful in the case in which the explorer starts mid-game
+    ) -> Self {
+        let mut starting_topology_info = HashMap::new();
+        starting_topology_info.insert(
+            planet_id,
+            PlanetInfo {
+                basic_resources: None,
+                complex_resources: None,
+                neighbours: None,
+            },
+        );
+        Self {
+            explorer_id,
+            planet_id,
+            next_planet_id: planet_id,
+            orchestrator_channels: explorer_to_orchestrator_channels,
+            planet_channels: explorer_to_planet_channels,
+            topology_info: starting_topology_info,
+            state: ExplorerState::WaitingToStartExplorerAI,
+            bag: Bag::new(),
+            energy_cells,
+            buffer_orchestrator_msg: VecDeque::new(),
+            buffer_planet_msg: VecDeque::new(),
+        }
+    }
+
+    // getter function for the id
+    pub fn id(&self) -> u32 {
+        self.explorer_id
+    }
+
+    // the explorer loop
+    pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // every iteration the explorer receives messages from both planet and orchestrator channels,
+        // then it behaves based on the message received, if the message received and the explorer state
+        // do not match together the message is pushed into the corresponding buffer, and it will be read
+        // when the explorer will be in an "Idle" state
+        loop {
+            select! {
+                recv(self.orchestrator_channels.0) -> msg_orchestrator => {
+                    match msg_orchestrator {
+                        Ok(msg) => {
+                            if orch_msg_match_state(&self.state, &msg) {
+                                match msg {
+                                    OrchestratorToExplorer::StartExplorerAI => {
+                                        start_explorer_ai(self)?;
+                                    }
+                                    OrchestratorToExplorer::ResetExplorerAI => {
+                                        reset_explorer_ai(self);
+                                    }
+                                    OrchestratorToExplorer::StopExplorerAI => {
+                                        stop_explorer_ai(self);
+                                    }
+                                    OrchestratorToExplorer::KillExplorer => {
+                                        // TODO this action should be preemptive
+                                        kill_explorer(self);
+                                    }
+                                    OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet, planet_id } => {
+                                        // TODO use the planet_id variable (common crate v3)
+                                        move_to_planet(self, sender_to_new_planet);
+                                    }
+                                    OrchestratorToExplorer::CurrentPlanetRequest => {
+                                        current_planet_request(self);
+                                    }
+                                    OrchestratorToExplorer::SupportedResourceRequest => {
+                                        // + devo fare un'attesa bloccante per ricevere le risorse supportate e poi rispondere o vado avanti? -> al momento attesa bloccante
+                                        supported_resource_request(self);
+                                    }
+                                    OrchestratorToExplorer::SupportedCombinationRequest => {
+                                        // + devo fare un'attesa bloccante per ricevere le combinazioni supportate e poi rispondere o vado avanti?
+                                        supported_combination_request(self);
+                                    }
+                                    OrchestratorToExplorer::GenerateResourceRequest{ to_generate } => {
+                                        generate_resource_request(self, to_generate);
+                                    }
+                                    OrchestratorToExplorer::CombineResourceRequest{ to_generate } => {
+                                        // TODO verify first if the explorer has the resources to generate the combined one
+                                        combine_resource_request(self, to_generate);
+                                    }
+                                    OrchestratorToExplorer::BagContentRequest => {
+                                        // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se
+                                        match self.orchestrator_channels.1.send(ExplorerToOrchestrator::BagContentResponse {explorer_id: self.explorer_id, bag_content: self.bag.to_resource_types()}) {
+                                            Ok(_) => {
+                                                println!("[EXPLORER DEBUG] BagContent response sent correctly");
+                                            }
+                                            Err(err) => {
+                                                println!("[EXPLORER DEBUG] Error sending bag content response: {}", err);
+                                            }
+                                        }
+                                    }
+                                    OrchestratorToExplorer::NeighborsResponse{ neighbors } => {
+                                        neighbours_response(self, neighbors);
+                                    }
+                                }
+                            } else {
+                                self.buffer_orchestrator_msg.push_back(msg);
+                            }
+                        }
+                        Err(err) => {
+                            println!("[EXPLORER DEBUG] Error in receiving the orchestrator message: {}", err);
+                        }
+                    }
+                },
+                recv(self.planet_channels.0) -> msg_planet => {
+                    match msg_planet {
+                        Ok(msg) => {
+                            if planet_msg_match_state(&self.state, &msg) {
+                                match msg {
+                                    PlanetToExplorer::SupportedResourceResponse{ resource_list } => {
+                                        match self.topology_info.get_mut(&self.planet_id) {
+                                            Some(planet_info) => {
+                                                planet_info.basic_resources = Some(resource_list);
+                                            }
+                                            None => {
+                                                // TODO (non dovrebbe accadere) inserire il pianeta nella topologia e poi inserire la resource list
+                                            }
+                                        }
+                                    }
+                                    PlanetToExplorer::SupportedCombinationResponse{ combination_list } => {
+                                        match self.topology_info.get_mut(&self.planet_id) {
+                                            Some(planet_info) => {
+                                                planet_info.complex_resources = Some(combination_list);
+                                            }
+                                            None => {
+                                                // TODO (non dovrebbe accadere) inserire il pianeta nella topologia e poi inserire la combination list
+                                            }
+                                        }
+                                    }
+                                    PlanetToExplorer::GenerateResourceResponse{ resource } => {
+                                        if let Some(resource) = resource {
+                                            let new_resource = match resource {
+                                                BasicResource::Oxygen(oxygen) => { oxygen.to_generic() }
+                                                BasicResource::Hydrogen(hydrogen) => { hydrogen.to_generic() }
+                                                BasicResource::Carbon(carbon) => { carbon.to_generic() }
+                                                BasicResource::Silicon(silicon) => { silicon.to_generic() }
+                                            };
+                                            self.bag.insert(new_resource);
+                                        }
+                                    }
+                                    PlanetToExplorer::CombineResourceResponse{ complex_response } => {
+                                        if let Ok(complex_resource) = complex_response {
+                                            let new_resource = match complex_resource {
+                                                ComplexResource::Diamond(diamond) => { diamond.to_generic() }
+                                                ComplexResource::Water(water) => { water.to_generic() }
+                                                ComplexResource::Life(life) => { life.to_generic() }
+                                                ComplexResource::Robot(robot) => { robot.to_generic() }
+                                                ComplexResource::Dolphin(dolphin) => { dolphin.to_generic() }
+                                                ComplexResource::AIPartner(ai_partner) => { ai_partner.to_generic() }
+                                            };
+                                            self.bag.insert(new_resource);
+                                        }
+                                    }
+                                    PlanetToExplorer::AvailableEnergyCellResponse{ available_cells } => {
+                                        self.energy_cells = available_cells;
+                                    }
+                                    PlanetToExplorer::Stopped => {
+                                        // TODO gestire in base all'ai dell'explorer
+                                        self.state = ExplorerState::Idle;
+                                    }
+                                }
+                            } else {
+                                self.buffer_planet_msg.push_back(msg);
+                            }
+                        }
+                        Err(err) => {
+                            println!("[EXPLORER DEBUG] Error in receiving the planet message: {}", err);
+                        }
+                    }
+                }
+                default => {
+                    match self.state {
+                        ExplorerState::Idle => {
+                            // TODO gestisci i messaggi nel buffer
+                            manage_buffer_msg(self);
+                        }
+                        _ => { return }
+                    }
+                    match self.state {
+                        ExplorerState::Idle => {
+                            // TODO qui va l'AI vera e propria
+
+                        }
+                        _ => { return }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // this function put the explorer in the condition to receive messages (idle state),
 // it is called when the explorer receives the StartExplorerAI message
-pub fn start_explorer_ai(explorer: &mut Explorer) {
+pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     match explorer.orchestrator_channels.1.send(
         ExplorerToOrchestrator::StartExplorerAIResult {explorer_id: explorer.explorer_id}) {
         Ok(_) => {
             explorer.state = ExplorerState::Idle;
-            println!("[EXPLORER DEBUG] Start explorer AI result sent correctly.")
+            println!("[EXPLORER DEBUG] Start explorer AI result sent correctly.");
             //todo logs
+            Ok(())
         }
         Err(err) => {
             println!(
@@ -282,20 +516,18 @@ pub fn start_explorer_ai(explorer: &mut Explorer) {
                 err
             );
             //todo logs
-            // TODO killare il thread / panicare o non gestire l'errore?
+            Err(err.into())
         }
     }
 }
 
 // this function resets the topology known by the explorer,
 // it is called when the explorer receives the ResetExplorerAI message
+//todo not really sure but maybe i need to change this
 pub fn reset_explorer_ai(explorer: &mut Explorer) {
-    match explorer
-        .orchestrator_channels
-        .1
-        .send(ExplorerToOrchestrator::ResetExplorerAIResult {
-            explorer_id: explorer.explorer_id,
-        }) {
+    match explorer.orchestrator_channels.1.send(
+        ExplorerToOrchestrator::ResetExplorerAIResult {explorer_id: explorer.explorer_id}
+    ){
         Ok(_) => {
             // TODO reset anche dell'inventario?
             explorer.topology_info.clear();
@@ -313,43 +545,39 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) {
 
 // this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
 // it is called when the explorer receives the StopExplorerAI message
-pub fn stop_explorer_ai(explorer: &mut Explorer) {
-    match explorer
-        .orchestrator_channels
-        .1
-        .send(ExplorerToOrchestrator::StopExplorerAIResult {
-            explorer_id: explorer.explorer_id,
-        }) {
+pub fn stop_explorer_ai(explorer: &mut Explorer)->Result<(), Box<dyn std::error::Error>> {
+    match explorer.orchestrator_channels.1.send(
+        ExplorerToOrchestrator::StopExplorerAIResult {explorer_id: explorer.explorer_id}
+    ){
         Ok(_) => {
             explorer.state = ExplorerState::WaitingToStartExplorerAI;
-            println!("[EXPLORER DEBUG] Stop explorer AI result sent correctly.")
+            println!("[EXPLORER DEBUG] Stop explorer AI result sent correctly.");
+            //todo logs
+            Ok(())
         }
         Err(err) => {
-            println!(
-                "[EXPLORER DEBUG] Error sending stop explorer AI result: {:?}",
-                err
-            );
+            println!("[EXPLORER DEBUG] Error sending stop explorer AI result: {:?}",err);
+            //todo logs
+            Err(err.into())
         }
     }
 }
 
 // this function puts the explorer in the Killed state waiting for the thread to be killed
-pub fn kill_explorer(explorer: &mut Explorer) {
-    match explorer
-        .orchestrator_channels
-        .1
-        .send(ExplorerToOrchestrator::KillExplorerResult {
-            explorer_id: explorer.explorer_id,
-        }) {
+pub fn kill_explorer(explorer: &mut Explorer) ->Result<(), Box<dyn std::error::Error>> {
+    match explorer.orchestrator_channels.1.send(
+        ExplorerToOrchestrator::KillExplorerResult {explorer_id: explorer.explorer_id}
+    ){
         Ok(_) => {
             explorer.state = ExplorerState::Killed;
-            println!("[EXPLORER DEBUG] Kill explorer result sent correctly.")
+            println!("[EXPLORER DEBUG] Kill explorer result sent correctly.");
+            //todo logs
+            Ok(())
         }
         Err(err) => {
-            println!(
-                "[EXPLORER DEBUG] Error sending kill explorer result: {:?}",
-                err
-            );
+            println!("[EXPLORER DEBUG] Error sending kill explorer result: {:?}",err);
+            //todo logs
+            Err(err.into())
         }
     }
 }
@@ -363,42 +591,109 @@ pub fn move_to_planet(
     match sender_to_new_planet {
         Some(sender) => {
             explorer.planet_channels.1 = sender;
-            explorer.planet_id = explorer.next_planet_id.clone();
+            explorer.planet_id = explorer.next_planet_id.clone(); //todo non viene mai settato
             println!("[EXPLORER DEBUG] Sender channel set correctly");
+            //todo logs
         }
-        None => {
+        None => { //the explorer cannot move
             println!("[EXPLORER DEBUG] Sender channel is None.");
+            //todo logs
         }
     }
 }
 
 // this function sends the current planet id to the orchestrator
-pub fn current_planet_request(explorer: &mut Explorer) {
-    match explorer
-        .orchestrator_channels
-        .1
-        .send(ExplorerToOrchestrator::CurrentPlanetResult {
+pub fn current_planet_request(explorer: &mut Explorer)->Result<(), Box<dyn std::error::Error>> {
+    match explorer.orchestrator_channels.1.send(
+        ExplorerToOrchestrator::CurrentPlanetResult {
             explorer_id: explorer.explorer_id,
-            planet_id: explorer.planet_id,
-        }) {
+            planet_id: explorer.planet_id
+        }
+    ){
         Ok(_) => {
             explorer.state = ExplorerState::Idle;
-            println!("[EXPLORER DEBUG] Current planet result sent correctly.")
+            println!("[EXPLORER DEBUG] Current planet result sent correctly.");
+            //todo logs
+            Ok(())
         }
         Err(err) => {
-            println!(
-                "[EXPLORER DEBUG] Error sending current planet result: {:?}",
-                err
-            );
+            println!("[EXPLORER DEBUG] Error sending current planet result: {:?}",err);
+            //todo logs
+            Err(err.into())
         }
     }
+}
+
+pub fn gather_info_from_planet(explorer: &mut Explorer)->Result<Planet, Box<dyn std::error::Error>> {
+    
 }
 
 // this function sends the basic resources supported by the current planet to the orchestrator
 // (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
 // response and then send it back to the orchestrator)
-pub fn supperted_resource_request(explorer: &mut Explorer) {
-    let mut supported_resources = HashSet::new();
+pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+    let mut supported_resources;
+    let mut need_recover=false;
+    match explorer.topology_info.get(&explorer.planet_id){
+        Some(planet_info) => {
+            match &planet_info.basic_resources{
+                Some(basic_resources) => {
+                    supported_resources = basic_resources.clone();
+                }
+                None => {
+                    need_recover=true;
+                    //this should not happen
+                    //todo logs
+                }
+            }
+        }
+        None => {
+            need_recover=true;
+            //this should not happen
+            //todo logs
+        }
+    }
+    //trying to recover
+    if need_recover{
+        match explorer.planet_channels.1.send(ExplorerToPlanet::SupportedResourceRequest{
+            explorer_id: explorer.explorer_id,
+        }){
+            Ok(_) => {
+                //todo logs
+            }
+            Err(err) => {
+                //this mean that the planet has been killed and the explorer terminates
+                // anticipating the kill message from the orchestrator
+                // this should not be a problem
+                //todo logs
+                return Err(err.into());
+            }
+        }
+        match explorer.planet_channels.0.recv(){
+            Ok(response) => {
+                match response {
+                    PlanetToExplorer::SupportedResourceResponse {resource_list } => {
+                        supported_resources = resource_list;
+                        match explorer.topology_info.get_mut(&explorer.planet_id){
+                            Some(topology_info) => {
+                                topology_info.basic_resources=Some(supported_resources.clone())
+                            }
+                            None => {
+                                explorer.topology_info.insert(explorer.planet_id, );
+                            }
+                        }
+                    }
+                    _ => {
+                        println!("[EXPLORER DEBUG] Unexpected response to SupportedResourceRequest.");
+                    }
+                }
+            }
+            Err(err) => {
+
+            }
+        }
+    }
+
     if explorer.topology_info.contains_key(&explorer.planet_id)
         && let Some(planet_info) = explorer.topology_info.get(&explorer.planet_id)
     {
@@ -575,18 +870,7 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
     }
 }
 
-// this function puts a basic resource in the explorer bag
-pub fn put_basic_resource_in_the_bag(explorer: &mut Explorer, resource: Option<BasicResource>) {
-    if let Some(resource) = resource {
-        let new_resource = match resource {
-            BasicResource::Oxygen(oxygen) => oxygen.to_generic(),
-            BasicResource::Hydrogen(hydrogen) => hydrogen.to_generic(),
-            BasicResource::Carbon(carbon) => carbon.to_generic(),
-            BasicResource::Silicon(silicon) => silicon.to_generic(),
-        };
-        explorer.bag.insert(new_resource);
-    }
-}
+
 
 // this function sends the CombineResourceRequest, waits for the planet response, and,
 // if successful puts the resource in the bag
@@ -703,224 +987,6 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
         .expect("Planet should already be in topology"); // TODO se non è nella topologia aggiornare la topologia e ripetere
 
     planet_info.neighbours = Some(neighbors.into_iter().collect());
-}
-
-// this is the struct of the explorer
-pub struct Explorer {
-    explorer_id: u32,
-    planet_id: u32, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
-    next_planet_id: u32, // needed if the travelToPlanet doesn't go well
-    orchestrator_channels: (
-        Receiver<OrchestratorToExplorer>,
-        Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
-    ),
-    planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
-    topology_info: HashMap<ID, PlanetInfo>,
-    state: ExplorerState,
-    bag: Bag,
-    energy_cells: u32, // of the current planet
-    buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
-    buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
-}
-
-impl Explorer {
-    // at creation, an Explorer should be connected to Orchestrator and the starting Planet
-    pub fn new(
-        explorer_id: u32,
-        planet_id: u32,
-        explorer_to_orchestrator_channels: (
-            Receiver<OrchestratorToExplorer>,
-            Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
-        ),
-        explorer_to_planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
-        energy_cells: u32, // useful in the case in which the explorer starts mid-game
-    ) -> Self {
-        let mut starting_topology_info = HashMap::new();
-        starting_topology_info.insert(
-            planet_id,
-            PlanetInfo {
-                basic_resources: None,
-                complex_resources: None,
-                neighbours: None,
-            },
-        );
-        Self {
-            explorer_id,
-            planet_id,
-            next_planet_id: planet_id,
-            orchestrator_channels: explorer_to_orchestrator_channels,
-            planet_channels: explorer_to_planet_channels,
-            topology_info: starting_topology_info,
-            state: ExplorerState::WaitingToStartExplorerAI,
-            bag: Bag::new(),
-            energy_cells,
-            buffer_orchestrator_msg: VecDeque::new(),
-            buffer_planet_msg: VecDeque::new(),
-        }
-    }
-
-    // getter function for the id
-    pub fn id(&self) -> u32 {
-        self.explorer_id
-    }
-
-    // the explorer loop
-    pub fn run(&mut self) {
-        // every iteration the explorer receives messages from both planet and orchestrator channels,
-        // then it behaves based on the message received, if the message received and the explorer state
-        // do not match together the message is pushed into the corresponding buffer, and it will be read
-        // when the explorer will be in an "Idle" state
-        loop {
-            select! {
-                recv(self.orchestrator_channels.0) -> msg_orchestrator => {
-                    match msg_orchestrator {
-                        Ok(msg) => {
-                            if orch_msg_match_state(&self.state, &msg) {
-                                match msg {
-                                    OrchestratorToExplorer::StartExplorerAI => {
-                                        start_explorer_ai(self);
-                                    }
-                                    OrchestratorToExplorer::ResetExplorerAI => {
-                                        reset_explorer_ai(self);
-                                    }
-                                    OrchestratorToExplorer::StopExplorerAI => {
-                                        stop_explorer_ai(self);
-                                    }
-                                    OrchestratorToExplorer::KillExplorer => {
-                                        // TODO this action should be preemptive
-                                        kill_explorer(self);
-                                    }
-                                    OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet, planet_id } => {
-                                        // TODO use the planet_id variable (common crate v3)
-                                        move_to_planet(self, sender_to_new_planet);
-                                    }
-                                    OrchestratorToExplorer::CurrentPlanetRequest => {
-                                        current_planet_request(self);
-                                    }
-                                    OrchestratorToExplorer::SupportedResourceRequest => {
-                                        // + devo fare un'attesa bloccante per ricevere le risorse supportate e poi rispondere o vado avanti? -> al momento attesa bloccante
-                                        supperted_resource_request(self);
-                                    }
-                                    OrchestratorToExplorer::SupportedCombinationRequest => {
-                                        // + devo fare un'attesa bloccante per ricevere le combinazioni supportate e poi rispondere o vado avanti?
-                                        supported_combination_request(self);
-                                    }
-                                    OrchestratorToExplorer::GenerateResourceRequest{ to_generate } => {
-                                        generate_resource_request(self, to_generate);
-                                    }
-                                    OrchestratorToExplorer::CombineResourceRequest{ to_generate } => {
-                                        // TODO verify first if the explorer has the resources to generate the combined one
-                                        combine_resource_request(self, to_generate);
-                                    }
-                                    OrchestratorToExplorer::BagContentRequest => {
-                                        // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se
-                                        match self.orchestrator_channels.1.send(ExplorerToOrchestrator::BagContentResponse {explorer_id: self.explorer_id, bag_content: self.bag.to_resource_types()}) {
-                                            Ok(_) => {
-                                                println!("[EXPLORER DEBUG] BagContent response sent correctly");
-                                            }
-                                            Err(err) => {
-                                                println!("[EXPLORER DEBUG] Error sending bag content response: {}", err);
-                                            }
-                                        }
-                                    }
-                                    OrchestratorToExplorer::NeighborsResponse{ neighbors } => {
-                                        neighbours_response(self, neighbors);
-                                    }
-                                }
-                            } else {
-                                self.buffer_orchestrator_msg.push_back(msg);
-                            }
-                        }
-                        Err(err) => {
-                            println!("[EXPLORER DEBUG] Error in receiving the orchestrator message: {}", err);
-                        }
-                    }
-                },
-                recv(self.planet_channels.0) -> msg_planet => {
-                    match msg_planet {
-                        Ok(msg) => {
-                            if planet_msg_match_state(&self.state, &msg) {
-                                match msg {
-                                    PlanetToExplorer::SupportedResourceResponse{ resource_list } => {
-                                        match self.topology_info.get_mut(&self.planet_id) {
-                                            Some(planet_info) => {
-                                                planet_info.basic_resources = Some(resource_list);
-                                            }
-                                            None => {
-                                                // TODO (non dovrebbe accadere) inserire il pianeta nella topologia e poi inserire la resource list
-                                            }
-                                        }
-                                    }
-                                    PlanetToExplorer::SupportedCombinationResponse{ combination_list } => {
-                                        match self.topology_info.get_mut(&self.planet_id) {
-                                            Some(planet_info) => {
-                                                planet_info.complex_resources = Some(combination_list);
-                                            }
-                                            None => {
-                                                // TODO (non dovrebbe accadere) inserire il pianeta nella topologia e poi inserire la combination list
-                                            }
-                                        }
-                                    }
-                                    PlanetToExplorer::GenerateResourceResponse{ resource } => {
-                                        if let Some(resource) = resource {
-                                            let new_resource = match resource {
-                                                BasicResource::Oxygen(oxygen) => { oxygen.to_generic() }
-                                                BasicResource::Hydrogen(hydrogen) => { hydrogen.to_generic() }
-                                                BasicResource::Carbon(carbon) => { carbon.to_generic() }
-                                                BasicResource::Silicon(silicon) => { silicon.to_generic() }
-                                            };
-                                            self.bag.insert(new_resource);
-                                        }
-                                    }
-                                    PlanetToExplorer::CombineResourceResponse{ complex_response } => {
-                                        if let Ok(complex_resource) = complex_response {
-                                            let new_resource = match complex_resource {
-                                                ComplexResource::Diamond(diamond) => { diamond.to_generic() }
-                                                ComplexResource::Water(water) => { water.to_generic() }
-                                                ComplexResource::Life(life) => { life.to_generic() }
-                                                ComplexResource::Robot(robot) => { robot.to_generic() }
-                                                ComplexResource::Dolphin(dolphin) => { dolphin.to_generic() }
-                                                ComplexResource::AIPartner(ai_partner) => { ai_partner.to_generic() }
-                                            };
-                                            self.bag.insert(new_resource);
-                                        }
-                                    }
-                                    PlanetToExplorer::AvailableEnergyCellResponse{ available_cells } => {
-                                        self.energy_cells = available_cells;
-                                    }
-                                    PlanetToExplorer::Stopped => {
-                                        // TODO gestire in base all'ai dell'explorer
-                                        self.state = ExplorerState::Idle;
-                                    }
-                                }
-                            } else {
-                                self.buffer_planet_msg.push_back(msg);
-                            }
-                        }
-                        Err(err) => {
-                            println!("[EXPLORER DEBUG] Error in receiving the planet message: {}", err);
-                        }
-                    }
-                }
-                default => {
-                    match self.state {
-                        ExplorerState::Idle => {
-                            // TODO gestisci i messaggi nel buffer
-                            manage_buffer_msg(self);
-                        }
-                        _ => { return }
-                    }
-                    match self.state {
-                        ExplorerState::Idle => {
-                            // TODO qui va l'AI vera e propria
-
-                        }
-                        _ => { return }
-                    }
-                }
-            }
-        }
-    }
 }
 
 // this function manages all the messages that were put in the buffers
