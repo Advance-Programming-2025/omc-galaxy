@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use super::types::PlanetFactory;
 use crate::utils::registry::PlanetType::{
     BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
-    RustyCrab,
+    RustyCrab, TheCompilerStrikesBack,
 };
 use rand::seq::IndexedRandom;
 use std::collections::HashMap;
@@ -22,6 +22,7 @@ pub enum PlanetType {
     OneMillionCrabs,
     Rustrelli,
     RustyCrab,
+    TheCompilerStrikesBack,
 }
 impl PlanetType {
     pub fn random() -> Self {
@@ -89,6 +90,14 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
         PlanetType::RustyCrab,
         Box::new(|rx_o, tx_o, rx_e, planet_id| {
             Ok(rusty_crab::planet::create_planet(
+                rx_o, tx_o, rx_e, planet_id,
+            ))
+        }),
+    );
+    map.insert(
+        PlanetType::TheCompilerStrikesBack,
+        Box::new(|rx_o, tx_o, rx_e, planet_id| {
+            Ok(the_compiler_strikes_back::planet::create_planet(
                 rx_o, tx_o, rx_e, planet_id,
             ))
         }),
