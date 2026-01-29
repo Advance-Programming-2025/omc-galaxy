@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 use std::path::Iter;
 use std::sync::{Arc, RwLock};
-use std::fmt::Debug;
 
 use common_game::components::energy_cell::EnergyCell;
 use common_game::components::planet::{DummyPlanetState, Planet};
@@ -33,68 +33,70 @@ pub type ExplorerStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
 
 pub type GalaxySnapshot = Vec<(u32, u32)>;
 
-
-pub struct PlanetInfoMap{
-    map: BTreeMap<u32, PlanetInfo>
+pub struct PlanetInfoMap {
+    map: BTreeMap<u32, PlanetInfo>,
 }
-impl PlanetInfoMap{
-    pub fn new() -> Self{
-        PlanetInfoMap{
+impl PlanetInfoMap {
+    pub fn new() -> Self {
+        PlanetInfoMap {
             map: BTreeMap::new(),
         }
     }
-    pub fn insert(&mut self, planet_id: u32, info: PlanetInfo){
+    pub fn insert(&mut self, planet_id: u32, info: PlanetInfo) {
         self.map.insert(planet_id, info);
     }
-    pub fn insert_status(&mut self, planet_id: u32, status: Status){
-        if let Some(planet_info) = self.map.get_mut(&planet_id){
+    pub fn insert_status(&mut self, planet_id: u32, status: Status) {
+        if let Some(planet_info) = self.map.get_mut(&planet_id) {
             planet_info.status = status;
-        }else{
+        } else {
             let new_info = PlanetInfo::from(status, vec![], 0, false);
             self.map.insert(planet_id, new_info);
         }
     }
 
-    pub fn update_from_planet_state(&mut self, planet_id: u32, planet_state: DummyPlanetState){
-        if let Some(planet_info) = self.map.get_mut(&planet_id){
+    pub fn update_from_planet_state(&mut self, planet_id: u32, planet_state: DummyPlanetState) {
+        if let Some(planet_info) = self.map.get_mut(&planet_id) {
             planet_info.energy_cells = planet_state.energy_cells;
             planet_info.charged_cells_count = planet_state.charged_cells_count;
             planet_info.rocket = planet_state.has_rocket;
         }
     }
-    pub fn len(&self) -> usize{
+    pub fn len(&self) -> usize {
         self.map.len()
     }
-    pub fn get_status(&self, planet_id: &u32) -> Status{
+    pub fn get_status(&self, planet_id: &u32) -> Status {
         self.map.get(planet_id).unwrap().status
     }
-    pub fn is_empty(&self) -> bool{
+    pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
-    pub fn is_paused(&self, planet_id: &u32) -> bool{
-        if let Some(planet_info) = self.map.get(planet_id){
+    pub fn is_paused(&self, planet_id: &u32) -> bool {
+        if let Some(planet_info) = self.map.get(planet_id) {
             return planet_info.status == Status::Paused;
         }
         false
     }
-    pub fn is_dead(&self, planet_id: &u32) -> bool{
-        if let Some(planet_info) = self.map.get(planet_id){
+    pub fn is_dead(&self, planet_id: &u32) -> bool {
+        if let Some(planet_info) = self.map.get(planet_id) {
             return planet_info.status == Status::Dead;
         }
         false
     }
-    pub fn is_running(&self, planet_id: &u32) -> bool{
-        if let Some(planet_info) = self.map.get(planet_id){
+    pub fn is_running(&self, planet_id: &u32) -> bool {
+        if let Some(planet_info) = self.map.get(planet_id) {
             return planet_info.status == Status::Running;
         }
         false
-    }   
+    }
 
     pub fn iter(&self) -> impl Iterator<Item = (&u32, &PlanetInfo)> {
         self.map.iter()
     }
-    pub fn count_survivors(&self) -> usize{
-        self.map.values().filter(|info| info.status != Status::Dead).count()
+    pub fn count_survivors(&self) -> usize {
+        self.map
+            .values()
+            .filter(|info| info.status != Status::Dead)
+            .count()
     }
 }
 
@@ -115,23 +117,22 @@ impl Debug for PlanetInfoMap {
         }
         debug_map.fmt(f)
     }
-    
 }
 #[derive(PartialEq, Debug, Clone)]
-pub struct PlanetInfo{
+pub struct PlanetInfo {
     pub status: Status,
     pub energy_cells: Vec<bool>,
     pub charged_cells_count: usize,
     pub rocket: bool,
 }
-impl PlanetInfo{
+impl PlanetInfo {
     pub fn from(
         status: Status,
         energy_cells: Vec<bool>,
         charged_cells_count: usize,
         rocket: bool,
-    ) -> Self{
-        PlanetInfo{
+    ) -> Self {
+        PlanetInfo {
             status,
             energy_cells,
             charged_cells_count,
@@ -139,5 +140,3 @@ impl PlanetInfo{
         }
     }
 }
-
-

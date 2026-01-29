@@ -1,15 +1,22 @@
+use std::time::{Duration, Instant};
+
+use common_game::protocols::orchestrator_explorer::{
+    ExplorerToOrchestrator, OrchestratorToExplorer,
+};
+use common_game::utils::ID;
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
-use common_game::utils::ID;
 use crossbeam_channel::select;
-use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, payload, warning_payload, LOG_ACTORS_ACTIVITY, LoggableActor};
 use log::info;
+use logging_utils::{
+    LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
+    payload, warning_payload,
+};
 
-use crate::{components::orchestrator::{Orchestrator}, utils::Status, ExplorerStatus};
 use crate::components::explorer_tommy::BagType;
+use crate::{ExplorerStatus, components::orchestrator::Orchestrator, utils::Status};
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -60,7 +67,7 @@ impl Orchestrator {
                     planet_id;
                     "has_rocket"=>rocket.is_some()
                 );
-                
+
                 //LOG
                 match rocket {
                     Some(_) => {
@@ -197,8 +204,10 @@ impl Orchestrator {
         Ok(())
     }
 
-
-    pub fn handle_explorer_message(&mut self, msg: ExplorerToOrchestrator<BagType>) -> Result<(), String> {
+    pub fn handle_explorer_message(
+        &mut self,
+        msg: ExplorerToOrchestrator<BagType>,
+    ) -> Result<(), String> {
         match msg {
             ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
                 //LOG
@@ -298,7 +307,10 @@ impl Orchestrator {
                 );
                 //LOG
             }
-            ExplorerToOrchestrator::MovedToPlanetResult { explorer_id, planet_id } => {
+            ExplorerToOrchestrator::MovedToPlanetResult {
+                explorer_id,
+                planet_id,
+            } => {
                 debug_println!("Explorer {} moved to planet {}", explorer_id, planet_id);
 
                 //LOG
@@ -315,7 +327,10 @@ impl Orchestrator {
                 //LOG
                 // TODO memorize the position of the explorer? if so, where?
             }
-            ExplorerToOrchestrator::CurrentPlanetResult { explorer_id, planet_id } => {
+            ExplorerToOrchestrator::CurrentPlanetResult {
+                explorer_id,
+                planet_id,
+            } => {
                 //LOG
                 log_message!(
                     ActorType::Explorer,
@@ -329,7 +344,10 @@ impl Orchestrator {
                 );
                 //LOG
             }
-            ExplorerToOrchestrator::SupportedResourceResult { explorer_id, supported_resources } => {
+            ExplorerToOrchestrator::SupportedResourceResult {
+                explorer_id,
+                supported_resources,
+            } => {
                 //LOG
                 log_message!(
                     ActorType::Explorer,
@@ -343,7 +361,10 @@ impl Orchestrator {
                 );
                 //LOG
             }
-            ExplorerToOrchestrator::SupportedCombinationResult { explorer_id, combination_list } => {
+            ExplorerToOrchestrator::SupportedCombinationResult {
+                explorer_id,
+                combination_list,
+            } => {
                 //LOG
                 log_message!(
                     ActorType::Explorer,
@@ -357,7 +378,10 @@ impl Orchestrator {
                 );
                 //LOG
             }
-            ExplorerToOrchestrator::GenerateResourceResponse { explorer_id, generated } => {
+            ExplorerToOrchestrator::GenerateResourceResponse {
+                explorer_id,
+                generated,
+            } => {
                 //LOG
                 log_message!(
                     ActorType::Explorer,
@@ -371,7 +395,10 @@ impl Orchestrator {
                 );
                 //LOG
             }
-            ExplorerToOrchestrator::CombineResourceResponse { explorer_id, generated } => {
+            ExplorerToOrchestrator::CombineResourceResponse {
+                explorer_id,
+                generated,
+            } => {
                 //LOG
                 log_message!(
                     ActorType::Explorer,
@@ -385,7 +412,10 @@ impl Orchestrator {
                 );
                 //LOG
             }
-            ExplorerToOrchestrator::BagContentResponse { explorer_id, bag_content } => {
+            ExplorerToOrchestrator::BagContentResponse {
+                explorer_id,
+                bag_content,
+            } => {
                 //LOG
                 log_message!(
                     ActorType::Explorer,
@@ -399,10 +429,17 @@ impl Orchestrator {
                 );
                 //LOG
             }
-            ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
+            ExplorerToOrchestrator::NeighborsRequest {
+                explorer_id,
+                current_planet_id,
+            } => {
                 self.send_neighbours_response(explorer_id, current_planet_id)?;
             }
-            ExplorerToOrchestrator::TravelToPlanetRequest { explorer_id, current_planet_id, dst_planet_id } => {
+            ExplorerToOrchestrator::TravelToPlanetRequest {
+                explorer_id,
+                current_planet_id,
+                dst_planet_id,
+            } => {
                 // verify that the planet exists and that the destination planet is a neighbour
                 let is_neighbour = {
                     let guard = self.galaxy_topology.read().unwrap();
@@ -413,12 +450,14 @@ impl Orchestrator {
                         .copied()
                         .unwrap_or(false)
                 };
-                
+
                 // if not existing or not a neighbour of the current planet return and Err
-                if !is_neighbour { return Err("Planet id not found".to_string()) }
-            
+                if !is_neighbour {
+                    return Err("Planet id not found".to_string());
+                }
+
                 // else send the move to planet
-                return self.send_move_to_planet(explorer_id, dst_planet_id)
+                return self.send_move_to_planet(explorer_id, dst_planet_id);
             }
         }
         Ok(())
@@ -432,44 +471,48 @@ impl Orchestrator {
     pub fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "handle_game_messages()");
-        //LOG
-        select! {
-            recv(self.receiver_orch_planet)->msg=>{
-                let msg_unwraped = match msg{
-                    Ok(res)=>res,
-                    Err(e)=>{
-                        //LOG
-                        let event=LogEvent::self_directed(
-                            Participant::new(ActorType::Orchestrator, 0u32),
-                            EventType::InternalOrchestratorAction,
-                            Channel::Warning,
-                            warning_payload!(
-                                "Cannot receive message from planets",
-                                e,
-                                "handle_game_messages()"
-                            )
-                        );
-                        event.emit();
-                        //LOG
-                        // TODO not using the "e" in Err(e), which version to use? this one or the one used below for explorer msg?
-                        return Err("Cannot receive message from planets".to_string())
-                    },
-                };
-                self.handle_planet_message(msg_unwraped)?;
+        let deadline = Instant::now() + Duration::from_millis(100);
+        while Instant::now() < deadline {
+            select! {
+                recv(self.receiver_orch_planet)->msg=>{
+                    let msg_unwraped = match msg{
+                        Ok(res)=>res,
+                        Err(e)=>{
+                            //LOG
+                            let event=LogEvent::self_directed(
+                                Participant::new(ActorType::Orchestrator, 0u32),
+                                EventType::InternalOrchestratorAction,
+                                Channel::Warning,
+                                warning_payload!(
+                                    "Cannot receive message from planets",
+                                    e,
+                                    "handle_game_messages()"
+                                )
+                            );
+                            event.emit();
+                            //LOG
+                            // TODO not using the "e" in Err(e), which version to use? this one or the one used below for explorer msg?
+                            return Err("Cannot receive message from planets".to_string())
+                        },
+                    };
+                    self.handle_planet_message(msg_unwraped)?;
+                }
+                recv(self.receiver_orch_explorer)->msg=>{
+                    let msg_unwraped = match msg{
+                        Ok(res)=>res,
+                        Err(e)=>{
+                            //LOG
+                            // TODO
+                            //LOG
+                            return Err(format!("Cannot receive message from explorers: {}", e));
+                        },
+                    };
+                    self.handle_explorer_message(msg_unwraped)?;
+                }
+                default=>{
+
+                }
             }
-            recv(self.receiver_orch_explorer)->msg=>{
-                let msg_unwraped = match msg{
-                    Ok(res)=>res,
-                    Err(e)=>{
-                        //LOG
-                        // TODO
-                        //LOG
-                        return Err(format!("Cannot receive message from explorers: {}", e));
-                    },
-                };
-                self.handle_explorer_message(msg_unwraped)?;
-            }
-            default=>{}
         }
 
         Ok(())

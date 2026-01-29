@@ -1,27 +1,27 @@
 pub mod debug;
+mod explorer_comms;
 pub mod gui_comms;
 pub mod handlers;
 pub mod init;
 pub mod macros;
 pub mod planets_comms;
 pub mod update;
-mod explorer_comms;
 
+use crate::ExplorerStatus;
 use crate::components::explorer::BagType;
-use crate::utils::{PlanetStatus,Status, PlanetInfoMap};
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
-use crate::{ExplorerStatus};
-use logging_utils::{log_internal_op, log_fn_call};
-use logging_utils::LoggableActor;
+use crate::utils::{PlanetInfoMap, PlanetStatus, Status};
 use common_game::components::forge::Forge;
+use common_game::logging::ActorType;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, unbounded};
-use common_game::logging::{ActorType};
+use logging_utils::LoggableActor;
+use logging_utils::{log_fn_call, log_internal_op};
 use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
@@ -34,7 +34,7 @@ pub enum OrchestratorEvent {
     SunraySent { planet_id: u32 },
     SunrayReceived { planet_id: u32 },
     AsteroidSent { planet_id: u32 },
-    ExplorerMoved { origin: u32, destination: u32 }
+    ExplorerMoved { origin: u32, destination: u32 },
 }
 
 ///The core of the game.
@@ -50,8 +50,8 @@ pub enum OrchestratorEvent {
 /// - coordinating and overseeing the actions of explorers
 /// - ensuring the state of the various elements of the game are congruent with the
 /// game timeline
-/// 
-/// 
+///
+///
 
 pub struct Orchestrator {
     // Forge sunray and asteroid
@@ -76,7 +76,7 @@ pub struct Orchestrator {
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
 
-    pub gui_messages: Vec<OrchestratorEvent>
+    pub gui_messages: Vec<OrchestratorEvent>,
 }
 impl Orchestrator {
     /// Create a new orchestrator instance.
@@ -113,7 +113,7 @@ impl Orchestrator {
             receiver_orch_planet,
             sender_explorer_orch,
             receiver_orch_explorer,
-            gui_messages: Vec::new()
+            gui_messages: Vec::new(),
         };
         Ok(new_orch)
     }
@@ -130,6 +130,10 @@ impl Orchestrator {
 }
 
 impl LoggableActor for Orchestrator {
-    fn actor_type(&self) -> ActorType { ActorType::Orchestrator }
-    fn actor_id(&self) -> u32 { 0 }
+    fn actor_type(&self) -> ActorType {
+        ActorType::Orchestrator
+    }
+    fn actor_id(&self) -> u32 {
+        0
+    }
 }
