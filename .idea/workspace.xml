@@ -13,7 +13,7 @@
   <component name="ChangeListManager">
     <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/explorer_mattia.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/explorer_mattia.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/explorer_tommy.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/explorer_tommy.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,9 +43,6 @@
     &quot;accountId&quot;: &quot;01ab2784-32b2-48c9-9a74-747582584569&quot;
   }
 }</component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/src/components/explorer_mattia.rs" root0="FORCE_HIGHLIGHTING" />
-  </component>
   <component name="MacroExpansionManager">
     <option name="directoryName" value="9O3M5xT2" />
   </component>
@@ -114,7 +111,7 @@
       <workItem from="1769286645283" duration="906000" />
       <workItem from="1769513365426" duration="14437000" />
       <workItem from="1769592415580" duration="4986000" />
-      <workItem from="1769673992782" duration="5263000" />
+      <workItem from="1769673992782" duration="6843000" />
     </task>
     <servers />
   </component>
