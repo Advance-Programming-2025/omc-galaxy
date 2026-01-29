@@ -98,6 +98,16 @@ impl PlanetInfoMap {
             .filter(|info| info.status != Status::Dead)
             .count()
     }
+
+    pub(crate) fn get_list_id_alive(&self)->Vec<u32>{
+        let mut res = Vec::new();
+        for (&id, info) in &self.map{
+            if info.status == Status::Running{
+                res.push(id);
+            }
+        }
+        res
+    }
 }
 
 impl Clone for PlanetInfoMap {

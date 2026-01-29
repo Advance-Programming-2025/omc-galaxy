@@ -122,10 +122,11 @@ impl Orchestrator {
         //LOG
         log_fn_call!(self, "get_random_planet_id()");
 
+        let ids = self.planets_info.get_list_id_alive();
+        let index: usize = rand::rng().random_range(0..ids.len());
+
         //LOG
-        let num: u32 = rand::rng().random();
-        let id = num % (self.planets_info.len() as u32);
-        Ok(id)
+        Ok(ids[index])
     }
 }
 

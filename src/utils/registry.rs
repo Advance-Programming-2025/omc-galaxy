@@ -42,7 +42,10 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
     );
     map.insert(
         PlanetType::Ciuc,
-        Box::new(|rx_o, tx_p, rx_e, id| Ok(ciuc_planet::create_planet(rx_o, tx_p, rx_e, id))),
+        Box::new(|rx_o, tx_p, rx_e, planet_id| {
+            one_million_crabs::planet::create_planet(rx_o, tx_p, rx_e, planet_id)
+            // Ok(ciuc_planet::create_planet(rx_o, tx_p, rx_e, id))),
+        }),
     );
 
     map.insert(
