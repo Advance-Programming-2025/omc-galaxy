@@ -1,11 +1,14 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType};
+use common_game::components::resource::{
+    BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType,
+    GenericResource, ResourceType,
+};
 use crossbeam_channel::{Receiver, Sender, select};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
-use crate::components::explorer_tommy::ExplorerAction::{AskNeighbours, AskSupportedCombinations, AskSupportedResources, GenerateOrCombine, Move};
+use crate::components::manual_explorer::ExplorerAction::{AskNeighbours, AskSupportedCombinations, AskSupportedResources, GenerateOrCombine, Move};
 
 /// the type that is returned to the orchestrator when he asks for the explorer's bag
 pub type BagType = Vec<ResourceType>;

@@ -1,15 +1,17 @@
-use std::sync::Arc;
 use crate::{PlanetInfoMap, utils::registry::PlanetType};
+use std::sync::Arc;
 
 use log::info;
 use rustc_hash::FxHashMap;
 
 use crate::{
-    ExplorerStatus, GalaxyTopology, PlanetStatus, components::orchestrator::{Orchestrator, OrchestratorEvent},
+    ExplorerStatus, GalaxyTopology, PlanetStatus,
+    components::orchestrator::{Orchestrator, OrchestratorEvent},
     utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
 };
 use logging_utils::LoggableActor;
 use logging_utils::log_fn_call;
+use crate::utils::ExplorerInfoMap;
 
 impl Orchestrator {
     /// Get a snapshot of the current galaxy topology
@@ -20,10 +22,10 @@ impl Orchestrator {
     /// way that might misalign the internal state
     pub fn get_topology(&self) -> (GalaxySnapshot, usize) {
         //LOG
-        log_fn_call!(self,"get_topology()");
+        log_fn_call!(self, "get_topology()");
         //LOG
         let topology = self.galaxy_topology.read().unwrap();
-        
+
         let mut edges = Vec::new();
         let planet_num = topology.len();
 
@@ -34,7 +36,7 @@ impl Orchestrator {
                 }
             }
         }
-        
+
         drop(topology);
 
         (edges, planet_num)
@@ -49,66 +51,66 @@ impl Orchestrator {
     /// - `ExplorerStatus`, the status (Running, Paused, ...) of all explorers
     pub(crate) fn get_game_status(
         &self,
-    ) -> Result<(GalaxyTopology, PlanetInfoMap, ExplorerStatus), String> {
+    ) -> Result<(GalaxyTopology, PlanetInfoMap, ExplorerInfoMap), String> {
         //LOG
         log_fn_call!(self, "get_game_status()");
         //LOG
         Ok((
             Arc::clone(&self.galaxy_topology),
             self.planets_info.clone(),
-            Arc::clone(&self.explorer_status),
+            self.explorers_info.clone(),
         ))
     }
 
     // Getter functions necessary for Ratatui-gui
-    
+
     pub fn get_planets_info(&self) -> PlanetInfoMap {
         //LOG
         log_fn_call!(self, "planet_states()");
         //LOG
         self.planets_info.clone()
     }
-    pub fn get_explorer_states(&self) -> ExplorerStatusNotLock {
+    pub fn get_explorer_states(&self) -> ExplorerInfoMap {
         //LOG
         log_fn_call!(self, "explorer_states()");
         //LOG
-        let explorer_status = self.explorer_status.read().unwrap().clone();
+        let explorer_status = self.explorers_info.clone();
         explorer_status
     }
 
     // Bevy stuff
 
     /// Emits a Bevy event if a planet has died
-    /// 
+    ///
     /// If the orchestrator's Bevy Message buffer is not None,
     /// It sends a message that signals the death of planet
     /// `planet_id`
-    pub(crate) fn emit_planet_death(&mut self, planet_id: u32){
-
+    pub(crate) fn emit_planet_death(&mut self, planet_id: u32) {
         info!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
-        self.gui_messages.push(OrchestratorEvent::PlanetDestroyed{planet_id});
+        self.gui_messages
+            .push(OrchestratorEvent::PlanetDestroyed { planet_id });
     }
 
-    pub(crate) fn emit_sunray_ack(&mut self, planet_id: u32){
-
+    pub(crate) fn emit_sunray_ack(&mut self, planet_id: u32) {
         info!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
-        self.gui_messages.push(OrchestratorEvent::SunrayReceived { planet_id });
+        self.gui_messages
+            .push(OrchestratorEvent::SunrayReceived { planet_id });
     }
 
-    pub(crate) fn emit_sunray_send(&mut self, planet_id: u32){
-
+    pub(crate) fn emit_sunray_send(&mut self, planet_id: u32) {
         info!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
-        self.gui_messages.push(OrchestratorEvent::SunraySent { planet_id });
+        self.gui_messages
+            .push(OrchestratorEvent::SunraySent { planet_id });
     }
 
-    pub(crate) fn emit_asteroid_send(&mut self, planet_id: u32){
-
+    pub(crate) fn emit_asteroid_send(&mut self, planet_id: u32) {
         info!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
-        self.gui_messages.push(OrchestratorEvent::AsteroidSent { planet_id });
+        self.gui_messages
+            .push(OrchestratorEvent::AsteroidSent { planet_id });
     }
 
     /// Returns the galaxy lookup function.
-    /// 
+    ///
     /// Used by the GUI to get every planet's type
     pub(crate) fn get_galaxy_lookup(&self) -> &FxHashMap<u32, (u32, PlanetType)> {
         &self.galaxy_lookup

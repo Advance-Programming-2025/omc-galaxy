@@ -1,14 +1,14 @@
 pub mod debug;
+mod explorer_comms;
 pub mod gui_comms;
 pub mod handlers;
 pub mod init;
 pub mod macros;
 pub mod planets_comms;
 pub mod update;
-mod explorer_comms;
 
 use crate::components::explorer::BagType;
-use crate::utils::{PlanetStatus,Status, PlanetInfoMap};
+use crate::utils::{PlanetStatus, Status, PlanetInfoMap, ExplorerInfoMap};
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
 use crate::{ExplorerStatus};
@@ -34,7 +34,7 @@ pub enum OrchestratorEvent {
     SunraySent { planet_id: u32 },
     SunrayReceived { planet_id: u32 },
     AsteroidSent { planet_id: u32 },
-    ExplorerMoved { origin: u32, destination: u32 }
+    ExplorerMoved { origin: u32, destination: u32 },
 }
 
 ///The core of the game.
@@ -50,8 +50,8 @@ pub enum OrchestratorEvent {
 /// - coordinating and overseeing the actions of explorers
 /// - ensuring the state of the various elements of the game are congruent with the
 /// game timeline
-/// 
-/// 
+///
+///
 
 pub struct Orchestrator {
     // Forge sunray and asteroid
@@ -61,9 +61,10 @@ pub struct Orchestrator {
     pub galaxy_topology: GalaxyTopology,
     pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
 
-    //Status for each planets and explorers, BTreeMaps are useful for printing
+    //Status for each planet and explorers, BTreeMaps are useful for printing
     pub planets_info: PlanetInfoMap,
-    pub explorer_status: ExplorerStatus,
+    pub explorers_info: ExplorerInfoMap,
+    
     //Communication channels for sending messages to planets and explorers
     pub planet_channels: HashMap<u32, (Sender<OrchestratorToPlanet>, Sender<ExplorerToPlanet>)>,
     pub explorer_channels: HashMap<u32, (Sender<OrchestratorToExplorer>, Sender<PlanetToExplorer>)>,
@@ -106,14 +107,14 @@ impl Orchestrator {
             galaxy_topology: Self::new_gtop(),
             galaxy_lookup: FxHashMap::default(),
             planets_info: PlanetInfoMap::new(),
-            explorer_status: Arc::new(RwLock::new(BTreeMap::new())),
+            explorers_info: ExplorerInfoMap::new(),
             planet_channels: HashMap::new(),
             explorer_channels: HashMap::new(),
             sender_planet_orch,
             receiver_orch_planet,
             sender_explorer_orch,
             receiver_orch_explorer,
-            gui_messages: Vec::new()
+            gui_messages: Vec::new(),
         };
         Ok(new_orch)
     }
@@ -122,14 +123,22 @@ impl Orchestrator {
         //LOG
         log_fn_call!(self, "get_random_planet_id()");
 
+        let ids = self.planets_info.get_list_id_alive();
+        if ids.len() == 0{
+            return Err("No more planets alive".to_string());
+        }
+        let index: usize = rand::rng().random_range(0..ids.len());
+
         //LOG
-        let num: u32 = rand::rng().random();
-        let id = num % (self.planets_info.len() as u32);
-        Ok(id)
+        Ok(ids[index])
     }
 }
 
 impl LoggableActor for Orchestrator {
-    fn actor_type(&self) -> ActorType { ActorType::Orchestrator }
-    fn actor_id(&self) -> u32 { 0 }
+    fn actor_type(&self) -> ActorType {
+        ActorType::Orchestrator
+    }
+    fn actor_id(&self) -> u32 {
+        0
+    }
 }

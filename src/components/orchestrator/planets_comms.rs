@@ -1,12 +1,11 @@
+use crate::{Status, components::orchestrator::Orchestrator, settings};
 use common_game::{
     logging::{ActorType, EventType},
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
 use crossbeam_channel::Sender;
 use log::info;
-use logging_utils::{log_message, log_fn_call, LoggableActor};
-use crate::{Status, components::orchestrator::Orchestrator, settings};
-
+use logging_utils::{LoggableActor, log_fn_call, log_message};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
@@ -22,7 +21,8 @@ impl Orchestrator {
                 // Probability mode
 
                 // Get a random planet
-                let planet_id = self.get_random_planet_id()?;
+                let planet_id= self.get_random_planet_id()?;
+                
                 // Get planet communication channel
                 let sender = &self.planet_channels.get(&planet_id).unwrap().0.clone();
 
@@ -58,7 +58,7 @@ impl Orchestrator {
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
             .map_err(|_| "Unable to send a sunray to planet: {id}".to_string());
         self.emit_sunray_send(planet_id);
-        
+
         //send update request
         self.send_internal_state_request(sender)?;
 
@@ -76,15 +76,15 @@ impl Orchestrator {
     }
 
     /// Sends a sun ray to all planets.
-    /// 
+    ///
     /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
     pub(crate) fn send_sunray_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "send_sunray_to_all()");
         //LOG
         //collect all of the senders in a vector
-        let senders_sunray: Vec<(u32, Sender<OrchestratorToPlanet>)> =
-        self.planet_channels
+        let senders_sunray: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
+            .planet_channels
             .iter()
             .filter_map(|(id, (sender, _))| {
                 let status = &self.planets_info;
@@ -126,7 +126,7 @@ impl Orchestrator {
                 self.forge.generate_asteroid(),
             ))
             .map_err(|_| "Unable to send asteroid to planet: {id}".to_string());
-        self.emit_asteroid_send(planet_id);        
+        self.emit_asteroid_send(planet_id);
         //send update request
         self.send_internal_state_request(sender)?;
 
@@ -144,7 +144,7 @@ impl Orchestrator {
     }
 
     /// Sends an asteroid to all planets.
-    /// 
+    ///
     /// See [`send_asteroid`](`Self::send_asteroid`) for more details on how an asteroid
     /// is sent.
     pub(crate) fn send_asteroid_to_all(&mut self) -> Result<(), String> {
@@ -154,8 +154,8 @@ impl Orchestrator {
 
         //TODO unwrap cannot fail because every id is contained in the map
         //collect all of the senders in a vector
-        let sender_asteroid: Vec<(u32, Sender<OrchestratorToPlanet>)> =
-        self.planet_channels
+        let sender_asteroid: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
+            .planet_channels
             .iter()
             .filter_map(|(id, (sender, _))| {
                 let status = &self.planets_info;
@@ -188,7 +188,7 @@ impl Orchestrator {
     ) -> Result<(), String> {
         //LOG
         log_fn_call!(
-            self, 
+            self,
             "send_planet_kill()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
@@ -211,7 +211,7 @@ impl Orchestrator {
     }
 
     /// Sends a Kill message to all planets.
-    /// 
+    ///
     /// See [`send_planet_kill`](`Self::send_planet_kill`) for more details on how a
     /// planet kill message is sent.
     pub(crate) fn send_planet_kill_to_all(&mut self) -> Result<(), String> {
@@ -220,8 +220,8 @@ impl Orchestrator {
         //LOG
 
         //collect all of the senders in a vector
-        let senders_to_kill: Vec<(u32, Sender<OrchestratorToPlanet>)> =
-        self.planet_channels
+        let senders_to_kill: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
+            .planet_channels
             .iter()
             .filter_map(|(id, (sender, _))| {
                 let status = &self.planets_info;
@@ -240,7 +240,10 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub fn send_internal_state_request(&self, sender: &Sender<OrchestratorToPlanet>) -> Result<(), String> {
+    pub fn send_internal_state_request(
+        &self,
+        sender: &Sender<OrchestratorToPlanet>,
+    ) -> Result<(), String> {
         //LOG
         log_fn_call!(
             self,
@@ -261,5 +264,5 @@ impl Orchestrator {
             "RequestPlanetState",
         );
         Ok(())
-    }       
+    }
 }
