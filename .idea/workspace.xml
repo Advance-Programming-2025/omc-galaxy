@@ -12,22 +12,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/game_loop.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/game_loop.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/manual_explorer.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/manual_explorer.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/explorer_comms.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/explorer_comms.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/gui_comms.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/gui_comms.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/handlers.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/init.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/init.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/planets_comms.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/planets_comms.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/update.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/update.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tests.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tests.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/settings/common.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/settings/common.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/registry.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/registry.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/types.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/types.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/mattia_explorer/bag.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/mattia_explorer/buffers.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/mattia_explorer/helpers.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/mattia_explorer/resource_management.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/components/mattia_explorer/states.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/explorer_mattia.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mod.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/bag.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/bag.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,7 +70,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
-    "git-widget-placeholder": "Merging main",
+    "git-widget-placeholder": "main",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
@@ -92,6 +86,11 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\matti\OneDrive - euron3\UniTN\advanced programming\omc-galaxy\src\components\mattia_explorer" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="Test omc-galaxy" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="buildProfileId" value="test" />

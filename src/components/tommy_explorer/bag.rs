@@ -66,7 +66,7 @@ impl Bag {
     
 
     /// the following methods are the ones to combine resources
-    fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
+    pub(crate) fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
         // checks that the explorer has 2 carbons before taking any
         let carbon_count = self.resources
             .iter()
@@ -90,7 +90,7 @@ impl Bag {
         Ok(ComplexResourceRequest::Diamond(c1, c2))
     }
 
-    fn make_water_request(&mut self) -> Result<ComplexResourceRequest, String> {
+    pub(crate) fn make_water_request(&mut self) -> Result<ComplexResourceRequest, String> {
         let hydrogen_type = ResourceType::Basic(BasicResourceType::Hydrogen);
         let oxygen_type = ResourceType::Basic(BasicResourceType::Oxygen);
 
@@ -111,7 +111,7 @@ impl Bag {
         Ok(ComplexResourceRequest::Water(h, o))
     }
 
-    fn make_life_request(&mut self) -> Result<ComplexResourceRequest, String> {
+    pub(crate) fn make_life_request(&mut self) -> Result<ComplexResourceRequest, String> {
         let water_type = ResourceType::Complex(ComplexResourceType::Water);
         let carbon_type = ResourceType::Basic(BasicResourceType::Carbon);
 
@@ -132,7 +132,7 @@ impl Bag {
         Ok(ComplexResourceRequest::Life(w, c))
     }
 
-    fn make_robot_request(&mut self) -> Result<ComplexResourceRequest, String> {
+    pub(crate) fn make_robot_request(&mut self) -> Result<ComplexResourceRequest, String> {
         let silicon_type = ResourceType::Basic(BasicResourceType::Silicon);
         let life_type = ResourceType::Complex(ComplexResourceType::Life);
 
@@ -153,7 +153,7 @@ impl Bag {
         Ok(ComplexResourceRequest::Robot(s, l))
     }
 
-    fn make_dolphin_request(&mut self) -> Result<ComplexResourceRequest, String> {
+    pub(crate) fn make_dolphin_request(&mut self) -> Result<ComplexResourceRequest, String> {
         let water_type = ResourceType::Complex(ComplexResourceType::Water);
         let life_type = ResourceType::Complex(ComplexResourceType::Life);
 
@@ -174,7 +174,7 @@ impl Bag {
         Ok(ComplexResourceRequest::Dolphin(w, l))
     }
 
-    fn make_ai_partner_request(&mut self) -> Result<ComplexResourceRequest, String> {
+    pub(crate) fn make_ai_partner_request(&mut self) -> Result<ComplexResourceRequest, String> {
         let robot_type = ResourceType::Complex(ComplexResourceType::Robot);
         let diamond_type = ResourceType::Complex(ComplexResourceType::Diamond);
 
