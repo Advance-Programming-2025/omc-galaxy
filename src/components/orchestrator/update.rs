@@ -4,10 +4,9 @@ use common_game::{
 };
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use logging_utils::{
-    LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
-    payload, warning_payload,
+    LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload
 };
-use rand::{Rng, seq::IteratorRandom};
+use rand::{Rng, seq::{IndexedRandom, IteratorRandom}};
 
 use crate::{components::orchestrator::Orchestrator, utils::Status};
 
@@ -282,17 +281,33 @@ impl Orchestrator {
 
     pub fn choose_random_action(&mut self) -> Result<(), String> {
         let mut rng = rand::rng();
+        let living_things = self.planets_info.get_list_id_alive();
 
-        // Pick a random planet from the HashMap with the choose method
-        let (planet_id, (orch_tx, _expl_tx)) = match self.planet_channels.iter().choose(&mut rng) {
-            Some((id, chans)) => (*id, chans.clone()),
-            None => return Ok(()), // REVIEW: is this correct or a silent fail?
+        let &rand_id = match living_things.choose(&mut rng) {
+            Some(num) => num,
+            None => return Ok(()),
         };
 
-        if rng.random_bool(0.5) {
-            self.send_asteroid(planet_id, &orch_tx)?;
-        } else {
-            self.send_sunray(planet_id, &orch_tx)?;
+        
+        let mut params: Option<(u32,Sender<OrchestratorToPlanet>)> = None;
+
+        for (&id, channels) in self.planet_channels.iter() {
+            if id == rand_id {
+                //cloning a sender is not a deep copy, safe
+                params = Some((id, channels.0.clone()));
+            }
+        }
+
+        if let Some((id, channel)) = params {
+            // chooses whether to do anything at all (probably will)
+            if rng.random_bool(0.8){
+                // chooses between sunray or asteroid
+                if rng.random_bool(0.5) {
+                    self.send_asteroid(id, &channel)?;
+                } else {
+                    self.send_sunray(id, &channel)?;
+                }
+            }
         }
 
         Ok(())
