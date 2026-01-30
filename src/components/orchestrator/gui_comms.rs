@@ -11,6 +11,7 @@ use crate::{
 };
 use logging_utils::LoggableActor;
 use logging_utils::log_fn_call;
+use crate::utils::ExplorerInfoMap;
 
 impl Orchestrator {
     /// Get a snapshot of the current galaxy topology
@@ -50,14 +51,14 @@ impl Orchestrator {
     /// - `ExplorerStatus`, the status (Running, Paused, ...) of all explorers
     pub(crate) fn get_game_status(
         &self,
-    ) -> Result<(GalaxyTopology, PlanetInfoMap, ExplorerStatus), String> {
+    ) -> Result<(GalaxyTopology, PlanetInfoMap, ExplorerInfoMap), String> {
         //LOG
         log_fn_call!(self, "get_game_status()");
         //LOG
         Ok((
             Arc::clone(&self.galaxy_topology),
             self.planets_info.clone(),
-            Arc::clone(&self.explorer_status),
+            self.explorers_info.clone(),
         ))
     }
 
@@ -69,11 +70,11 @@ impl Orchestrator {
         //LOG
         self.planets_info.clone()
     }
-    pub fn get_explorer_states(&self) -> ExplorerStatusNotLock {
+    pub fn get_explorer_states(&self) -> ExplorerInfoMap {
         //LOG
         log_fn_call!(self, "explorer_states()");
         //LOG
-        let explorer_status = self.explorer_status.read().unwrap().clone();
+        let explorer_status = self.explorers_info.clone();
         explorer_status
     }
 

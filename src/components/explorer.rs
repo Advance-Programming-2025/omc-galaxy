@@ -50,7 +50,7 @@ impl Bag {
         self.resources.iter().map(|r| r.get_type()).collect()
     }
 
-    // the following methods are the ones to combine resources
+    /// the following methods are the ones to combine resources
     //they are all used in order to avoid code duplication
     fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
         // Check that the explorer has 2 carbons before taking any

@@ -31,6 +31,8 @@ use crate::{
 };
 
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
+use crate::utils::ExplorerInfo;
+
 
 //Initialization game functions
 impl Orchestrator {
@@ -238,7 +240,7 @@ impl Orchestrator {
         ) = unbounded();
 
         //Log
-        log_internal_op!(dir ActorType::Orchestrator, 0u32,
+        log_internal_op!(dir ActorType::Orchestrator, 0u32, 
             "action"=>"channels initialized",
             "from"=>"orchestrator, planet",
             "to"=>"explorer"
@@ -362,10 +364,8 @@ impl Orchestrator {
         );
 
         //Update HashMaps
-        self.explorer_status
-            .write()
-            .unwrap()
-            .insert(new_explorer.id(), Status::Paused);
+        self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), Some(planet_id)));
+
         log_internal_op!(
             self,
             "action"=>"explorer_status hashmap updated",
@@ -383,7 +383,7 @@ impl Orchestrator {
             Ok(())
         });
         log_internal_op!(
-            self,
+            self, 
             "action"=>"explorer thread created",
             "explorer_id"=>explorer_id,
         );

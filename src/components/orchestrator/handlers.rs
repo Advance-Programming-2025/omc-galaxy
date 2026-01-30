@@ -1,13 +1,11 @@
 use std::time::{Duration, Instant};
 
-use common_game::protocols::orchestrator_explorer::{
-    ExplorerToOrchestrator, OrchestratorToExplorer,
-};
-use common_game::utils::ID;
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
+use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
+use common_game::utils::ID;
 use crossbeam_channel::select;
 use log::info;
 use logging_utils::{
@@ -15,8 +13,9 @@ use logging_utils::{
     payload, warning_payload,
 };
 
-use crate::components::explorer_tommy::BagType;
-use crate::{ExplorerStatus, components::orchestrator::Orchestrator, utils::Status};
+use crate::{components::orchestrator::{Orchestrator}, utils::Status, ExplorerStatus};
+use crate::components::explorer::BagType;
+use crate::utils::ExplorerInfoMap;
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -67,7 +66,7 @@ impl Orchestrator {
                     planet_id;
                     "has_rocket"=>rocket.is_some()
                 );
-
+                
                 //LOG
                 match rocket {
                     Some(_) => {
@@ -222,8 +221,9 @@ impl Orchestrator {
                 );
                 //LOG
 
-                if let Some(mut status_map) = self.explorer_status.write().ok() {
-                    status_map.insert(explorer_id, Status::Running);
+                self.explorers_info.insert_status(explorer_id, Status::Running);
+                if self.explorers_info.get(&explorer_id).is_none() {
+                    self.send_current_planet_request(explorer_id)?;
                 }
 
                 //LOG
@@ -249,9 +249,7 @@ impl Orchestrator {
                 );
                 //LOG
 
-                if let Some(mut status_map) = self.explorer_status.write().ok() {
-                    status_map.insert(explorer_id, Status::Dead);
-                }
+                self.explorers_info.insert_status(explorer_id, Status::Dead);
 
                 //LOG
                 log_internal_op!(
@@ -295,8 +293,9 @@ impl Orchestrator {
                 );
                 //LOG
 
-                if let Some(mut status_map) = self.explorer_status.write().ok() {
-                    status_map.insert(explorer_id, Status::Paused);
+                self.explorers_info.insert_status(explorer_id, Status::Paused);
+                if self.explorers_info.get(&explorer_id).is_none() {
+                    self.send_current_planet_request(explorer_id)?;
                 }
 
                 //LOG
@@ -325,7 +324,8 @@ impl Orchestrator {
                     "planet_id" => planet_id
                 );
                 //LOG
-                // TODO memorize the position of the explorer? if so, where?
+
+                self.explorers_info.update_current_planet(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::CurrentPlanetResult {
                 explorer_id,
@@ -343,6 +343,8 @@ impl Orchestrator {
                     "planet_id" => planet_id
                 );
                 //LOG
+
+                self.explorers_info.update_current_planet(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::SupportedResourceResult {
                 explorer_id,
@@ -394,6 +396,8 @@ impl Orchestrator {
                     "success" => generated.is_ok()
                 );
                 //LOG
+
+                self.send_bag_content_request(explorer_id)?;
             }
             ExplorerToOrchestrator::CombineResourceResponse {
                 explorer_id,
@@ -411,6 +415,8 @@ impl Orchestrator {
                     "success" => generated.is_ok()
                 );
                 //LOG
+
+                self.send_bag_content_request(explorer_id)?;
             }
             ExplorerToOrchestrator::BagContentResponse {
                 explorer_id,
@@ -428,11 +434,10 @@ impl Orchestrator {
                     "items_count" => bag_content.len()
                 );
                 //LOG
+
+                self.explorers_info.update_bag(explorer_id, bag_content);
             }
-            ExplorerToOrchestrator::NeighborsRequest {
-                explorer_id,
-                current_planet_id,
-            } => {
+            ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
                 self.send_neighbours_response(explorer_id, current_planet_id)?;
             }
             ExplorerToOrchestrator::TravelToPlanetRequest {

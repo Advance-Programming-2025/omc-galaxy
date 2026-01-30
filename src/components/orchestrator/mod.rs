@@ -7,21 +7,21 @@ pub mod macros;
 pub mod planets_comms;
 pub mod update;
 
-use crate::ExplorerStatus;
 use crate::components::explorer::BagType;
+use crate::utils::{PlanetStatus, Status, PlanetInfoMap, ExplorerInfoMap};
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
-use crate::utils::{PlanetInfoMap, PlanetStatus, Status};
+use crate::{ExplorerStatus};
+use logging_utils::{log_internal_op, log_fn_call};
+use logging_utils::LoggableActor;
 use common_game::components::forge::Forge;
-use common_game::logging::ActorType;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, unbounded};
-use logging_utils::LoggableActor;
-use logging_utils::{log_fn_call, log_internal_op};
+use common_game::logging::{ActorType};
 use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::BTreeMap;
@@ -61,9 +61,10 @@ pub struct Orchestrator {
     pub galaxy_topology: GalaxyTopology,
     pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
 
-    //Status for each planets and explorers, BTreeMaps are useful for printing
+    //Status for each planet and explorers, BTreeMaps are useful for printing
     pub planets_info: PlanetInfoMap,
-    pub explorer_status: ExplorerStatus,
+    pub explorers_info: ExplorerInfoMap,
+    
     //Communication channels for sending messages to planets and explorers
     pub planet_channels: HashMap<u32, (Sender<OrchestratorToPlanet>, Sender<ExplorerToPlanet>)>,
     pub explorer_channels: HashMap<u32, (Sender<OrchestratorToExplorer>, Sender<PlanetToExplorer>)>,
@@ -76,7 +77,7 @@ pub struct Orchestrator {
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
 
-    pub gui_messages: Vec<OrchestratorEvent>,
+    pub gui_messages: Vec<OrchestratorEvent>
 }
 impl Orchestrator {
     /// Create a new orchestrator instance.
@@ -106,7 +107,7 @@ impl Orchestrator {
             galaxy_topology: Self::new_gtop(),
             galaxy_lookup: FxHashMap::default(),
             planets_info: PlanetInfoMap::new(),
-            explorer_status: Arc::new(RwLock::new(BTreeMap::new())),
+            explorers_info: ExplorerInfoMap::new(),
             planet_channels: HashMap::new(),
             explorer_channels: HashMap::new(),
             sender_planet_orch,
@@ -118,7 +119,7 @@ impl Orchestrator {
         Ok(new_orch)
     }
 
-    fn get_random_planet_id(&self) -> Result<u32,String> {
+    fn get_random_planet_id(&self) -> Result<u32, String> {
         //LOG
         log_fn_call!(self, "get_random_planet_id()");
 
