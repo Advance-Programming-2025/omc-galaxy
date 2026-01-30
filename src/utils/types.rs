@@ -187,9 +187,6 @@ impl ExplorerInfoMap {
     pub fn insert_status(&mut self, explorer_id: u32, status: Status) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
             explorer_info.status = status;
-        } else {
-            let new_info = ExplorerInfo::from(explorer_id, status, vec![], None);
-            self.map.insert(explorer_id, new_info);
         }
     }
 
@@ -201,7 +198,7 @@ impl ExplorerInfoMap {
 
     pub fn update_current_planet(&mut self, explorer_id: u32, planet_id: u32) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
-            explorer_info.current_planet_id = Some(planet_id);
+            explorer_info.current_planet_id = planet_id;
         }
     }
 
@@ -213,8 +210,8 @@ impl ExplorerInfoMap {
         self.map.get(explorer_id).unwrap().status
     }
 
-    pub fn get_current_planet(&self, explorer_id: &u32) -> Option<u32> {
-        self.map.get(explorer_id).map(|info| info.current_planet_id)?
+    pub fn get_current_planet(&self, explorer_id: &u32) -> u32 {
+        self.get(explorer_id).unwrap().current_planet_id
     }
 
     pub fn is_empty(&self) -> bool {
@@ -283,7 +280,7 @@ pub struct ExplorerInfo{
     pub id: u32,
     pub status: Status,
     pub bag: Vec<ResourceType>,
-    pub current_planet_id: Option<u32>,
+    pub current_planet_id: u32,
 }
 
 impl ExplorerInfo{
@@ -291,7 +288,7 @@ impl ExplorerInfo{
         id: u32,
         status: Status,
         bag: Vec<ResourceType>,
-        current_planet_id: Option<u32>,
+        current_planet_id: u32,
     ) -> Self {
         ExplorerInfo{
             id,

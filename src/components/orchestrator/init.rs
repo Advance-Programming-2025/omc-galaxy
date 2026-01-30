@@ -364,7 +364,7 @@ impl Orchestrator {
         );
 
         //Update HashMaps
-        self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), Some(planet_id)));
+        self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), planet_id));
 
         log_internal_op!(
             self,
