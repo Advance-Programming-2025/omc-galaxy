@@ -21,7 +21,8 @@ impl Orchestrator {
                 // Probability mode
 
                 // Get a random planet
-                let planet_id = self.get_random_planet_id()?;
+                let planet_id= self.get_random_planet_id()?;
+                
                 // Get planet communication channel
                 let sender = &self.planet_channels.get(&planet_id).unwrap().0.clone();
 

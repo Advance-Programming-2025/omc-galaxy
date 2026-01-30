@@ -118,11 +118,14 @@ impl Orchestrator {
         Ok(new_orch)
     }
 
-    fn get_random_planet_id(&self) -> Result<u32, String> {
+    fn get_random_planet_id(&self) -> Result<u32,String> {
         //LOG
         log_fn_call!(self, "get_random_planet_id()");
 
         let ids = self.planets_info.get_list_id_alive();
+        if ids.len() == 0{
+            return Err("No more planets alive".to_string());
+        }
         let index: usize = rand::rng().random_range(0..ids.len());
 
         //LOG
