@@ -18,7 +18,7 @@ use rustc_hash::FxHashMap;
 
 use super::Orchestrator;
 use crate::utils::registry::PlanetType::{
-    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
+    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,RustyCrab,TheCompilerStrikesBack
 };
 use crate::{
     GalaxyTopology,
@@ -448,7 +448,8 @@ impl Orchestrator {
                         3 => ImmutableCosmicBorrow,
                         4 => OneMillionCrabs,
                         5 => Rustrelli,
-                        6 => Rustrelli,
+                        6 => RustyCrab,
+                        7 => TheCompilerStrikesBack,    
                         _ => PlanetType::random(),
                     },
                 ),
