@@ -155,8 +155,8 @@ impl Orchestrator {
                     );
                     event.emit();
                     //LOG
-                    //TODO this unwrap is needlessly dangerous. safer alternative?
-                    self.planets_info.insert_status(planet_id, Status::Running);
+                    //TODO handle this result
+                    self.planets_info.update_status(planet_id, Status::Running);
                     count += 1;
                 }
                 _ => {}

@@ -8,8 +8,10 @@ use common_game::components::planet::{DummyPlanetState, Planet};
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use crossbeam_channel::{Receiver, Sender};
+use rustrelli::planet;
 
 use crate::utils::Status;
+use crate::utils::registry::PlanetType;
 
 pub type PlanetFactory = Box<
     dyn Fn(
@@ -45,12 +47,17 @@ impl PlanetInfoMap {
     pub fn insert(&mut self, planet_id: u32, info: PlanetInfo) {
         self.map.insert(planet_id, info);
     }
-    pub fn insert_status(&mut self, planet_id: u32, status: Status) {
-        if let Some(planet_info) = self.map.get_mut(&planet_id) {
+    pub fn insert_status(&mut self, planet_id: u32, name: PlanetType, status: Status){
+        let new_info = PlanetInfo::from(name, status, vec![], 0, false);
+        self.map.insert(planet_id, new_info);
+    }
+
+    pub fn update_status(&mut self, planet_id: u32, status: Status) -> Result<(),String> {
+        if let Some(planet_info) = self.map.get_mut(&planet_id){
             planet_info.status = status;
+            Ok(())
         } else {
-            let new_info = PlanetInfo::from(status, vec![], 0, false);
-            self.map.insert(planet_id, new_info);
+            Err("planet info is not already present".to_string())
         }
     }
 
@@ -67,7 +74,12 @@ impl PlanetInfoMap {
     pub fn get_status(&self, planet_id: &u32) -> Status {
         self.map.get(planet_id).unwrap().status
     }
-    pub fn is_empty(&self) -> bool {
+
+    pub fn get_info(&self, planet_id: u32) -> Option<&PlanetInfo>{
+        self.map.get(&planet_id)
+    }
+
+    pub fn is_empty(&self) -> bool{
         self.map.is_empty()
     }
     pub fn is_paused(&self, planet_id: &u32) -> bool {
@@ -129,7 +141,8 @@ impl Debug for PlanetInfoMap {
     }
 }
 #[derive(PartialEq, Debug, Clone)]
-pub struct PlanetInfo {
+pub struct PlanetInfo{
+    pub name: PlanetType,
     pub status: Status,
     pub energy_cells: Vec<bool>,
     pub charged_cells_count: usize,
@@ -137,12 +150,14 @@ pub struct PlanetInfo {
 }
 impl PlanetInfo {
     pub fn from(
+        name: PlanetType,
         status: Status,
         energy_cells: Vec<bool>,
         charged_cells_count: usize,
         rocket: bool,
-    ) -> Self {
-        PlanetInfo {
+    ) -> Self{
+        PlanetInfo{
+            name,
             status,
             energy_cells,
             charged_cells_count,

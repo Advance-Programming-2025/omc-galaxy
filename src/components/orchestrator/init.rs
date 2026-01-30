@@ -300,8 +300,7 @@ impl Orchestrator {
         //LOG
 
         //Update HashMaps
-        self.planets_info
-            .insert_status(new_planet.id(), Status::Paused);
+        self.planets_info.insert_status(new_planet.id(), type_id, Status::Paused);
         self.planet_channels
             .insert(new_planet.id(), (sender_orchestrator, sender_explorer));
 

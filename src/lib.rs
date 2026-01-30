@@ -1,7 +1,7 @@
 mod components;
 pub mod messages;
 pub mod settings;
-mod utils;
+pub mod utils;
 
 //Orchestrator example
 pub use components::Game;

@@ -19,7 +19,7 @@ mod tests_core_lifecycle {
     fn test_lifecycle_reset_clears_internal_maps() {
         let mut orch = Orchestrator::new().unwrap();
         // Manually pollute state
-        orch.planets_info.insert_status(1, Status::Dead);
+        orch.planets_info.insert_status(1, PlanetType::OneMillionCrabs, Status::Dead);
         orch.explorer_status
             .write()
             .unwrap()
@@ -132,7 +132,8 @@ mod tests_messaging_protocol {
     fn test_messaging_send_sunray_to_all_skips_dead_planets() {
         let mut orch = Orchestrator::new().unwrap();
         orch.add_planet(1, PlanetType::OneMillionCrabs).unwrap();
-        orch.planets_info.insert_status(1, Status::Dead); // Force dead
+        let update = orch.planets_info.update_status(1, Status::Dead); // Force dead
+        assert!(update.is_ok());
 
         // This should not fail even if the channel is technically "broken" for the dead planet
         let result = orch.send_sunray_to_all();

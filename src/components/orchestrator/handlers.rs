@@ -97,7 +97,7 @@ impl Orchestrator {
                         //LOG
 
                         //Update planet State
-                        self.planets_info.insert_status(planet_id, Status::Dead);
+                        self.planets_info.update_status(planet_id, Status::Dead);
                         //LOG
                         log_internal_op!(
                             self,
