@@ -22,6 +22,13 @@
       <change beforePath="$PROJECT_DIR$/src/components/explorer_mattia.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mod.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/bag.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/bag.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/init.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/init.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/orchestrator/update.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/orchestrator/update.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/actions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/actions.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/core.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/core.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/state.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/state.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/types.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/types.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,7 +77,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.rust.reset.selective.auto.import": "true",
-    "git-widget-placeholder": "main",
+    "git-widget-placeholder": "Merging main",
     "ignore.virus.scanning.warn.message": "true",
     "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
@@ -86,11 +93,6 @@
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\matti\OneDrive - euron3\UniTN\advanced programming\omc-galaxy\src\components\mattia_explorer" />
-    </key>
-  </component>
   <component name="RunManager">
     <configuration name="Test omc-galaxy" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="buildProfileId" value="test" />

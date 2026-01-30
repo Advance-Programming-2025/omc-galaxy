@@ -2,6 +2,7 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
+use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
     payload, warning_payload,
@@ -95,7 +96,7 @@ impl Orchestrator {
     ///
     /// Goes through every PlanetToOrchestrator channel and sends the `StartPlanetAI`
     /// message. As of version 0.1 of the project, the execution of this function is
-    /// non deterministic and might never return in case one of the channels just
+    /// non-deterministic and might never return in case one of the channels just
     /// hangs forever.
     ///
     /// Returns Err if any of the communication channels are inaccessible.
@@ -165,6 +166,81 @@ impl Orchestrator {
         Ok(())
     }
 
+    /// Starts the AI of every explorer.
+    ///
+    /// Goes through every OrchestratorToExplorer channel and sends the `StartExplorerAI`
+    ///
+    /// Returns Err if any of the communication channels are inaccessible.
+    pub(crate) fn start_all_explorer_ais(&mut self) -> Result<(), String> {
+        //LOG
+        log_fn_call!(self, "start_all_explorer_ais()");
+        //LOG
+
+        for (_id, (from_orch, _)) in &self.explorer_channels {
+            from_orch
+                .try_send(OrchestratorToExplorer::StartExplorerAI)
+                .map_err(|_| format!("Cannot send message to explorer {}", _id))?;
+
+            //LOG
+            log_message!(
+                ActorType::Orchestrator, 0u32,
+                ActorType::Explorer, *_id,
+                EventType::MessageOrchestratorToExplorer,
+                "StartExplorerAI";
+                "explorer_id"=>_id
+            );
+            //LOG
+        }
+
+        let mut count = 0;
+        loop {
+            if count == self.explorer_channels.len() {
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action"=>"all explorers started",
+                    "count"=>count
+                );
+                //LOG
+                break;
+            }
+
+            let receive_channel = self
+                .receiver_orch_explorer
+                .recv()
+                .map_err(|_| "Cannot receive message from explorers".to_string())?;
+
+            match receive_channel {
+                ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
+                    debug_println!("Started Explorer AI: {}", explorer_id);
+
+                    //LOG
+                    let event = LogEvent::new(
+                        Some(Participant::new(ActorType::Explorer, explorer_id)),
+                        Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                        EventType::MessageExplorerToOrchestrator,
+                        LOG_ACTORS_ACTIVITY,
+                        payload!(
+                            "message"=>"StartExplorerAIResult",
+                            "explorer_id"=>explorer_id,
+                            "status"=>"Running"
+                        ),
+                    );
+                    event.emit();
+                    //LOG
+
+                    self.explorers_info.insert_status(explorer_id, Status::Running);
+                    count += 1;
+                }
+                _ => {
+                    // ignores other events
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     /// Global start function, starts all of the planets' AIs; wrapper on
     /// [`start_all_planet_ais`](`Self::start_all_planet_ais`).
     ///
@@ -174,6 +250,7 @@ impl Orchestrator {
         log_fn_call!(self, "start_all()");
         //LOG
         self.start_all_planet_ais()?;
+        self.start_all_explorer_ais()?;
         //LOG
         log_internal_op!(
             self,

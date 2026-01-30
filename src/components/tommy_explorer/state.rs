@@ -21,6 +21,7 @@ impl ExplorerState {
     pub fn matches_orchestrator_msg(&self, msg: &OrchestratorToExplorer) -> bool {
         match (self, msg) {
             (ExplorerState::Idle, _) => true,
+            (_, OrchestratorToExplorer::KillExplorer) => true,
             (ExplorerState::WaitingToStartExplorerAI, OrchestratorToExplorer::StartExplorerAI) => true,
             (ExplorerState::WaitingForNeighbours, OrchestratorToExplorer::NeighborsResponse { .. }) => true,
             (ExplorerState::Traveling, OrchestratorToExplorer::MoveToPlanet { .. }) => true,

@@ -44,14 +44,8 @@ impl ActionQueue {
         self.queue.push_back(action);
     }
 
-    /// rotates the action (pop front, push back)
-    pub fn rotate_action(&mut self) -> Option<ExplorerAction> {
-        if let Some(action) = self.queue.pop_front() {
-            self.queue.push_back(action);
-            Some(action)
-        } else {
-            None
-        }
+    pub fn push_front(&mut self, action: ExplorerAction) {
+        self.queue.push_front(action);
     }
 
     /// clears the action queue

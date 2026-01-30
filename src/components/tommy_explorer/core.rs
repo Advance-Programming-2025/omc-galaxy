@@ -285,24 +285,69 @@ impl Explorer {
         if let Some(action) = self.action_queue.next_action() {
             match action {
                 ExplorerAction::AskNeighbours => {
-                    // TODO: Implement asking for neighbours
-                    self.action_queue.push_back(action);
+                    match self.send_to_orchestrator(ExplorerToOrchestrator::NeighborsRequest { explorer_id: self.explorer_id, current_planet_id: self.planet_id }) {
+                        Ok(_) => {
+                            // if the sending is successful change the state to WaitingForNeighbours
+                            // and push back the action
+                            self.set_state(ExplorerState::WaitingForNeighbours);
+                            self.action_queue.push_back(action);
+                        }
+                        Err(err) => {
+                            self.action_queue.push_front(action);
+                            println!("[EXPLORER DEBUG] Error in sending NeighboursRequest: {}", err);
+                        }
+                    }
                 }
                 ExplorerAction::AskSupportedResources => {
-                    // TODO: Implement asking for supported resources
-                    // Don't push back - only ask once per planet
+                    match self.send_to_planet(ExplorerToPlanet::SupportedResourceRequest { explorer_id: self.explorer_id }) {
+                        Ok(_) => {
+                            // if the sending was successful change the state to WaitingForSupportedResources
+                            self.set_state(ExplorerState::WaitingForSupportedResources);
+                        }
+                        Err(err) => {
+                            self.action_queue.push_front(action);
+                        }
+                    }
                 }
                 ExplorerAction::AskSupportedCombinations => {
-                    // TODO: Implement asking for supported combinations
-                    // Don't push back - only ask once per planet
+                    match self.send_to_planet(ExplorerToPlanet::SupportedCombinationRequest { explorer_id: self.explorer_id }) {
+                        Ok(_) => {
+                            // if the sending was successful change the state to WaitingForSupportedCombinations
+                            self.set_state(ExplorerState::WaitingForSupportedCombinations);
+                        }
+                        Err(err) => {
+                            self.action_queue.push_front(action);
+                        }
+                    }
                 }
                 ExplorerAction::GenerateOrCombine => {
                     // TODO: Implement generation/combination logic based on AI strategy
+                    // IMPORTANT continue to generate/combine till the explorer can
                     self.action_queue.push_back(action);
+
+                    // TODO decision on what to generate/combine
+                    // if the topology isn't fully discovered simply generate/combine the useful resources
+                    // otherwise:
+                    // check what and how many resources the explorer has
+                    // check what and how many resources are needed to complete the goal -> see the dependency graph of the resources
+                    // maybe check what resources can be obtained from other planets in a possible path
+                    // choose the resource based on the things written above
+                    // generate/combine it
                 }
                 ExplorerAction::Move => {
                     // TODO: Implement movement logic based on AI strategy
                     self.action_queue.push_back(action);
+
+                    // TODO decision on where to move
+                    // 1st case -> the topology isn't fully discovered yet
+                    // check the planets that still need to be visited
+                    // choose the best path to visit those planets in the shortest way possible
+
+                    // 2nd case -> the topology is fully discovered
+                    // check what and how many resources the explorer has
+                    // maybe check what resources can be obtained from other planets in a possible path
+                    // choose the best path to achieve the goal
+
                 }
             }
         }
