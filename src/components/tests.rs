@@ -20,10 +20,7 @@ mod tests_core_lifecycle {
         let mut orch = Orchestrator::new().unwrap();
         // Manually pollute state
         orch.planets_info.insert_status(1, PlanetType::OneMillionCrabs, Status::Dead);
-        orch.explorer_status
-            .write()
-            .unwrap()
-            .insert(1, Status::Running);
+        orch.explorers_info.insert_status(1, Status::Running);
 
         orch.reset().unwrap();
 
