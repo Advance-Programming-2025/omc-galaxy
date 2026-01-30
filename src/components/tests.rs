@@ -11,7 +11,7 @@ mod tests_core_lifecycle {
     fn test_lifecycle_new_initializes_empty_state() {
         let orch = Orchestrator::new().unwrap();
         assert!(orch.planets_info.is_empty());
-        assert!(orch.explorer_status.read().unwrap().is_empty());
+        assert!(orch.explorers_info.is_empty());
         assert!(orch.galaxy_lookup.is_empty());
     }
 
@@ -20,15 +20,12 @@ mod tests_core_lifecycle {
         let mut orch = Orchestrator::new().unwrap();
         // Manually pollute state
         orch.planets_info.insert_status(1, Status::Dead);
-        orch.explorer_status
-            .write()
-            .unwrap()
-            .insert(1, Status::Running);
+        orch.explorers_info.insert_status(1, Status::Running);
 
         orch.reset().unwrap();
 
         assert!(orch.planets_info.is_empty());
-        assert!(orch.explorer_status.read().unwrap().is_empty());
+        assert!(orch.explorers_info.is_empty());
         assert!(orch.planet_channels.is_empty());
     }
 }
@@ -58,10 +55,10 @@ mod tests_actor_management {
 
         orch.add_explorer(1, 10, 5, tx);
 
-        assert!(orch.explorer_status.read().unwrap().contains_key(&1));
+        assert!(orch.explorers_info.get(&1).is_some());
         assert_eq!(
-            orch.explorer_status.read().unwrap().get(&1),
-            Some(&Status::Paused)
+            orch.explorers_info.get_status(&1),
+            Status::Paused
         );
         assert!(orch.explorer_channels.contains_key(&1));
     }

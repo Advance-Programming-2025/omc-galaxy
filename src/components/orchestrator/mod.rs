@@ -8,7 +8,7 @@ pub mod update;
 mod explorer_comms;
 
 use crate::components::explorer::BagType;
-use crate::utils::{PlanetStatus,Status, PlanetInfoMap};
+use crate::utils::{PlanetStatus, Status, PlanetInfoMap, ExplorerInfoMap};
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
 use crate::{ExplorerStatus};
@@ -61,9 +61,10 @@ pub struct Orchestrator {
     pub galaxy_topology: GalaxyTopology,
     pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
 
-    //Status for each planets and explorers, BTreeMaps are useful for printing
+    //Status for each planet and explorers, BTreeMaps are useful for printing
     pub planets_info: PlanetInfoMap,
-    pub explorer_status: ExplorerStatus,
+    pub explorers_info: ExplorerInfoMap,
+    
     //Communication channels for sending messages to planets and explorers
     pub planet_channels: HashMap<u32, (Sender<OrchestratorToPlanet>, Sender<ExplorerToPlanet>)>,
     pub explorer_channels: HashMap<u32, (Sender<OrchestratorToExplorer>, Sender<PlanetToExplorer>)>,
@@ -76,7 +77,7 @@ pub struct Orchestrator {
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
 
-    pub gui_messages: Vec<OrchestratorEvent>
+    pub gui_messages: Vec<OrchestratorEvent>,
 }
 impl Orchestrator {
     /// Create a new orchestrator instance.
@@ -106,7 +107,7 @@ impl Orchestrator {
             galaxy_topology: Self::new_gtop(),
             galaxy_lookup: FxHashMap::default(),
             planets_info: PlanetInfoMap::new(),
-            explorer_status: Arc::new(RwLock::new(BTreeMap::new())),
+            explorers_info: ExplorerInfoMap::new(),
             planet_channels: HashMap::new(),
             explorer_channels: HashMap::new(),
             sender_planet_orch,

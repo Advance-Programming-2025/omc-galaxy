@@ -9,7 +9,8 @@ use logging_utils::{debug_println, log_message, log_fn_call, log_internal_op, pa
 use log::info;
 
 use crate::{components::orchestrator::{Orchestrator}, utils::Status, ExplorerStatus};
-use crate::components::explorer_tommy::BagType;
+use crate::components::explorer::BagType;
+use crate::utils::ExplorerInfoMap;
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -213,8 +214,9 @@ impl Orchestrator {
                 );
                 //LOG
 
-                if let Some(mut status_map) = self.explorer_status.write().ok() {
-                    status_map.insert(explorer_id, Status::Running);
+                self.explorers_info.insert_status(explorer_id, Status::Running);
+                if self.explorers_info.get(&explorer_id).is_none() {
+                    self.send_current_planet_request(explorer_id)?;
                 }
 
                 //LOG
@@ -240,9 +242,7 @@ impl Orchestrator {
                 );
                 //LOG
 
-                if let Some(mut status_map) = self.explorer_status.write().ok() {
-                    status_map.insert(explorer_id, Status::Dead);
-                }
+                self.explorers_info.insert_status(explorer_id, Status::Dead);
 
                 //LOG
                 log_internal_op!(
@@ -286,8 +286,9 @@ impl Orchestrator {
                 );
                 //LOG
 
-                if let Some(mut status_map) = self.explorer_status.write().ok() {
-                    status_map.insert(explorer_id, Status::Paused);
+                self.explorers_info.insert_status(explorer_id, Status::Paused);
+                if self.explorers_info.get(&explorer_id).is_none() {
+                    self.send_current_planet_request(explorer_id)?;
                 }
 
                 //LOG
@@ -313,7 +314,8 @@ impl Orchestrator {
                     "planet_id" => planet_id
                 );
                 //LOG
-                // TODO memorize the position of the explorer? if so, where?
+
+                self.explorers_info.update_current_planet(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::CurrentPlanetResult { explorer_id, planet_id } => {
                 //LOG
@@ -328,6 +330,8 @@ impl Orchestrator {
                     "planet_id" => planet_id
                 );
                 //LOG
+
+                self.explorers_info.update_current_planet(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::SupportedResourceResult { explorer_id, supported_resources } => {
                 //LOG
@@ -370,6 +374,8 @@ impl Orchestrator {
                     "success" => generated.is_ok()
                 );
                 //LOG
+
+                self.send_bag_content_request(explorer_id)?;
             }
             ExplorerToOrchestrator::CombineResourceResponse { explorer_id, generated } => {
                 //LOG
@@ -384,6 +390,8 @@ impl Orchestrator {
                     "success" => generated.is_ok()
                 );
                 //LOG
+
+                self.send_bag_content_request(explorer_id)?;
             }
             ExplorerToOrchestrator::BagContentResponse { explorer_id, bag_content } => {
                 //LOG
@@ -398,6 +406,8 @@ impl Orchestrator {
                     "items_count" => bag_content.len()
                 );
                 //LOG
+
+                self.explorers_info.update_bag(explorer_id, bag_content);
             }
             ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
                 self.send_neighbours_response(explorer_id, current_planet_id)?;
@@ -413,10 +423,10 @@ impl Orchestrator {
                         .copied()
                         .unwrap_or(false)
                 };
-                
+
                 // if not existing or not a neighbour of the current planet return and Err
                 if !is_neighbour { return Err("Planet id not found".to_string()) }
-            
+
                 // else send the move to planet
                 return self.send_move_to_planet(explorer_id, dst_planet_id)
             }

@@ -30,7 +30,7 @@ use crate::{
 };
 
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
-
+use crate::utils::ExplorerInfo;
 
 //Initialization game functions
 impl Orchestrator {
@@ -362,10 +362,8 @@ impl Orchestrator {
         );
 
         //Update HashMaps
-        self.explorer_status
-            .write()
-            .unwrap()
-            .insert(new_explorer.id(), Status::Paused);
+        self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), Some(planet_id)));
+        
         log_internal_op!(
             self,
             "action"=>"explorer_status hashmap updated",
