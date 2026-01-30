@@ -4,6 +4,8 @@ mod states;
 mod buffers;
 mod handlers;
 mod helpers;
+mod explorer_ai;
+mod planet_info;
 
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
 use crate::components::mattia_explorer::handlers::{combine_resource_request, current_planet_request, generate_resource_request, kill_explorer, manage_combine_response, manage_generate_response, manage_supported_combination_response, manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai, start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request};
@@ -17,14 +19,8 @@ use common_game::utils::ID;
 use crossbeam_channel::{select, Receiver, Sender};
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet, VecDeque};
-
-// struct that contains some
-struct PlanetInfo {
-    basic_resources: Option<HashSet<BasicResourceType>>,
-    complex_resources: Option<HashSet<ComplexResourceType>>,
-    neighbours: Option<HashSet<ID>>,
-}
-
+use std::time::SystemTime;
+use crate::components::mattia_explorer::planet_info::PlanetInfo;
 
 // this is the struct of the explorer
 pub struct Explorer {
@@ -42,6 +38,7 @@ pub struct Explorer {
     energy_cells: u32, // of the current planet
     buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
+    time: u64,
 }
 
 impl Explorer {
@@ -59,11 +56,7 @@ impl Explorer {
         let mut starting_topology_info = HashMap::new();
         starting_topology_info.insert(
             planet_id,
-            PlanetInfo {
-                basic_resources: None,
-                complex_resources: None,
-                neighbours: None,
-            },
+            PlanetInfo::new(0),
         );
         Self {
             explorer_id,
@@ -77,6 +70,7 @@ impl Explorer {
             energy_cells,
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
+            time: 0,
         }
     }
 

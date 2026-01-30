@@ -302,11 +302,7 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
         explorer
             .topology_info
             .entry(neighbour)
-            .or_insert(PlanetInfo {
-                basic_resources: None,
-                complex_resources: None,
-                neighbours: None,
-            });
+            .or_insert(PlanetInfo::new(explorer.time));
     }
     //todo logs
     match explorer.topology_info.get_mut(&explorer.planet_id){
@@ -316,11 +312,7 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
         None => {
             explorer.topology_info.insert(
                 explorer.planet_id,
-                PlanetInfo {
-                    basic_resources: None,
-                    complex_resources: None,
-                    neighbours: Some(neighbors.into_iter().collect()),
-                }
+                PlanetInfo::new(explorer.time)
             );
         }
     }
@@ -339,11 +331,7 @@ pub fn manage_supported_resource_response(
                 None => {
                     explorer.topology_info.insert(
                         explorer.planet_id,
-                        PlanetInfo {
-                            basic_resources: Some(resource_list.clone()),
-                            complex_resources: None,
-                            neighbours: None,
-                        }
+                        PlanetInfo::new(explorer.time)
                     );
                 }
             }
@@ -386,11 +374,7 @@ pub fn manage_supported_combination_response(
                 None => {
                     explorer.topology_info.insert(
                         explorer.planet_id,
-                        PlanetInfo {
-                            basic_resources: None,
-                            complex_resources: Some(combination_list.clone()),
-                            neighbours: None,
-                        }
+                        PlanetInfo::new(explorer.time)
                     );
                 }
             }
