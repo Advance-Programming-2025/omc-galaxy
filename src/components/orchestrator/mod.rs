@@ -1,11 +1,11 @@
 pub mod debug;
+mod explorer_comms;
 pub mod gui_comms;
 pub mod handlers;
 pub mod init;
 pub mod macros;
 pub mod planets_comms;
 pub mod update;
-mod explorer_comms;
 
 use crate::components::explorer::BagType;
 use crate::utils::{PlanetStatus, Status, PlanetInfoMap, ExplorerInfoMap};
@@ -34,7 +34,7 @@ pub enum OrchestratorEvent {
     SunraySent { planet_id: u32 },
     SunrayReceived { planet_id: u32 },
     AsteroidSent { planet_id: u32 },
-    ExplorerMoved { origin: u32, destination: u32 }
+    ExplorerMoved { origin: u32, destination: u32 },
 }
 
 ///The core of the game.
@@ -50,8 +50,8 @@ pub enum OrchestratorEvent {
 /// - coordinating and overseeing the actions of explorers
 /// - ensuring the state of the various elements of the game are congruent with the
 /// game timeline
-/// 
-/// 
+///
+///
 
 pub struct Orchestrator {
     // Forge sunray and asteroid
@@ -77,7 +77,7 @@ pub struct Orchestrator {
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
 
-    pub gui_messages: Vec<OrchestratorEvent>,
+    pub gui_messages: Vec<OrchestratorEvent>
 }
 impl Orchestrator {
     /// Create a new orchestrator instance.
@@ -114,7 +114,7 @@ impl Orchestrator {
             receiver_orch_planet,
             sender_explorer_orch,
             receiver_orch_explorer,
-            gui_messages: Vec::new()
+            gui_messages: Vec::new(),
         };
         Ok(new_orch)
     }
@@ -123,14 +123,22 @@ impl Orchestrator {
         //LOG
         log_fn_call!(self, "get_random_planet_id()");
 
+        let ids = self.planets_info.get_list_id_alive();
+        if ids.len() == 0{
+            return Err("No more planets alive".to_string());
+        }
+        let index: usize = rand::rng().random_range(0..ids.len());
+
         //LOG
-        let num: u32 = rand::rng().random();
-        let id = num % (self.planets_info.len() as u32);
-        Ok(id)
+        Ok(ids[index])
     }
 }
 
 impl LoggableActor for Orchestrator {
-    fn actor_type(&self) -> ActorType { ActorType::Orchestrator }
-    fn actor_id(&self) -> u32 { 0 }
+    fn actor_type(&self) -> ActorType {
+        ActorType::Orchestrator
+    }
+    fn actor_id(&self) -> u32 {
+        0
+    }
 }

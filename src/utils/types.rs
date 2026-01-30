@@ -34,13 +34,12 @@ pub type ExplorerStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
 
 pub type GalaxySnapshot = Vec<(u32, u32)>;
 
-
-pub struct PlanetInfoMap{
-    map: BTreeMap<u32, PlanetInfo>
+pub struct PlanetInfoMap {
+    map: BTreeMap<u32, PlanetInfo>,
 }
-impl PlanetInfoMap{
-    pub fn new() -> Self{
-        PlanetInfoMap{
+impl PlanetInfoMap {
+    pub fn new() -> Self {
+        PlanetInfoMap {
             map: BTreeMap::new(),
         }
     }
@@ -94,8 +93,21 @@ impl PlanetInfoMap{
     pub fn iter(&self) -> impl Iterator<Item = (&u32, &PlanetInfo)> {
         self.map.iter()
     }
-    pub fn count_survivors(&self) -> usize{
-        self.map.values().filter(|info| info.status != Status::Dead).count()
+    pub fn count_survivors(&self) -> usize {
+        self.map
+            .values()
+            .filter(|info| info.status != Status::Dead)
+            .count()
+    }
+
+    pub(crate) fn get_list_id_alive(&self)->Vec<u32>{
+        let mut res = Vec::new();
+        for (&id, info) in &self.map{
+            if info.status == Status::Running{
+                res.push(id);
+            }
+        }
+        res
     }
 }
 

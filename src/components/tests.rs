@@ -42,9 +42,7 @@ mod tests_actor_management {
         orch.add_planet(planet_id, PlanetType::OneMillionCrabs)
             .unwrap();
 
-        assert!(
-            orch.planets_info.is_paused(&planet_id)
-        );
+        assert!(orch.planets_info.is_paused(&planet_id));
         assert!(orch.planet_channels.contains_key(&planet_id));
     }
 
@@ -124,9 +122,7 @@ mod tests_messaging_protocol {
         };
         orch.handle_planet_message(msg).unwrap();
 
-        assert!(
-            orch.planets_info.is_dead(&planet_id)
-        );
+        assert!(orch.planets_info.is_dead(&planet_id));
     }
 
     #[test]
@@ -202,7 +198,7 @@ mod tests {
 
             orch.send_sunray(p_id_a, &channel_a).unwrap();
             orch.send_sunray(p_id_b, &channel_b).unwrap();
-            
+
             // Give the planet threads a moment to process the sunray and build
             std::thread::sleep(Duration::from_millis(500));
             // We simulate receiving the responses from the channels
@@ -211,8 +207,8 @@ mod tests {
             orch.handle_game_messages().unwrap();
 
             // Phase 2: Asteroid Attack
-            orch.send_asteroid(p_id_a,&channel_a).unwrap();
-            orch.send_asteroid(p_id_b,&channel_b).unwrap();
+            orch.send_asteroid(p_id_a, &channel_a).unwrap();
+            orch.send_asteroid(p_id_b, &channel_b).unwrap();
 
             // Give the planet threads a moment to process the asteroids and build
             std::thread::sleep(Duration::from_millis(500));
@@ -256,7 +252,7 @@ mod tests {
 
             // Fire Asteroids
             for id in 0..id_counter {
-                let _ = orch.send_asteroid(id,&orch.planet_channels.get(&id).unwrap().0.clone());
+                let _ = orch.send_asteroid(id, &orch.planet_channels.get(&id).unwrap().0.clone());
             }
 
             // Wait for processing
@@ -299,7 +295,7 @@ mod tests {
                 std::thread::sleep(Duration::from_millis(50));
 
                 for i in 0..n_planets {
-                    let _ = orch.send_asteroid(i,&orch.planet_channels.get(&i).unwrap().0.clone());
+                    let _ = orch.send_asteroid(i, &orch.planet_channels.get(&i).unwrap().0.clone());
                 }
 
                 let _ = orch.handle_game_messages();
@@ -307,9 +303,7 @@ mod tests {
             }
 
             // Check how many survived the onslaught
-            let survivors = orch
-                .planets_info
-                .count_survivors();
+            let survivors = orch.planets_info.count_survivors();
 
             println!("Survivors: {}/{}", survivors, n_planets);
             // In a heavy scenario, we just want to ensure the Orchestrator didn't crash
@@ -324,7 +318,7 @@ mod tests {
 
             // Spam 1000 sunrays to a single planet to test channel capacity/backpressure
             for _ in 0..1000 {
-                let _ = orch.send_sunray(0u32,&orch.planet_channels.get(&0).unwrap().0.clone());
+                let _ = orch.send_sunray(0u32, &orch.planet_channels.get(&0).unwrap().0.clone());
             }
 
             // Ensure the orchestrator remains responsive

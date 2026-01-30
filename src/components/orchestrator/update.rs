@@ -2,13 +2,13 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use logging_utils::{log_fn_call, log_message, log_internal_op, warning_payload, payload, LoggableActor, debug_println, LOG_ACTORS_ACTIVITY};
+use logging_utils::{
+    LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
+    payload, warning_payload,
+};
 use rand::{Rng, seq::IteratorRandom};
 
-use crate::{
-    components::orchestrator::{Orchestrator},
-    utils::Status,
-};
+use crate::{components::orchestrator::Orchestrator, utils::Status};
 
 impl Orchestrator {
     /// Removes the link between two planets if one of them explodes.
@@ -24,7 +24,12 @@ impl Orchestrator {
         planet_two_pos: usize,
     ) -> Result<(), String> {
         //LOG
-        log_fn_call!(self, "destroy_topology_link()", planet_one_pos, planet_two_pos,);
+        log_fn_call!(
+            self,
+            "destroy_topology_link()",
+            planet_one_pos,
+            planet_two_pos,
+        );
         //LOG
 
         match self.galaxy_topology.write() {
@@ -35,7 +40,7 @@ impl Orchestrator {
                     gtop[planet_two_pos][planet_one_pos] = false;
                     //LOG
                     log_internal_op!(
-                        self, 
+                        self,
                         "action"=>"adj link destroyed",
                         "updated topology"=>format!("{:?}",gtop),
                     );
@@ -121,7 +126,7 @@ impl Orchestrator {
             if count == self.planet_channels.len() {
                 //LOG
                 log_internal_op!(
-                    self, 
+                    self,
                     "action"=>"all planets started",
                     "count"=>count
                 );
@@ -171,7 +176,7 @@ impl Orchestrator {
         self.start_all_planet_ais()?;
         //LOG
         log_internal_op!(
-            self, 
+            self,
             "action"=>"all systems started",
             "status"=>"success"
         );
@@ -189,7 +194,7 @@ impl Orchestrator {
         //TODO
         //LOG
         log_internal_op!(
-            self, 
+            self,
             "action"=>"stop_all requested",
             "status"=>"TODO - not implemented" //TODO change this message
         );
@@ -202,9 +207,7 @@ impl Orchestrator {
         let mut rng = rand::rng();
 
         // Pick a random planet from the HashMap with the choose method
-        let (planet_id, (orch_tx, _expl_tx)) = match
-            self.planet_channels.iter().choose(&mut rng)
-        {
+        let (planet_id, (orch_tx, _expl_tx)) = match self.planet_channels.iter().choose(&mut rng) {
             Some((id, chans)) => (*id, chans.clone()),
             None => return Ok(()), // REVIEW: is this correct or a silent fail?
         };

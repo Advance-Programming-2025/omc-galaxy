@@ -25,6 +25,7 @@ List of possible values of `type_id`:
 4: OneMillionCrabs
 5: Rustrelli
 6: RustyCrab
+7. TheCompilerStrikesBack
 _: Random (one type will be chosen at random from among the possible ones)
 ```
 

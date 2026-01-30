@@ -1,6 +1,9 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType};
+use common_game::components::resource::{
+    BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType,
+    GenericResource, ResourceType,
+};
 use crossbeam_channel::{Receiver, Sender, select};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
@@ -49,7 +52,7 @@ impl Bag {
     }
 
     /// the following methods are the ones to combine resources
-    /// they are all used in order to avoid code duplication
+    ///they are all used in order to avoid code duplication
     fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
         /// Check that the explorer has 2 carbons before taking any
         let carbon_count = self.resources
@@ -544,7 +547,6 @@ pub fn put_complex_resource_in_the_bag(explorer: &mut Explorer, complex_response
 }
 
 /// this function updates the neighbours of the current planet
-// TODO è corretta questa funzione?
 pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
     explorer.state = ExplorerState::Idle;
     for &neighbour in &neighbors {
@@ -627,10 +629,10 @@ impl Explorer {
             return Ok(());
         }
 
-            // every iteration the explorer receives messages from both planet and orchestrator channels,
-            // then it behaves based on the message received, if the message received and the explorer state
-            // do not match together the message is pushed into the corresponding buffer, and it will be read
-            // when the explorer will be in an "Idle" state
+        // every iteration the explorer receives messages from both planet and orchestrator channels,
+        // then it behaves based on the message received, if the message received and the explorer state
+        // do not match together the message is pushed into the corresponding buffer, and it will be read
+        // when the explorer will be in an "Idle" state
         loop {
             select! {
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
@@ -761,6 +763,7 @@ impl Explorer {
                                         self.energy_cells = available_cells;
                                     }
                                     PlanetToExplorer::Stopped => {
+                                        // TODO gestire in base all'ai dell'explorer
                                         self.state = ExplorerState::WaitingToStartExplorerAI;
                                     }
                                 }
@@ -781,6 +784,51 @@ impl Explorer {
                             if self.should_terminate() {
                                 return Ok(())
                             }
+                        }
+                        // otherwise it exits the default branch because it means the explorer has some messages to take care
+                        _ => { continue }
+                    }
+                    match self.state {
+                        // if after managing the buffered messages the explorer is in idle state, it can perform whatever he wants
+                        ExplorerState::Idle => {
+                            // TODO qui va l'AI vera e propria
+                            // flow of AI
+                            // 1) ask for neighbours (every time, they could change)
+                            // 2) ask for resources and combining rules (only if not memorized yet)
+                            // 3) generate/combine resources in order to achieve your explorer goal
+                            // 4) move (do it casually at first just to discover all the topology, then
+                            //    use the topology to visit the graph in some particular order)
+                            // 5) special behaviours for some specific planets (if they have special features)
+                            // 6) repeat
+
+                            // TODO implement the AI flow
+                            // there is a queue (action_queue) from which we pop_front and we push_back the same action
+                            // then the action is executed (through a match that matches all the actions)
+                            // IMPORTANT the AskSupportedResources and AskSupportedCombinations do not have to be pushed back again
+                            // IMPORTANT the Move and GenerateOrCombine should choose in some way where to move or what to generate/combine
+
+                            let action = self.action_queue.pop_front();
+                            if let Some(action) = action {
+                                match action {
+                                    AskNeighbours => {
+
+                                    }
+                                    AskSupportedResources => {
+
+                                    }
+                                    AskSupportedCombinations => {
+
+                                    }
+                                    GenerateOrCombine => {
+                                        // TODO depends on the AI
+                                    }
+                                    Move => {
+                                        // TODO depends on the AI
+                                        // TODO when sending the travelToPlanet request change the next planet id
+                                    }
+                                }
+                            }
+
                         }
                         // otherwise it exits the default branch because it means the explorer has some messages to take care
                         _ => { continue }

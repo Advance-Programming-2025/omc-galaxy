@@ -19,6 +19,7 @@ use rustc_hash::FxHashMap;
 use super::Orchestrator;
 use crate::utils::registry::PlanetType::{
     BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
+    RustyCrab, TheCompilerStrikesBack,
 };
 use crate::{
     GalaxyTopology,
@@ -31,6 +32,7 @@ use crate::{
 
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
 use crate::utils::ExplorerInfo;
+
 
 //Initialization game functions
 impl Orchestrator {
@@ -300,7 +302,8 @@ impl Orchestrator {
         //LOG
 
         //Update HashMaps
-        self.planets_info.insert_status(new_planet.id(), Status::Paused);
+        self.planets_info
+            .insert_status(new_planet.id(), Status::Paused);
         self.planet_channels
             .insert(new_planet.id(), (sender_orchestrator, sender_explorer));
 
@@ -309,7 +312,7 @@ impl Orchestrator {
 
         //LOG
         log_internal_op!(
-            self, 
+            self,
             "action"=>"planet thread started",
             "planet_id"=>id
         );
@@ -363,7 +366,7 @@ impl Orchestrator {
 
         //Update HashMaps
         self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), Some(planet_id)));
-        
+
         log_internal_op!(
             self,
             "action"=>"explorer_status hashmap updated",
@@ -446,7 +449,8 @@ impl Orchestrator {
                         3 => ImmutableCosmicBorrow,
                         4 => OneMillionCrabs,
                         5 => Rustrelli,
-                        6 => Rustrelli,
+                        6 => RustyCrab,
+                        7 => TheCompilerStrikesBack,
                         _ => PlanetType::random(),
                     },
                 ),
@@ -538,7 +542,7 @@ impl Orchestrator {
                 *gtop = new_topology;
 
                 //LOG
-                log_internal_op!(self, "update galaxy_topology" );
+                log_internal_op!(self, "update galaxy_topology");
                 //LOG
 
                 //drops the lock just in case

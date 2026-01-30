@@ -15,6 +15,7 @@ immutable_cosmic_borrow = {git="https://github.com/ImmutableCosmicBorrow/planet.
 one-million-crabs = { git = "https://github.com/Advance-Programming-2025/One_million_crabs.git" }
 rustrelli = {git="https://github.com/Rustrelli/rustrelli.git"}
 rusty-crab = {package = "rusty-crab-ap2025", version = "2.0.0-alpha.1"}
+the-compiler-strikes-back = { git = "https://github.com/TheCompilerStrikesBackAP2025/TheCompilerStrikesBack.git"}
 
 
 crossbeam-channel = "0.5.15"
