@@ -11,7 +11,7 @@ use crate::components::mattia_explorer::buffers::manage_buffer_msg;
 use crate::components::mattia_explorer::handlers::{combine_resource_request, current_planet_request, generate_resource_request, kill_explorer, manage_combine_response, manage_generate_response, manage_supported_combination_response, manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai, start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request};
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::{orch_msg_match_state, planet_msg_match_state, ExplorerState};
-use crate::components::tommy_explorer::bag::Bag;
+use crate::components::mattia_explorer::bag::Bag;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
@@ -26,7 +26,6 @@ use crate::components::mattia_explorer::planet_info::PlanetInfo;
 pub struct Explorer {
     explorer_id: u32,
     planet_id: u32, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
-    next_planet_id: u32, // needed if the travelToPlanet doesn't go well
     orchestrator_channels: (
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
@@ -61,7 +60,6 @@ impl Explorer {
         Self {
             explorer_id,
             planet_id,
-            next_planet_id: planet_id,
             orchestrator_channels: explorer_to_orchestrator_channels,
             planet_channels: explorer_to_planet_channels,
             topology_info: starting_topology_info,
@@ -70,13 +68,27 @@ impl Explorer {
             energy_cells,
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
-            time: 0,
+            time: 1,
         }
     }
 
     // getter function for the id
     pub fn id(&self) -> u32 {
         self.explorer_id
+    }
+    
+    //generic getter for planet_info
+    pub fn get_planet_info(&self, planet_id: ID) -> Option<&PlanetInfo> {
+        self.topology_info.get(&planet_id)
+    }
+    //current planet getter
+    pub fn get_current_planet_info(&self) -> Result<&PlanetInfo, &'static str> {
+        match self.get_planet_info(self.planet_id){
+            Some(info) => Ok(info),
+            None => {
+                Err("Planet not found")
+            }
+        }
     }
 
     // the explorer loop
@@ -213,5 +225,4 @@ impl Explorer {
         }
     }
 }
-
 

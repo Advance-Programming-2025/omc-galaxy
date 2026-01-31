@@ -1,7 +1,7 @@
 use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{AIPartner, BasicResource, BasicResourceType, Carbon, ComplexResource, ComplexResourceRequest, ComplexResourceType, Diamond, Dolphin, GenericResource, Hydrogen, Life, Oxygen, ResourceType, Robot, Silicon, Water};
 
-struct Bag {
+pub(crate) struct Bag {
     oxygen: Vec<Oxygen>,
     hydrogen: Vec<Hydrogen>,
     carbon: Vec<Carbon>,
@@ -16,7 +16,7 @@ struct Bag {
 
 impl Bag {
     // creates an empty bag
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             oxygen: vec![],
             hydrogen: vec![],
@@ -84,6 +84,24 @@ impl Bag {
             ResourceType::Complex(ComplexResourceType::Robot) => !self.robot.is_empty(),
             ResourceType::Complex(ComplexResourceType::Dolphin) => !self.dolphin.is_empty(),
             ResourceType::Complex(ComplexResourceType::AIPartner) => !self.ai_partner.is_empty(),
+        }
+    }
+
+    //tells the number of resource of a certain type
+    pub fn count(&self, ty:ResourceType) -> usize {
+        match ty {
+            //basic
+            ResourceType::Basic(BasicResourceType::Oxygen) => self.oxygen.len(),
+            ResourceType::Basic(BasicResourceType::Hydrogen) => self.hydrogen.len(),
+            ResourceType::Basic(BasicResourceType::Carbon) => self.carbon.len(),
+            ResourceType::Basic(BasicResourceType::Silicon) => self.silicon.len(),
+            //complex
+            ResourceType::Complex(ComplexResourceType::Diamond) => self.diamond.len(),
+            ResourceType::Complex(ComplexResourceType::Water) => self.water.len(),
+            ResourceType::Complex(ComplexResourceType::Life) => self.life.len(),
+            ResourceType::Complex(ComplexResourceType::Robot) => self.robot.len(),
+            ResourceType::Complex(ComplexResourceType::Dolphin) => self.dolphin.len(),
+            ResourceType::Complex(ComplexResourceType::AIPartner) => self.ai_partner.len(),
         }
     }
 

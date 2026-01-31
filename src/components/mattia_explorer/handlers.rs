@@ -98,17 +98,20 @@ pub fn move_to_planet(
 ) -> Result<(), Box<dyn std::error::Error>> {
     explorer.state = ExplorerState::Idle;
     match sender_to_new_planet {
+        //in case the planet dies there are 2 cases:
+        // the orchestrator refuses the move operation
+        // the orchestrator kills also the explorer if it has already accepted the move
         Some(sender) => {
             explorer.planet_channels.1 = sender;
-            explorer.planet_id = planet_id; //todo rimuovere next_planet_id
+            explorer.planet_id = planet_id;
             println!("[EXPLORER DEBUG] Sender channel set correctly");
             //todo logs
             Ok(())
         }
-        None => { //the explorer cannot move
+        None => { //the explorer cannot move but it is not a problem
             println!("[EXPLORER DEBUG] Sender channel is None.");
             //todo logs
-            Err("Sender channel is None.".into())
+            Ok(())
         }
     }
 }
