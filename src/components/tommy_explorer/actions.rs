@@ -6,6 +6,7 @@ pub enum ExplorerAction {
     AskNeighbours,
     AskSupportedResources,
     AskSupportedCombinations,
+    AskFreeCells,
     GenerateOrCombine,
     Move,
 }
@@ -15,6 +16,7 @@ pub fn initialize_action_flow() -> VecDeque<ExplorerAction> {
     let mut res = VecDeque::new();
     res.push_back(ExplorerAction::Move);
     res.push_back(ExplorerAction::GenerateOrCombine);
+    res.push_back(ExplorerAction::AskFreeCells);
     res.push_back(ExplorerAction::AskSupportedCombinations);
     res.push_back(ExplorerAction::AskSupportedResources);
     res.push_back(ExplorerAction::AskNeighbours);
@@ -72,5 +74,32 @@ impl ActionQueue {
 impl Default for ActionQueue {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub struct MoveQueue {
+    move_queue: VecDeque<u32>,
+}
+
+impl MoveQueue {
+    pub fn new() -> Self {
+        MoveQueue {
+            move_queue: VecDeque::new(),
+        }
+    }
+    pub fn next_move(&mut self) -> Option<u32> {
+        self.move_queue.pop_front()
+    }
+    pub fn push_back(&mut self, x: u32) {
+        self.move_queue.push_back(x);
+    }
+    pub fn push_path(&mut self, path: VecDeque<u32>) {
+        self.move_queue = path;
+    }
+    pub fn is_empty(&self) -> bool {
+        self.move_queue.is_empty()
+    }
+    pub fn clear(&mut self) {
+        self.move_queue.clear();
     }
 }
