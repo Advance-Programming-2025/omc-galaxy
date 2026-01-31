@@ -12,13 +12,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/components/tommy_explorer/explorer_ai.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/actions.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/actions.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/core.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/core.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/handlers/orchestrator.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/handlers/orchestrator.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/topology.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/topology.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -143,7 +143,7 @@ impl ResourceNeeds {
     }
 }
 pub struct ai_data{
-    global_sunray_rate: f32,
+    global_sunray_rate: f32, //todo i don't think these 2 values are useful
     global_asteroid_rate: f32,
     resource_needs: ResourceNeeds,
 }
@@ -200,7 +200,7 @@ fn score_basic_resource_production(
         * (1.0 / resource_count as f32)
         * (1.0 - (1.0 / energy_cells as f32))
         * (if planet_info.charge_rate > 0f32 { 1.0 } else { 0.8 })
-        * reliability;
+        * (reliability*0.2 +0.8); //in this case the reliability on the information about the energy cells it isn't very important
 
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
@@ -222,7 +222,7 @@ fn score_complex_resource_production(
         * (1.0 / resource_count as f32)
         * (1.0 - (1.0 / energy_cells as f32))
         * (if planet_info.charge_rate > 0f32 { 1.0 } else { 0.8 })
-        * reliability;
+        * (reliability*0.2 +0.8); //in this case the reliability on the information about the energy cells it isn't very important
 
     // can_craft ora viene chiamato direttamente da explorer.bag
     let (_, _, has_a, _, has_b) = explorer.bag.can_craft(resource_type);
@@ -241,10 +241,13 @@ fn score_complex_resource_production(
 }
 
 
-fn calculate_safety_score(planet_info: &PlanetInfo, explorer: &Explorer) -> f32{
+fn calculate_safety_score(explorer: &mut Explorer) -> Result<f32, &'static str>{
+    let explorer_time=explorer.time.clone();
+    let planet_info = explorer.get_current_planet_info_mut()?;
     let sustainability = if planet_info.charge_rate>0f32{1.0}else{0.5};
     let physical_safety = 1.0 - (1.0 / planet_info.energy_cells.max(1) as f32);
-
+    //calculating reliability of the topology data
+    let neighbors_reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer_time);
     // Bonus for the connectivity
     let escape_factor = match planet_info.neighbors.as_ref() {
         None => {0.0}
@@ -257,10 +260,154 @@ fn calculate_safety_score(planet_info: &PlanetInfo, explorer: &Explorer) -> f32{
             }
         }
     };
+    let pessimistic_minimum = 0.2;
+    let adjusted_escape_factor = (escape_factor * neighbors_reliability)
+        + (pessimistic_minimum * (1.0 - neighbors_reliability));
+    let rocket=calculate_rocket_probability(planet_info)?;
+    let mut rng = rand::rng();
+    let noise_factor: f32 = rng.random_range(0.95..=1.05);
+    let safety_score= (sustainability * physical_safety * adjusted_escape_factor*rocket*noise_factor).clamp(0.0, 1.0);
+    planet_info.safety_score=safety_score;
+    Ok(safety_score)
+}
 
-    (sustainability * physical_safety * escape_factor).clamp(0.0, 1.0)
+fn update_planet_safety(explorer: &mut Explorer, planet_id: ID) -> Result<f32, &'static str> {
+    let explorer_time = explorer.time;
+    // Recuperiamo le info del pianeta specifico
+    let planet_info = match explorer.get_planet_info_mut(planet_id){
+        Some(planet_info) => planet_info,
+        None => {Err("Planet not found")?}
+    };
+
+    let sustainability = if planet_info.charge_rate > 0.0 { 1.0 } else { 0.5 };
+    let physical_safety = 1.0 - (1.0 / planet_info.energy_cells.max(1) as f32);
+
+    // Affidabilità dei dati basata su quando è stata fatta l'ultima survey
+    let neighbors_reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer_time);
+
+    let escape_factor = match planet_info.neighbors.as_ref() {
+        None => 0.0,
+        Some(neighbours) => match neighbours.len() {
+            0 => 0.0,
+            1 => 0.4,
+            2 => 0.8,
+            _ => 1.0,
+        },
+    };
+
+    let pessimistic_minimum = 0.2;
+    let adjusted_escape_factor = (escape_factor * neighbors_reliability)
+        + (pessimistic_minimum * (1.0 - neighbors_reliability));
+
+    let rocket = calculate_rocket_probability(planet_info)?;
+
+    // Aggiorniamo il campo interno per riferimenti futuri
+    let safety_score = (sustainability * physical_safety * adjusted_escape_factor * rocket).clamp(0.0, 1.0);
+    planet_info.safety_score = safety_score;
+
+    Ok(safety_score)
 }
 
 fn calculate_rocket_probability(planet_info: &PlanetInfo) -> Result<f32, &'static str> {
-todo!()
+    match (&planet_info.basic_resources, &planet_info.complex_resources){
+        //this should not happen
+        (None,_)=>{
+            Err("planet_info.basic_resources are None")
+        }
+        (_, None)=>{
+            Err("planet_info.complex_resources are None")
+        }
+        (Some(basic_resources),Some(complex_resources)) => {
+            let comp_len= complex_resources.len();
+            let base_len=basic_resources.len();
+            if comp_len >1{
+                //in this case the planet type is C
+                Ok(1.0)
+            }
+            else if comp_len == 1{
+                //in this case the planet could be also C, but B is more likely
+                Ok(2.0)
+            }
+            else if base_len >1{
+                //in this case the planet type is D
+                Ok(2.0)
+            }
+            else{
+                //in this case the planet could be D, but A is more likely
+                Ok(1.0)
+            }
+        }
+
+    }
 }
+
+//calculating the utility of updating neighbors
+fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
+    let planet_info = explorer.get_current_planet_info()?;
+    // critic information for navigation
+    // safety score is basically calculated on data eta and number of escape routes
+    let base = ((1.0 - planet_info.safety_score) * 0.9);
+
+    let mut rng = rand::rng();
+    let noise: f32 = rng.random_range(0.95..=1.05);
+    Ok((base * noise).clamp(0.0, 1.0))
+}
+
+// calculating the utility of updating energy cells
+fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
+    let planet_info = explorer.get_current_planet_info()?;
+
+    // data reliability
+    let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time);
+
+    // not as important ad neighbors
+    let base = 0.15 + (1.0 - reliability) * 0.5;
+
+    let mut rng = rand::rng();
+    let noise: f32 = rng.random_range(0.95..=1.05);
+
+    Ok((base * noise).clamp(0.0, 1.0))
+}
+
+
+
+//todo da controllare la seguente funzione (vibe-codata)
+// fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str> {
+// 
+//     let current_info = explorer.get_current_planet_info()?;
+//     let target_info = explorer.get_planet_info(target_id)?;
+// 
+//     // 1. Valutazione della Sicurezza Locale (Immediata)
+//     let safety_factor = target_info.safety_score;
+// 
+//     // 2. Valutazione Strategica (Dijkstra / Prossimità a Zone Safe)
+//     // Qui cerchiamo il percorso più breve verso il pianeta PIÙ sicuro conosciuto.
+//     // Se il target_id ci avvicina a quella zona, riceve un bonus enorme.
+//     let strategic_value = calculate_strategic_proximity(explorer, target_id);
+// 
+//     // 3. Spinta delle Risorse (Opportunità)
+//     // Solo se siamo in condizioni di sicurezza accettabili (> 0.5)
+//     let opportunity = if current_info.safety_score > 0.5 {
+//         calculate_resource_opportunity(explorer, &target_info)
+//     } else {
+//         0.0 // Se siamo in pericolo, non ci importa delle risorse
+//     };
+// 
+//     // 4. Moltiplicatore di Sopravvivenza (Il "Pessimismo")
+//     // Se l'energia attuale è bassa, l'utilità di muoversi verso zone sicure aumenta drasticamente
+//     let energy_ratio = explorer.energy as f32 / explorer.max_energy as f32;
+//     let survival_urgency = (1.0 - energy_ratio).powi(2);
+// 
+//     let base = (safety_factor * 0.4) + (strategic_value * 0.5) + (opportunity * 0.1);
+// 
+//     // Se l'urgenza è alta, ignoriamo l'opportunità e forziamo la sicurezza
+//     let final_score = if survival_urgency > 0.7 {
+//         (safety_factor * 0.7 + strategic_value * 0.3)
+//     } else {
+//         base
+//     };
+// 
+//     let mut rng = rand::rng();
+//     Ok((final_score * rng.random_range(0.95..1.05)).clamp(0.0, 1.0))
+//     
+// }

@@ -39,6 +39,7 @@ pub struct Explorer {
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
     time: u64,
     ai_data: ai_data,
+    current_planet_neighbors_update:bool,
 }
 
 impl Explorer {
@@ -70,6 +71,7 @@ impl Explorer {
             buffer_planet_msg: VecDeque::new(),
             time: 1,
             ai_data: ai_data::new(),
+            current_planet_neighbors_update: false,
         }
     }
 
@@ -82,9 +84,20 @@ impl Explorer {
     pub fn get_planet_info(&self, planet_id: ID) -> Option<&PlanetInfo> {
         self.topology_info.get(&planet_id)
     }
+    pub fn get_planet_info_mut(&mut self, planet_id: ID) -> Option<&mut PlanetInfo> {
+        self.topology_info.get_mut(&planet_id)
+    }
     //current planet getter
     pub fn get_current_planet_info(&self) -> Result<&PlanetInfo, &'static str> {
         match self.get_planet_info(self.planet_id){
+            Some(info) => Ok(info),
+            None => {
+                Err("Planet not found")
+            }
+        }
+    }
+    pub fn get_current_planet_info_mut(&mut self) -> Result<&mut PlanetInfo, &'static str> {
+        match self.get_planet_info_mut(self.planet_id){
             Some(info) => Ok(info),
             None => {
                 Err("Planet not found")

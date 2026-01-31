@@ -131,6 +131,8 @@ pub fn move_to_planet(
             Ok(())
         }
         None => { //the explorer cannot move but it is not a problem
+            //todo absolute priority
+            explorer.current_planet_neighbors_update=true;
             println!("[EXPLORER DEBUG] Sender channel is None.");
             //todo logs
             Ok(())
@@ -332,6 +334,9 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
     //todo logs
     match explorer.topology_info.get_mut(&explorer.planet_id){
         Some(planet_info) => {
+            explorer.current_planet_neighbors_update=false;
+            //todo potrei fare la richiesta direttamente qui
+            //already overriding the neighbors
             planet_info.neighbors = Some(neighbors.into_iter().collect());
             planet_info.timestamp_neighbors=explorer.time;
         }
