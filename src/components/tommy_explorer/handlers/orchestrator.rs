@@ -258,7 +258,7 @@ fn supported_combination_request(explorer: &mut Explorer) {
 }
 
 /// sends the GenerateResourceRequest, waits for the planet response, and if successful puts the resource in the bag
-fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResourceType) {
+pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResourceType) {
     match explorer.send_to_planet(ExplorerToPlanet::GenerateResourceRequest {
         explorer_id: explorer.id(),
         resource: to_generate,
@@ -282,7 +282,7 @@ fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResource
 }
 
 /// sends the CombineResourceRequest, waits for the planet response, and if successful puts the resource in the bag
-fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexResourceType) {
+pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexResourceType) {
     let complex_resource_req = explorer.make_complex_request(to_generate);
 
     match complex_resource_req {

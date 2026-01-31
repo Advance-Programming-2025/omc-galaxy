@@ -6,11 +6,26 @@ use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, Orch
 use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload
 };
-use rand::{Rng, seq::{IndexedRandom, IteratorRandom}};
+use rand::{Rng, seq::IndexedRandom};
 
 use crate::{components::orchestrator::Orchestrator, utils::Status};
 
+/// regulates the chance that the orchestrator decides to do anything
+/// that might change the state of the galaxy (i.e. send either an 
+/// asteroid or a sunray). Ideally this should be pretty high but not 1 
+pub const RANDOM_ACTION_CHANCE: f64 = 0.8;
+
+/// regulates the chance that the orchestrator, when asked to launch
+/// a celestial body, launches either a sunray or an asteroid.
+/// 
+/// A lower setting skews the balance towards sunrays, which makes 
+/// for longer games, while a value over 0.6 is pretty much
+/// intergalactic nuclear war.
+pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.5;
+
 impl Orchestrator {
+
+
     /// Removes the link between two planets if one of them explodes.
     ///
     /// Returns Err if the given indexes are out of bounds, Ok otherwise;
@@ -18,7 +33,7 @@ impl Orchestrator {
     ///
     /// * `planet_one_pos` - Position of the first planet in the matrix. Must be a valid index
     /// * `planet_two_pos` - Position of the second planet in the matrix. Must be a valid index
-    pub(crate) fn destroy_topology_link(
+    pub fn destroy_topology_link(
         &mut self,
         planet_one_pos: usize,
         planet_two_pos: usize,
@@ -155,8 +170,78 @@ impl Orchestrator {
                     );
                     event.emit();
                     //LOG
-                    //TODO handle this result
-                    self.planets_info.update_status(planet_id, Status::Running);
+                    self.planets_info.update_status(planet_id, Status::Running)?;
+                    count += 1;
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
+    /// Stops the AI of every planet.
+    ///
+    /// Goes through every PlanetToOrchestrator channel and sends the `StopPlanetAI`
+    /// message.
+    ///
+    /// Returns Err if any of the communication channels are inaccessible.
+    pub(crate) fn stop_all_planet_ais(&mut self) -> Result<(), String> {
+        //LOG
+        log_fn_call!(self, "stop_all_planet_ais()");
+        //LOG
+
+        for (_id, (from_orch, _)) in &self.planet_channels {
+            from_orch
+                .try_send(OrchestratorToPlanet::StopPlanetAI)
+                .map_err(|_| "Cannot send message to {_id}".to_string())?;
+
+            //LOG
+            log_message!(
+                ActorType::Orchestrator, 0u32,
+                ActorType::Planet, *_id,
+                EventType::MessageOrchestratorToPlanet,
+                "StopPlanetAI";
+                "planet_id"=>_id
+            );
+            //LOG
+        }
+
+        let mut count = 0;
+        //TODO REVIEW is it possible that this loop could block forever the game?
+        loop {
+            if count == self.planet_channels.len() {
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action"=>"all planets stopped",
+                    "count"=>count
+                );
+                //LOG
+                break;
+            }
+            let receive_channel = self
+                .receiver_orch_planet
+                .recv()
+                .map_err(|_| "Cannot receive message from planets".to_string())?;
+            match receive_channel {
+                PlanetToOrchestrator::StopPlanetAIResult { planet_id } => {
+                    debug_println!("Stopped Planet AI: {}", planet_id);
+
+                    //LOG
+                    let event = LogEvent::new(
+                        Some(Participant::new(ActorType::Planet, planet_id)),
+                        Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                        EventType::MessagePlanetToOrchestrator,
+                        LOG_ACTORS_ACTIVITY,
+                        payload!(
+                            "message"=>"StopPlanetAIResult",
+                            "planet_id"=>planet_id,
+                            "status"=>"Paused"
+                        ),
+                    );
+                    event.emit();
+                    //LOG
+                    self.planets_info.update_status(planet_id, Status::Paused)?;
                     count += 1;
                 }
                 _ => {}
@@ -240,8 +325,88 @@ impl Orchestrator {
         Ok(())
     }
 
-    /// Global start function, starts all of the planets' AIs; wrapper on
-    /// [`start_all_planet_ais`](`Self::start_all_planet_ais`).
+    /// Stop the AI of every explorer.
+    ///
+    /// Goes through every OrchestratorToExplorer channel and sends the `StopExplorerAI`
+    ///
+    /// Returns Err if any of the communication channels are inaccessible.
+    pub(crate) fn stop_all_explorer_ais(&mut self) -> Result<(), String> {
+        //LOG
+        log_fn_call!(self, "stop_all_explorer_ais()");
+        //LOG
+
+        for (_id, (from_orch, _)) in &self.explorer_channels {
+            from_orch
+                .try_send(OrchestratorToExplorer::StopExplorerAI)
+                .map_err(|_| format!("Cannot send message to explorer {}", _id))?;
+
+            //LOG
+            log_message!(
+                ActorType::Orchestrator, 0u32,
+                ActorType::Explorer, *_id,
+                EventType::MessageOrchestratorToExplorer,
+                "StopExplorerAI";
+                "explorer_id"=>_id
+            );
+            //LOG
+        }
+
+        //TODO this is probably not needed for the stop function
+        // also check the stop_all_planet_ais func
+        let mut count = 0;
+        loop {
+            if count == self.explorer_channels.len() {
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action"=>"all explorers stopped",
+                    "count"=>count
+                );
+                //LOG
+                break;
+            }
+
+            let receive_channel = self
+                .receiver_orch_explorer
+                .recv()
+                .map_err(|_| "Cannot receive message from explorers".to_string())?;
+
+            match receive_channel {
+                ExplorerToOrchestrator::StopExplorerAIResult { explorer_id } => {
+                    debug_println!("Stopped Explorer AI: {}", explorer_id);
+
+                    //LOG
+                    let event = LogEvent::new(
+                        Some(Participant::new(ActorType::Explorer, explorer_id)),
+                        Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                        EventType::MessageExplorerToOrchestrator,
+                        LOG_ACTORS_ACTIVITY,
+                        payload!(
+                            "message"=>"StoppedExplorerAIResult",
+                            "explorer_id"=>explorer_id,
+                            "status"=>"Paused"
+                        ),
+                    );
+                    event.emit();
+                    //LOG
+
+                    self.explorers_info.insert_status(explorer_id, Status::Paused);
+                    count += 1;
+                }
+                _ => {
+                    // ignores other events
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Global start function, starts all of the planets'
+    /// and explorer's AIs; wrapper on
+    /// [`start_all_planet_ais`](`Self::start_all_planet_ais`)
+    /// and on
+    /// [`start_all_explorer_ais`](`Self::start_all_explorer_ais`).
     ///
     /// Returns Err if any of the planets fail to start.
     pub fn start_all(&mut self) -> Result<(), String> {
@@ -260,29 +425,35 @@ impl Orchestrator {
         Ok(())
     }
 
-    /// Global stop function.
+    /// Global stop function, pauses all of the planets'
+    /// and explorer's AIs; wrapper on
+    /// [`stop_all_planet_ais`](`Self::stop_all_planet_ais`)
+    /// and on
+    /// [`stop_all_explorer_ais`](`Self::stop_all_explorer_ais`).
     ///
-    /// The function is yet to be implemented, and WILL panic no matter what.
-    pub(crate) fn stop_all(&mut self) -> Result<(), String> {
+    /// Returns Err if any of the planets fail to start.
+    pub fn stop_all(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "stop_all()");
         //LOG
-        //TODO
+        self.stop_all_explorer_ais()?;
+        self.stop_all_planet_ais()?;
         //LOG
         log_internal_op!(
             self,
             "action"=>"stop_all requested",
-            "status"=>"TODO - not implemented" //TODO change this message
+            "status"=>"success"
         );
         //LOG
-        todo!();
-        //Ok(())
+        Ok(())
     }
+
 
     pub fn choose_random_action(&mut self) -> Result<(), String> {
         let mut rng = rand::rng();
         let living_things = self.planets_info.get_list_id_alive();
 
+        // get a random ID, from the list of planets that are still alive
         let &rand_id = match living_things.choose(&mut rng) {
             Some(num) => num,
             None => return Ok(()),
@@ -291,18 +462,20 @@ impl Orchestrator {
         
         let mut params: Option<(u32,Sender<OrchestratorToPlanet>)> = None;
 
+        // find the set of channels that correspond to the chosen ID
         for (&id, channels) in self.planet_channels.iter() {
             if id == rand_id {
-                //cloning a sender is not a deep copy, safe
-                params = Some((id, channels.0.clone()));
+                // to_owned is not a deep copy
+                params = Some((id, channels.0.to_owned()));
             }
         }
 
+        // if there is at least one living planet...
         if let Some((id, channel)) = params {
-            // chooses whether to do anything at all (probably will)
-            if rng.random_bool(0.8){
+            // ...choose whether to do anything at all (probably will)
+            if rng.random_bool(RANDOM_ACTION_CHANCE){
                 // chooses between sunray or asteroid
-                if rng.random_bool(0.5) {
+                if rng.random_bool(SUNRAY_ASTEROID_CHANCE) {
                     self.send_asteroid(id, &channel)?;
                 } else {
                     self.send_sunray(id, &channel)?;
@@ -311,5 +484,55 @@ impl Orchestrator {
         }
 
         Ok(())
+    }
+
+
+    // TODO unify this function and the next one in send_celestial_from_gui
+    pub fn send_sunray_from_gui(&mut self, planet_id: u32) -> Result<(),String> {
+        if !self.planets_info.get_list_id_alive().contains(&planet_id) {
+            return Err("Planet is either dead or not valid".to_string())
+        }
+        
+        let x: Option<(u32, Sender<OrchestratorToPlanet>)> = self.planet_channels
+            .iter()
+            .find_map(|(&id, (sender, _))| {
+                if id == planet_id {
+                    Some((id, sender.clone()))
+                } else {
+                    None
+                }
+            });
+
+        match x {
+            Some(y) => {
+                self.send_sunray(y.0, &y.1)
+            }, 
+            None => todo!()
+        }
+        
+    }
+
+    pub fn send_asteroid_from_gui(&mut self, planet_id: u32) -> Result<(),String> {
+        if !self.planets_info.get_list_id_alive().contains(&planet_id) {
+            return Err("Planet is either dead or not valid".to_string())
+        }
+        
+        let x: Option<(u32, Sender<OrchestratorToPlanet>)> = self.planet_channels
+            .iter()
+            .find_map(|(&id, (sender, _))| {
+                if id == planet_id {
+                    Some((id, sender.clone()))
+                } else {
+                    None
+                }
+            });
+
+        match x {
+            Some(y) => {
+                self.send_asteroid(y.0, &y.1)
+            }, 
+            None => todo!()
+        }
+        
     }
 }

@@ -1,12 +1,12 @@
-use std::collections::{VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use crossbeam_channel::{Receiver, Sender, select};
 
-use common_game::components::resource::{ComplexResourceRequest, ComplexResourceType, GenericResource};
+use common_game::components::resource::{BasicResourceType, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType};
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
-
-use super::actions::{ActionQueue, ExplorerAction};
+use crate::components::tommy_explorer::handlers::orchestrator::{combine_resource_request, generate_resource_request};
+use super::actions::{ActionQueue, ExplorerAction, MoveQueue};
 use super::bag::{Bag, BagType};
 use super::state::ExplorerState;
 use super::topology::{PlanetInfo, TopologyManager};
@@ -15,19 +15,20 @@ use super::handlers::{orchestrator, planet};
 /// struct of the explorer
 pub struct Explorer {
     explorer_id: u32,
-    planet_id: u32,
+    pub(crate) planet_id: u32,
     orchestrator_channels: (
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<BagType>>,
     ),
     planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
-    topology: TopologyManager,
+    pub(crate) topology: TopologyManager,
     state: ExplorerState,
-    bag: Bag,
+    pub bag: Bag,
     energy_cells: u32, // of the current planet
     buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
     action_queue: ActionQueue, // actions that the explorer can perform (sorted in the correct order)
+    move_queue: MoveQueue,
 }
 
 impl Explorer {
@@ -54,6 +55,7 @@ impl Explorer {
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
             action_queue: ActionQueue::new(),
+            move_queue: MoveQueue::new(),
         }
     }
 
@@ -285,45 +287,58 @@ impl Explorer {
         if let Some(action) = self.action_queue.next_action() {
             match action {
                 ExplorerAction::AskNeighbours => {
+                    self.action_queue.push_back(action);
                     match self.send_to_orchestrator(ExplorerToOrchestrator::NeighborsRequest { explorer_id: self.explorer_id, current_planet_id: self.planet_id }) {
                         Ok(_) => {
                             // if the sending is successful change the state to WaitingForNeighbours
                             // and push back the action
                             self.set_state(ExplorerState::WaitingForNeighbours);
-                            self.action_queue.push_back(action);
                         }
                         Err(err) => {
-                            self.action_queue.push_front(action);
                             println!("[EXPLORER DEBUG] Error in sending NeighboursRequest: {}", err);
                         }
                     }
                 }
                 ExplorerAction::AskSupportedResources => {
+                    // TODO make an "if not dicevered then ..."
+                    self.action_queue.push_back(action);
                     match self.send_to_planet(ExplorerToPlanet::SupportedResourceRequest { explorer_id: self.explorer_id }) {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedResources
                             self.set_state(ExplorerState::WaitingForSupportedResources);
                         }
                         Err(err) => {
-                            self.action_queue.push_front(action);
+                            // TODO
                         }
                     }
                 }
                 ExplorerAction::AskSupportedCombinations => {
+                    // TODO make an "if not dicevered then ..."
+                    self.action_queue.push_back(action);
                     match self.send_to_planet(ExplorerToPlanet::SupportedCombinationRequest { explorer_id: self.explorer_id }) {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedCombinations
                             self.set_state(ExplorerState::WaitingForSupportedCombinations);
                         }
                         Err(err) => {
-                            self.action_queue.push_front(action);
+                            // TODO
+                        }
+                    }
+                }
+                ExplorerAction::AskFreeCells => {
+                    self.action_queue.push_back(action);
+                    match self.send_to_planet(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id: self.explorer_id }) {
+                        Ok(_) => {
+                            self.set_state(ExplorerState::WaitingForAvailableEnergyCells);
+                        }
+                        Err(err) => {
+                            // TODO
                         }
                     }
                 }
                 ExplorerAction::GenerateOrCombine => {
                     // TODO: Implement generation/combination logic based on AI strategy
                     // IMPORTANT continue to generate/combine till the explorer can
-                    self.action_queue.push_back(action);
 
                     // TODO decision on what to generate/combine
                     // if the topology isn't fully discovered simply generate/combine the useful resources
@@ -333,10 +348,57 @@ impl Explorer {
                     // maybe check what resources can be obtained from other planets in a possible path
                     // choose the resource based on the things written above
                     // generate/combine it
+
+                    self.action_queue.push_back(action);
+
+                    if self.energy_cells > 0 {
+                        if let Some(resource) = self.decide_resource_action() {
+                            match resource {
+                                ResourceType::Basic(basic_resource) => {
+                                    match basic_resource {
+                                        BasicResourceType::Oxygen => {
+                                            generate_resource_request(self, BasicResourceType::Oxygen);
+                                        }
+                                        BasicResourceType::Hydrogen => {
+                                            generate_resource_request(self, BasicResourceType::Hydrogen);
+                                        }
+                                        BasicResourceType::Carbon => {
+                                            generate_resource_request(self, BasicResourceType::Carbon);
+                                        }
+                                        BasicResourceType::Silicon => {
+                                            generate_resource_request(self, BasicResourceType::Silicon);
+                                        }
+                                    }
+                                }
+                                ResourceType::Complex(complex_resource) => {
+                                    match complex_resource {
+                                        ComplexResourceType::Diamond => {
+                                            combine_resource_request(self, ComplexResourceType::Diamond);
+                                        }
+                                        ComplexResourceType::Water => {
+                                            combine_resource_request(self, ComplexResourceType::Water);
+                                        }
+                                        ComplexResourceType::Life => {
+                                            combine_resource_request(self, ComplexResourceType::Life);
+                                        }
+                                        ComplexResourceType::Robot => {
+                                            combine_resource_request(self, ComplexResourceType::Robot);
+                                        }
+                                        ComplexResourceType::Dolphin => {
+                                            combine_resource_request(self, ComplexResourceType::Dolphin);
+                                        }
+                                        ComplexResourceType::AIPartner => {
+                                            combine_resource_request(self, ComplexResourceType::AIPartner);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                 }
                 ExplorerAction::Move => {
                     // TODO: Implement movement logic based on AI strategy
-                    self.action_queue.push_back(action);
 
                     // TODO decision on where to move
                     // 1st case -> the topology isn't fully discovered yet
@@ -348,8 +410,248 @@ impl Explorer {
                     // maybe check what resources can be obtained from other planets in a possible path
                     // choose the best path to achieve the goal
 
+                    // TODO this is the exploring-phase
+                    self.action_queue.push_back(action);
+
+                    // obtain the needed resource
+                    let resource = self.get_production_priority();
+                    if let Some(path) = self.topology.find_path_to_nearest_frontier(self.planet_id) {
+                        // if the topology isn't fully discovered yet, continue exploring
+                        self.move_queue.push_path(path)
+                    } else if let Some(path) = self.topology.find_path_to_resource(self.planet_id, resource){
+                        // else find the best path to reach the resource goal
+                        self.move_queue.push_path(path)
+                    }
+
+                    // if the explorer has to move somewhere send a TravelToPlanetRequest
+                    if let Some(next_planet) = self.move_queue.next_move() {
+                        if self.topology.contains(next_planet) {
+                            match self.send_to_orchestrator(ExplorerToOrchestrator::TravelToPlanetRequest {
+                                explorer_id: self.explorer_id,
+                                current_planet_id: self.planet_id,
+                                dst_planet_id: next_planet }) {
+                                Ok(_) => {
+                                    self.set_state(ExplorerState::Traveling);
+                                }
+                                Err(_) => {
+                                    self.move_queue.clear()
+                                },
+                            }
+                        } else {
+                            self.move_queue.clear();
+                        }
+                    }
                 }
             }
         }
     }
+
+    /// Checks the bag of the explorer and finds the needed resource by looking at the
+    /// dependency graph of the resources. The most complex resource needed is returned first.
+    fn get_production_priority(&self) -> ResourceType {
+        let bag = self.bag.to_resource_types();
+
+        if bag.contains(&ResourceType::Complex(ComplexResourceType::Robot)) &&
+            bag.contains(&ResourceType::Complex(ComplexResourceType::Diamond)) {
+            // if the explorer has robot and diamond
+            return ResourceType::Complex(ComplexResourceType::AIPartner);
+        }
+
+        let carbon_count = bag.iter().filter(|r| **r == ResourceType::Basic(BasicResourceType::Carbon)).count();
+        if !bag.contains(&ResourceType::Complex(ComplexResourceType::Diamond)) {
+            if carbon_count >= 2 {
+                // if he has no diamond but at least 2 carbon
+                return ResourceType::Complex(ComplexResourceType::Diamond);
+            }
+            // if he has no diamond and max 1 carbon
+            return ResourceType::Basic(BasicResourceType::Carbon);
+        }
+
+        // if the explorer doesn't have robot
+        if !bag.contains(&ResourceType::Complex(ComplexResourceType::Robot)) {
+            let has_silicon = bag.contains(&ResourceType::Basic(BasicResourceType::Silicon));
+            let has_life = bag.contains(&ResourceType::Complex(ComplexResourceType::Life));
+
+
+            if has_life {
+                return if has_silicon {
+                    // if he has life and silicon
+                    ResourceType::Complex(ComplexResourceType::Robot)
+                } else {
+                    // if he has life and not silicon
+                    ResourceType::Basic(BasicResourceType::Silicon)
+                }
+            }
+
+            // if he has no life
+            let has_water = bag.contains(&ResourceType::Complex(ComplexResourceType::Water));
+            if has_water {
+                return if carbon_count >= 1 {
+                    // if he has water and carbon
+                    ResourceType::Complex(ComplexResourceType::Life)
+                } else {
+                    // if he has water but no carbon
+                    ResourceType::Basic(BasicResourceType::Carbon)
+                }
+            }
+
+            // if he has no water
+            let has_h = bag.contains(&ResourceType::Basic(BasicResourceType::Hydrogen));
+            let has_o = bag.contains(&ResourceType::Basic(BasicResourceType::Oxygen));
+
+            if has_h && has_o {
+                // if he has both hydrogen and oxygen
+                return ResourceType::Complex(ComplexResourceType::Water);
+            }
+            if !has_h {
+                // if he has hydrogen but no oxygen
+                return ResourceType::Basic(BasicResourceType::Hydrogen);
+            }
+            // if he has no hydrogen nor oxygen
+            return ResourceType::Basic(BasicResourceType::Oxygen);
+        }
+
+        // this shouldn't happen (all possible cases should have been taken in consideration)
+        println!("[EXPLORER DEBUG] Something went wrong in the decision of the next needed resource.");
+        ResourceType::Basic(BasicResourceType::Carbon)
+    }
+
+    /// Returns an HashSet containing all the resources needed.
+    pub fn resources_needed(&self) -> HashSet<ResourceType> {
+        let bag = self.bag.to_resource_types();
+        let mut res = HashSet::new();
+
+        if bag.contains(&ResourceType::Complex(ComplexResourceType::Robot)) &&
+            bag.contains(&ResourceType::Complex(ComplexResourceType::Diamond)) {
+            // if the explorer has robot and diamond
+            res.insert(ResourceType::Complex(ComplexResourceType::AIPartner));
+        }
+
+        let carbon_count = bag.iter().filter(|r| **r == ResourceType::Basic(BasicResourceType::Carbon)).count();
+        if !bag.contains(&ResourceType::Complex(ComplexResourceType::Diamond)) {
+            if carbon_count >= 2 {
+                // if he has no diamond but at least 2 carbon
+                res.insert(ResourceType::Complex(ComplexResourceType::Diamond));
+            }
+            // if he has no diamond and max 1 carbon
+            res.insert(ResourceType::Basic(BasicResourceType::Carbon));
+        }
+
+        // if the explorer doesn't have robot
+        if !bag.contains(&ResourceType::Complex(ComplexResourceType::Robot)) {
+            let has_silicon = bag.contains(&ResourceType::Basic(BasicResourceType::Silicon));
+            let has_life = bag.contains(&ResourceType::Complex(ComplexResourceType::Life));
+
+
+            if has_life {
+                if has_silicon {
+                    // if he has life and silicon
+                    res.insert(ResourceType::Complex(ComplexResourceType::Robot));
+                } else {
+                    // if he has life and not silicon
+                    res.insert(ResourceType::Basic(BasicResourceType::Silicon));
+                }
+            }
+
+            // if he has no life
+            let has_water = bag.contains(&ResourceType::Complex(ComplexResourceType::Water));
+            if has_water {
+                if carbon_count >= 1 {
+                    // if he has water and carbon
+                    res.insert(ResourceType::Complex(ComplexResourceType::Life));
+                } else {
+                    // if he has water but no carbon
+                    res.insert(ResourceType::Basic(BasicResourceType::Carbon));
+                }
+            }
+
+            // if he has no water
+            let has_h = bag.contains(&ResourceType::Basic(BasicResourceType::Hydrogen));
+            let has_o = bag.contains(&ResourceType::Basic(BasicResourceType::Oxygen));
+
+            if has_h && has_o {
+                // if he has both hydrogen and oxygen
+                res.insert(ResourceType::Complex(ComplexResourceType::Water));
+            }
+            if !has_h {
+                // if he has hydrogen but no oxygen
+                res.insert(ResourceType::Basic(BasicResourceType::Hydrogen));
+            }
+            // if he has no hydrogen nor oxygen
+            res.insert(ResourceType::Basic(BasicResourceType::Oxygen));
+        }
+
+        res
+    }
+
+    /// Returns the resource to generate/combine based on the needs and the availability of the planet,
+    /// or None if no resource can be crafted.
+    pub fn decide_resource_action(&self) -> Option<ResourceType> {
+        let current_planet_info = self.topology.get(self.planet_id)?;
+        let needed = self.resources_needed();
+
+        // check
+        if let Some(planet_complex) = current_planet_info.get_complex_resources() {
+            // same order of the target for path research
+            let craft_order = [
+                ComplexResourceType::AIPartner,
+                ComplexResourceType::Robot,
+                ComplexResourceType::Diamond,
+                ComplexResourceType::Life,
+                ComplexResourceType::Water,
+            ];
+
+            for complex_ty in craft_order {
+                let res_ty = ResourceType::Complex(complex_ty);
+                // if the planet can craft it and we need it
+                if planet_complex.contains(&complex_ty) && needed.contains(&res_ty) {
+                    // if we can actually craft it
+                    if self.can_actually_craft(complex_ty) {
+                        return Some(res_ty);
+                    }
+                }
+            }
+        }
+
+        // then we check basic resources
+        if let Some(planet_basic) = current_planet_info.get_basic_resources() {
+            for basic_ty in planet_basic {
+                let res_ty = ResourceType::Basic(*basic_ty);
+                if needed.contains(&res_ty) {
+                    return Some(res_ty);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Helper function that checks if the explorer can craft a specific complex resource.
+    fn can_actually_craft(&self, complex_ty: ComplexResourceType) -> bool {
+        let bag = self.bag.to_resource_types();
+        match complex_ty {
+            ComplexResourceType::Water => {
+                bag.contains(&ResourceType::Basic(BasicResourceType::Hydrogen)) &&
+                    bag.contains(&ResourceType::Basic(BasicResourceType::Oxygen))
+            },
+            ComplexResourceType::Life => {
+                bag.contains(&ResourceType::Complex(ComplexResourceType::Water)) &&
+                    bag.contains(&ResourceType::Basic(BasicResourceType::Carbon))
+            },
+            ComplexResourceType::Diamond => {
+                bag.iter().filter(|r| **r == ResourceType::Basic(BasicResourceType::Carbon)).count() >= 2
+            },
+            ComplexResourceType::Robot => {
+                bag.contains(&ResourceType::Basic(BasicResourceType::Silicon)) &&
+                    bag.contains(&ResourceType::Complex(ComplexResourceType::Life))
+            },
+            ComplexResourceType::AIPartner => {
+                bag.contains(&ResourceType::Complex(ComplexResourceType::Robot)) &&
+                    bag.contains(&ResourceType::Complex(ComplexResourceType::Diamond))
+            },
+            _ => false,
+        }
+    }
 }
+
+
