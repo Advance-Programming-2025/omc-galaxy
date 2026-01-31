@@ -15,9 +15,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/bag.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/bag.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/planet_info.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/planet_info.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -116,7 +113,7 @@
       <workItem from="1769513365426" duration="14437000" />
       <workItem from="1769592415580" duration="4986000" />
       <workItem from="1769673992782" duration="6843000" />
-      <workItem from="1769852118224" duration="9690000" />
+      <workItem from="1769852118224" duration="11417000" />
     </task>
     <servers />
   </component>

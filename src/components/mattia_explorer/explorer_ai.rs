@@ -86,6 +86,24 @@ fn calculate_time_decay(planet_timestamp: u64, current_time: u64) -> f32 {
     }
 }
 
+pub fn calc_utility(ai_action: AIAction, ai_data: & mut ai_data, explorer: &mut Explorer) -> Result<f32, &'static str> {
+    match ai_action{
+        AIAction::ProduceResource(resource_type) => {
+            let planet_info=explorer.get_current_planet_info()?;
+            Ok(score_basic_resource_production(
+                explorer,
+                &planet_info,
+                resource_type,
+                ai_data.resource_needs.get(ResourceType::Basic(resource_type)),
+            ))
+        }
+        AIAction::CombineResource(_) => {}
+        AIAction::MoveTo(_) => {}
+        AIAction::SurveyPlanet { .. } => {}
+        AIAction::Wait => {}
+    }
+}
+
 fn score_basic_resource_production(
     explorer: &Explorer,
     planet_info: &PlanetInfo,
@@ -107,20 +125,23 @@ fn score_basic_resource_production(
     (base * noise_factor).clamp(0.0, 1.0)
 }
 
-pub fn calc_utility(ai_action: AIAction, ai_data: & mut ai_data, explorer: &mut Explorer) -> Result<f32, &'static str> {
-    match ai_action{
-        AIAction::ProduceResource(resource_type) => {
-            let planet_info=explorer.get_current_planet_info()?;
-            Ok(score_basic_resource_production(
-                explorer,
-                &planet_info,
-                resource_type,
-                ai_data.resource_needs.get(ResourceType::Basic(resource_type)),
-            ))
-        }
-        AIAction::CombineResource(_) => {}
-        AIAction::MoveTo(_) => {}
-        AIAction::SurveyPlanet { .. } => {}
-        AIAction::Wait => {}
-    }
+fn score_complex_resource_production(
+    explorer: &Explorer,
+    planet_info: &PlanetInfo,
+    resource_type: BasicResourceType,
+    need: f32,
+)->f32{
+    let energy_cells = planet_info.energy_cells.max(1);
+    let resource_count = explorer.bag.count(ResourceType::Basic(resource_type)).max(1);
+    let reliability = calculate_time_decay(planet_info.timestamp, explorer.time);
+    let base = need
+        * (1.0 / resource_count as f32)
+        * (1.0 - (1.0 / energy_cells as f32))
+        * (planet_info.charge_rate / planet_info.discharge_rate.max(0.0001))
+        * reliability;
+
+    let mut rng = rand::rng();
+    let noise_factor: f32 = rng.random_range(0.95..=1.05);
+
+    (base * noise_factor).clamp(0.0, 1.0)
 }

@@ -104,6 +104,33 @@ impl Bag {
             ResourceType::Complex(ComplexResourceType::AIPartner) => self.ai_partner.len(),
         }
     }
+    pub fn can_craft(&self, complex_type: ComplexResourceType) -> bool {
+        match complex_type {
+            ComplexResourceType::Diamond => {
+                self.count(ResourceType::Basic(BasicResourceType::Carbon)) >= 2
+            }
+            ComplexResourceType::Water => {
+                self.contains(ResourceType::Basic(BasicResourceType::Hydrogen)) &&
+                    self.contains(ResourceType::Basic(BasicResourceType::Oxygen))
+            }
+            ComplexResourceType::Life => {
+                self.contains(ResourceType::Complex(ComplexResourceType::Water)) &&
+                    self.contains(ResourceType::Basic(BasicResourceType::Carbon))
+            }
+            ComplexResourceType::Robot => {
+                self.contains(ResourceType::Basic(BasicResourceType::Silicon)) &&
+                    self.contains(ResourceType::Complex(ComplexResourceType::Life))
+            }
+            ComplexResourceType::Dolphin => {
+                self.contains(ResourceType::Complex(ComplexResourceType::Water)) &&
+                    self.contains(ResourceType::Complex(ComplexResourceType::Life))
+            }
+            ComplexResourceType::AIPartner => {
+                self.contains(ResourceType::Complex(ComplexResourceType::Robot)) &&
+                    self.contains(ResourceType::Complex(ComplexResourceType::Diamond))
+            }
+        }
+    }
 
     // returns a BagType containing all the ResourceType in the bag
 
@@ -128,108 +155,81 @@ impl Bag {
     // the following methods are the ones to combine resources
     //they are all used in order to avoid code duplication
     pub fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        // Check that the explorer has 2 carbons before taking any
-        let carbon_count = self.carbon.len();
-
-        if carbon_count < 2 {
-            return Err("Missing resource".to_string());
+        if !self.can_craft(ComplexResourceType::Diamond) {
+            return Err("Missing resources for Diamond".to_string());
         }
 
-        let c1 = self
-            .take_resource(ResourceType::Basic(BasicResourceType::Carbon))
-            .ok_or("Missing resource")?
-            .to_carbon()?;
-
-        let c2 = self
-            .take_resource(ResourceType::Basic(BasicResourceType::Carbon))
-            .ok_or("Missing resource")?
-            .to_carbon()?;
+        let c1 = self.take_resource(ResourceType::Basic(BasicResourceType::Carbon))
+            .unwrap().to_carbon()?;
+        let c2 = self.take_resource(ResourceType::Basic(BasicResourceType::Carbon))
+            .unwrap().to_carbon()?;
 
         Ok(ComplexResourceRequest::Diamond(c1, c2))
     }
+
     pub fn make_water_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.oxygen.is_empty() && self.hydrogen.is_empty(){
-            return Err("Missing resource".to_string());
+        if !self.can_craft(ComplexResourceType::Water) {
+            return Err("Missing resources for Water".to_string());
         }
 
-        let c1 = self
-            .take_resource(ResourceType::Basic(BasicResourceType::Hydrogen))
-            .ok_or("Missing resource")?
-            .to_hydrogen()?;
-        let c2 = self
-            .take_resource(ResourceType::Basic(BasicResourceType::Oxygen))
-            .ok_or("Missing resource")?
-            .to_oxygen()?;
+        let h = self.take_resource(ResourceType::Basic(BasicResourceType::Hydrogen))
+            .unwrap().to_hydrogen()?;
+        let o = self.take_resource(ResourceType::Basic(BasicResourceType::Oxygen))
+            .unwrap().to_oxygen()?;
 
-        Ok(ComplexResourceRequest::Water(c1, c2))
+        Ok(ComplexResourceRequest::Water(h, o))
     }
+
     pub fn make_life_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.water.is_empty() && self.carbon.is_empty()
-        {
-            return Err("Missing resource".to_string());
+        if !self.can_craft(ComplexResourceType::Life) {
+            return Err("Missing resources for Life".to_string());
         }
 
-        let c1 = self
-            .take_resource(ResourceType::Complex(ComplexResourceType::Water))
-            .ok_or("Missing resource")?
-            .to_water()?;
-        let c2 = self
-            .take_resource(ResourceType::Basic(BasicResourceType::Carbon))
-            .ok_or("Missing resource")?
-            .to_carbon()?;
+        let w = self.take_resource(ResourceType::Complex(ComplexResourceType::Water))
+            .unwrap().to_water()?;
+        let c = self.take_resource(ResourceType::Basic(BasicResourceType::Carbon))
+            .unwrap().to_carbon()?;
 
-        Ok(ComplexResourceRequest::Life(c1, c2))
+        Ok(ComplexResourceRequest::Life(w, c))
     }
+
     pub fn make_robot_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.life.is_empty() && self.silicon.is_empty()
-        {
-            return Err("Missing resource".to_string());
+        if !self.can_craft(ComplexResourceType::Robot) {
+            return Err("Missing resources for Robot".to_string());
         }
 
-        let c1 = self
-            .take_resource(ResourceType::Basic(BasicResourceType::Silicon))
-            .ok_or("Missing resource")?
-            .to_silicon()?;
-        let c2 = self
-            .take_resource(ResourceType::Complex(ComplexResourceType::Life))
-            .ok_or("Missing resource")?
-            .to_life()?;
+        let s = self.take_resource(ResourceType::Basic(BasicResourceType::Silicon))
+            .unwrap().to_silicon()?;
+        let l = self.take_resource(ResourceType::Complex(ComplexResourceType::Life))
+            .unwrap().to_life()?;
 
-        Ok(ComplexResourceRequest::Robot(c1, c2))
+        Ok(ComplexResourceRequest::Robot(s, l))
     }
+
     pub fn make_dolphin_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.life.is_empty() && self.water.is_empty()
-        {
-            return Err("Missing resource".to_string());
+        if !self.can_craft(ComplexResourceType::Dolphin) {
+            return Err("Missing resources for Dolphin".to_string());
         }
 
-        let c1 = self
-            .take_resource(ResourceType::Complex(ComplexResourceType::Water))
-            .ok_or("Missing resource")?
-            .to_water()?;
-        let c2 = self
-            .take_resource(ResourceType::Complex(ComplexResourceType::Life))
-            .ok_or("Missing resource")?
-            .to_life()?;
+        let w = self.take_resource(ResourceType::Complex(ComplexResourceType::Water))
+            .unwrap().to_water()?;
+        let l = self.take_resource(ResourceType::Complex(ComplexResourceType::Life))
+            .unwrap().to_life()?;
 
-        Ok(ComplexResourceRequest::Dolphin(c1, c2))
+        Ok(ComplexResourceRequest::Dolphin(w, l))
     }
+
     pub fn make_ai_partner_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if self.diamond.is_empty() && self.robot.is_empty()
-        {
-            return Err("Missing resource".to_string());
+        if !self.can_craft(ComplexResourceType::AIPartner) {
+            return Err("Missing resources for AIPartner".to_string());
         }
 
-        let c1 = self
-            .take_resource(ResourceType::Complex(ComplexResourceType::Robot))
-            .ok_or("Missing resource")?
-            .to_robot()?;
-        let c2 = self
-            .take_resource(ResourceType::Complex(ComplexResourceType::Diamond))
-            .ok_or("Missing resource")?
-            .to_diamond()?;
+        let r = self.take_resource(ResourceType::Complex(ComplexResourceType::Robot))
+            .unwrap().to_robot()?;
+        let d = self.take_resource(ResourceType::Complex(ComplexResourceType::Diamond))
+            .unwrap().to_diamond()?;
 
-        Ok(ComplexResourceRequest::AIPartner(c1, c2))
+        Ok(ComplexResourceRequest::AIPartner(r, d))
     }
 }
 
