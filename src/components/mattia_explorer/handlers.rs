@@ -106,6 +106,28 @@ pub fn move_to_planet(
             explorer.planet_id = planet_id;
             println!("[EXPLORER DEBUG] Sender channel set correctly");
             //todo logs
+            match explorer.topology_info.get(&planet_id) {
+                Some(planet_info) => {
+                    explorer.state=ExplorerState::Surveying {
+                        resources: planet_info.basic_resources.is_none(),
+                        combinations: planet_info.complex_resources.is_none(),
+                        energy_cells:true,
+                        orch_resource:false,
+                        orch_combination:false,
+                    };
+                }
+                None => {
+                    explorer.topology_info.insert(planet_id, PlanetInfo::new(0));
+                    explorer.state=ExplorerState::Surveying {
+                        resources: true,
+                        combinations: true,
+                        energy_cells:true,
+                        orch_resource:false,
+                        orch_combination:false,
+                    };
+                }
+            }
+            gather_info_from_planet(explorer)?;
             Ok(())
         }
         None => { //the explorer cannot move but it is not a problem
@@ -310,7 +332,8 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
     //todo logs
     match explorer.topology_info.get_mut(&explorer.planet_id){
         Some(planet_info) => {
-            planet_info.neighbours = Some(neighbors.into_iter().collect());
+            planet_info.neighbors = Some(neighbors.into_iter().collect());
+            planet_info.timestamp_neighbors=explorer.time;
         }
         None => {
             explorer.topology_info.insert(

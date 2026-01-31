@@ -20,12 +20,13 @@ use crossbeam_channel::{select, Receiver, Sender};
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::SystemTime;
+use crate::components::mattia_explorer::explorer_ai::{ai_data, ResourceNeeds};
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 
 // this is the struct of the explorer
 pub struct Explorer {
-    explorer_id: u32,
-    planet_id: u32, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
+    explorer_id: ID,
+    planet_id: ID, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
     orchestrator_channels: (
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
@@ -34,10 +35,10 @@ pub struct Explorer {
     topology_info: HashMap<ID, PlanetInfo>,
     state: ExplorerState,
     bag: Bag,
-    energy_cells: u32, // of the current planet
     buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
     time: u64,
+    ai_data: ai_data,
 }
 
 impl Explorer {
@@ -65,10 +66,10 @@ impl Explorer {
             topology_info: starting_topology_info,
             state: ExplorerState::WaitingToStartExplorerAI,
             bag: Bag::new(),
-            energy_cells,
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
             time: 1,
+            ai_data: ai_data::new(),
         }
     }
 
@@ -76,7 +77,7 @@ impl Explorer {
     pub fn id(&self) -> u32 {
         self.explorer_id
     }
-    
+
     //generic getter for planet_info
     pub fn get_planet_info(&self, planet_id: ID) -> Option<&PlanetInfo> {
         self.topology_info.get(&planet_id)
@@ -176,7 +177,14 @@ impl Explorer {
                                     PlanetToExplorer::AvailableEnergyCellResponse{ available_cells } => {
                                         match self.state{
                                             ExplorerState::Surveying {resources,combinations,energy_cells:true,orch_resource,orch_combination}=>{
-                                                self.energy_cells = available_cells;
+                                                match self.topology_info.get_mut(&self.explorer_id){
+                                                    Some(planet_info) => {
+                                                        planet_info.update_charge_rate(available_cells, self.time);
+                                                    }
+                                                    None => {
+                                                        //this should not happen
+                                                    }
+                                                }
                                                 if !resources && !combinations{
                                                     self.state = ExplorerState::Idle;
                                                 }

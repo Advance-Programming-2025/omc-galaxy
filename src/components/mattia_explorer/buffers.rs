@@ -77,7 +77,14 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                 PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {
                     match explorer.state{
                         ExplorerState::Surveying {resources,combinations,energy_cells:true,orch_resource,orch_combination}=>{
-                            explorer.energy_cells = available_cells;
+                            match explorer.topology_info.get_mut(&explorer.explorer_id){
+                                Some(planet_info) => {
+                                    planet_info.update_charge_rate(available_cells, explorer.time);
+                                }
+                                None => {
+                                    //this should not happen
+                                }
+                            }
                             if !resources && !combinations{
                                 explorer.state = ExplorerState::Idle;
                             }

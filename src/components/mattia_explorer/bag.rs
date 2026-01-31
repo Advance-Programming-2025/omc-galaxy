@@ -68,7 +68,6 @@ impl Bag {
     }
 
     // tells if a resource is contained in the bag
-    //todo potrebbe non servire
     pub fn contains(&self, ty: ResourceType) -> bool {
         match ty {
             // Basic Resources
@@ -104,35 +103,40 @@ impl Bag {
             ResourceType::Complex(ComplexResourceType::AIPartner) => self.ai_partner.len(),
         }
     }
-    pub fn can_craft(&self, complex_type: ComplexResourceType) -> bool {
+    pub fn can_craft(&self, complex_type: ComplexResourceType) -> (bool, ResourceType, bool, ResourceType, bool) {
         match complex_type {
             ComplexResourceType::Diamond => {
-                self.count(ResourceType::Basic(BasicResourceType::Carbon)) >= 2
+                let res = ResourceType::Basic(BasicResourceType::Carbon);
+                let n = self.count(res);
+                (n>=2,res, n >= 1, res, n >= 2)
             }
             ComplexResourceType::Water => {
-                self.contains(ResourceType::Basic(BasicResourceType::Hydrogen)) &&
-                    self.contains(ResourceType::Basic(BasicResourceType::Oxygen))
+                let r1 = ResourceType::Basic(BasicResourceType::Hydrogen);
+                let r2 = ResourceType::Basic(BasicResourceType::Oxygen);
+                (self.contains(r1) && self.contains(r2),r1, self.contains(r1), r2, self.contains(r2))
             }
             ComplexResourceType::Life => {
-                self.contains(ResourceType::Complex(ComplexResourceType::Water)) &&
-                    self.contains(ResourceType::Basic(BasicResourceType::Carbon))
+                let r1 = ResourceType::Complex(ComplexResourceType::Water);
+                let r2 = ResourceType::Basic(BasicResourceType::Carbon);
+                (self.contains(r1) && self.contains(r2), r1, self.contains(r1), r2, self.contains(r2))
             }
             ComplexResourceType::Robot => {
-                self.contains(ResourceType::Basic(BasicResourceType::Silicon)) &&
-                    self.contains(ResourceType::Complex(ComplexResourceType::Life))
+                let r1 = ResourceType::Basic(BasicResourceType::Silicon);
+                let r2 = ResourceType::Complex(ComplexResourceType::Life);
+                (self.contains(r1) && self.contains(r2), r1, self.contains(r1), r2, self.contains(r2))
             }
             ComplexResourceType::Dolphin => {
-                self.contains(ResourceType::Complex(ComplexResourceType::Water)) &&
-                    self.contains(ResourceType::Complex(ComplexResourceType::Life))
+                let r1 = ResourceType::Complex(ComplexResourceType::Water);
+                let r2 = ResourceType::Complex(ComplexResourceType::Life);
+                (self.contains(r1) && self.contains(r2),r1, self.contains(r1), r2, self.contains(r2))
             }
             ComplexResourceType::AIPartner => {
-                self.contains(ResourceType::Complex(ComplexResourceType::Robot)) &&
-                    self.contains(ResourceType::Complex(ComplexResourceType::Diamond))
+                let r1 = ResourceType::Complex(ComplexResourceType::Robot);
+                let r2 = ResourceType::Complex(ComplexResourceType::Diamond);
+                (self.contains(r1) && self.contains(r2), r1, self.contains(r1), r2, self.contains(r2))
             }
         }
     }
-
-    // returns a BagType containing all the ResourceType in the bag
 
     // this is needed because the bag cannot give his ownership to the orchestrator and cannot be passed as a reference
     pub fn to_resource_types(&self) -> Vec<ResourceType> {
@@ -155,7 +159,7 @@ impl Bag {
     // the following methods are the ones to combine resources
     //they are all used in order to avoid code duplication
     pub fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if !self.can_craft(ComplexResourceType::Diamond) {
+        if !self.can_craft(ComplexResourceType::Diamond).0 {
             return Err("Missing resources for Diamond".to_string());
         }
 
@@ -168,7 +172,7 @@ impl Bag {
     }
 
     pub fn make_water_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if !self.can_craft(ComplexResourceType::Water) {
+        if !self.can_craft(ComplexResourceType::Water).0 {
             return Err("Missing resources for Water".to_string());
         }
 
@@ -181,7 +185,7 @@ impl Bag {
     }
 
     pub fn make_life_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if !self.can_craft(ComplexResourceType::Life) {
+        if !self.can_craft(ComplexResourceType::Life).0 {
             return Err("Missing resources for Life".to_string());
         }
 
@@ -194,7 +198,7 @@ impl Bag {
     }
 
     pub fn make_robot_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if !self.can_craft(ComplexResourceType::Robot) {
+        if !self.can_craft(ComplexResourceType::Robot).0 {
             return Err("Missing resources for Robot".to_string());
         }
 
@@ -207,7 +211,7 @@ impl Bag {
     }
 
     pub fn make_dolphin_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if !self.can_craft(ComplexResourceType::Dolphin) {
+        if !self.can_craft(ComplexResourceType::Dolphin).0 {
             return Err("Missing resources for Dolphin".to_string());
         }
 
@@ -220,7 +224,7 @@ impl Bag {
     }
 
     pub fn make_ai_partner_request(&mut self) -> Result<ComplexResourceRequest, String> {
-        if !self.can_craft(ComplexResourceType::AIPartner) {
+        if !self.can_craft(ComplexResourceType::AIPartner).0 {
             return Err("Missing resources for AIPartner".to_string());
         }
 
