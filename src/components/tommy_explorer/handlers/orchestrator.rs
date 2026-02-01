@@ -5,6 +5,7 @@ use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
+use crate::components::tommy_explorer::actions::ActionQueue;
 use super::planet;
 
 /// Handles all messages from the orchestrator,
@@ -70,6 +71,7 @@ fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         .map_err(|e| format!("Error sending start explorer AI result: {:?}", e))?;
 
     explorer.set_state(ExplorerState::Idle);
+    explorer.manual_mode_off();
     println!("[EXPLORER DEBUG] Start explorer AI result sent correctly.");
     Ok(())
 }
@@ -96,7 +98,8 @@ fn stop_explorer_ai(explorer: &mut Explorer) {
         explorer_id: explorer.id(),
     }) {
         Ok(_) => {
-            explorer.set_state(ExplorerState::WaitingToStartExplorerAI);
+            // explorer.set_state(ExplorerState::WaitingToStartExplorerAI); // TODO rimuovere il waiting to start explorer ai?
+            explorer.manual_mode_on();
             println!("[EXPLORER DEBUG] Stop explorer AI result sent correctly.");
         }
         Err(err) => {
@@ -125,9 +128,12 @@ fn move_to_planet(
     planet_id: u32,
 ) {
     explorer.set_state(ExplorerState::Idle);
-    explorer.action_queue.clear();
     match sender_to_new_planet {
         Some(sender) => {
+
+            explorer.action_queue.clear();
+            explorer.action_queue.reset();
+
             explorer.set_planet_sender(sender);
             explorer.set_planet_id(planet_id);
             println!("[EXPLORER DEBUG] Sender channel set correctly");

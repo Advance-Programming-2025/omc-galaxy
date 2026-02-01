@@ -370,7 +370,8 @@ mod tests {
             let (explorer, _, _, _, _) = create_test_explorer();
             assert_eq!(explorer.id(), 1);
             assert_eq!(explorer.planet_id(), 100);
-            assert_eq!(*explorer.state(), ExplorerState::WaitingToStartExplorerAI);
+            // assert_eq!(*explorer.state(), ExplorerState::WaitingToStartExplorerAI);
+            assert_eq!(*explorer.state(), ExplorerState::Idle);
         }
 
         #[test]
@@ -642,7 +643,8 @@ mod tests {
             let (mut explorer, _, _, _, _) = create_test_explorer();
 
             // Initial state
-            assert_eq!(*explorer.state(), ExplorerState::WaitingToStartExplorerAI);
+            // assert_eq!(*explorer.state(), ExplorerState::WaitingToStartExplorerAI);
+            assert_eq!(*explorer.state(), ExplorerState::Idle);
 
             // Transition to Idle
             explorer.set_state(ExplorerState::Idle);

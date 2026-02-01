@@ -1,4 +1,5 @@
 use common_game::components::resource::{BasicResource, ComplexResource, GenericResource};
+use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::PlanetToExplorer;
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
 
@@ -15,10 +16,20 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
         }
         PlanetToExplorer::GenerateResourceResponse { resource } => {
             put_basic_resource_in_bag(explorer, resource);
+            // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
+            //     ExplorerToOrchestrator::BagContentResponse { 
+            //         explorer_id: explorer.explorer_id, 
+            //         bag_content: explorer.bag.to_resource_types() })
+            //     .unwrap();
             Ok(())
         }
         PlanetToExplorer::CombineResourceResponse { complex_response } => {
             put_complex_resource_in_bag(explorer, complex_response);
+            // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
+            //     ExplorerToOrchestrator::BagContentResponse { 
+            //         explorer_id: explorer.explorer_id, 
+            //         bag_content: explorer.bag.to_resource_types() })
+            //     .unwrap();
             Ok(())
         }
         PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {

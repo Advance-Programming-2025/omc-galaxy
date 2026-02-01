@@ -5,7 +5,7 @@ use common_game::protocols::planet_explorer::PlanetToExplorer;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExplorerState {
     Idle,
-    WaitingToStartExplorerAI,
+    WaitingToStartExplorerAI, // TODO rimuovere? con la manual mode diventa inutile...
     WaitingForNeighbours,
     Traveling,
     GeneratingResource,
