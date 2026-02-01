@@ -478,7 +478,7 @@ impl Orchestrator {
     pub fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "handle_game_messages()");
-        let deadline = Instant::now() + Duration::from_millis(100);
+        let deadline = Instant::now() + Duration::from_millis(10);
         while Instant::now() < deadline {
             select! {
                 recv(self.receiver_orch_planet)->msg=>{

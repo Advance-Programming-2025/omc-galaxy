@@ -63,7 +63,7 @@ impl Game {
                 self.state = GameState::Running;
 
                 //Send the update to UI
-                let update = self.orchestrator.get_game_status()?;
+                // let update = self.orchestrator.get_game_status()?;
                 // let handle_err = self.sender_game_ui.send(GameToUi::GameStatusUpdate { galaxy_topology: update.0, planets_status: update.1, explorer_status: update.2 }).map_err(|_|"Unable to send messages to UI");
 
                 // handle case error

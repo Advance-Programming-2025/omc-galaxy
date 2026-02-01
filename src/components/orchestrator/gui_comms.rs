@@ -42,26 +42,6 @@ impl Orchestrator {
         (edges, planet_num)
     }
 
-    /// Get the game's current state, as present in the orchestrator.
-    ///
-    /// Returns a tuple of 3 atomic references to objects that represent
-    /// the game's state:
-    /// - `GalaxyTopology`, the current structure of the galaxy
-    /// - `PlanetStatus`, the status (Running, Paused, ...) of all planets
-    /// - `ExplorerStatus`, the status (Running, Paused, ...) of all explorers
-    pub(crate) fn get_game_status(
-        &self,
-    ) -> Result<(GalaxyTopology, PlanetInfoMap, ExplorerInfoMap), String> {
-        //LOG
-        log_fn_call!(self, "get_game_status()");
-        //LOG
-        Ok((
-            Arc::clone(&self.galaxy_topology),
-            self.planets_info.clone(),
-            self.explorers_info.clone(),
-        ))
-    }
-
     // Getter functions necessary for Ratatui-gui
 
     pub fn get_planets_info(&self) -> PlanetInfoMap {
@@ -76,6 +56,9 @@ impl Orchestrator {
         //LOG
         let explorer_status = self.explorers_info.clone();
         explorer_status
+    }
+    pub fn get_galaxy_topology(&self)->Vec<Vec<bool>>{
+        self.galaxy_topology.read().unwrap().clone()    
     }
 
     // Bevy stuff
@@ -107,12 +90,5 @@ impl Orchestrator {
         info!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
         self.gui_messages
             .push(OrchestratorEvent::AsteroidSent { planet_id });
-    }
-
-    /// Returns the galaxy lookup function.
-    ///
-    /// Used by the GUI to get every planet's type
-    pub(crate) fn get_galaxy_lookup(&self) -> &FxHashMap<u32, (u32, PlanetType)> {
-        &self.galaxy_lookup
     }
 }
