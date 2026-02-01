@@ -49,9 +49,7 @@ mod tests_actor_management {
     #[test]
     fn test_membership_add_explorer_creates_comms() {
         let mut orch = Orchestrator::new().unwrap();
-        let (tx, _) = crossbeam_channel::unbounded();
-
-        orch.add_explorer(1, 10, 5, tx);
+        orch.add_tommy_explorer(1, 10);
 
         assert!(orch.explorers_info.get(&1).is_some());
         assert_eq!(
