@@ -119,7 +119,7 @@ impl Orchestrator {
         Ok(new_orch)
     }
 
-    fn get_random_planet_id(&self) -> Result<u32, String> {
+    pub fn get_random_planet_id(&self) -> Result<u32, String> {
         //LOG
         log_fn_call!(self, "get_random_planet_id()");
 

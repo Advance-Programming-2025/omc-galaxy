@@ -361,7 +361,7 @@ impl Orchestrator {
         }
 
         //Construct Explorer
-        let new_explorer =TommyExplorer::new(
+        let mut new_explorer =TommyExplorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
@@ -390,8 +390,8 @@ impl Orchestrator {
         );
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
-        thread::spawn(|| -> Result<(), String> {
-            let _ = new_explorer; //TODO implement a run function for explorer to interact with orchestrator
+        thread::spawn(move|| -> Result<(), String> {
+            let handle = new_explorer.run()?; //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
         log_internal_op!(
@@ -433,7 +433,7 @@ impl Orchestrator {
         };
 
         //Construct Explorer
-        let new_explorer =MattiaExplorer::new(
+        let mut new_explorer =MattiaExplorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
@@ -461,8 +461,8 @@ impl Orchestrator {
         );
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
-        thread::spawn(|| -> Result<(), String> {
-            let _ = new_explorer; //TODO implement a run function for explorer to interact with orchestrator
+        thread::spawn(move|| -> Result<(), String> {
+            let _ = new_explorer.run().map_err(|_|"Error run"); //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
         log_internal_op!(
