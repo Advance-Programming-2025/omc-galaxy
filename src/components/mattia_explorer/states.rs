@@ -2,7 +2,7 @@ use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
 use common_game::protocols::planet_explorer::PlanetToExplorer;
 
 // these are the states of the explorer state machine
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum ExplorerState {
     Idle,
     WaitingForNeighbours,

@@ -1,15 +1,14 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::hash::Hash;
-use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, ResourceType};
-use common_game::components::resource::GenericResource::BasicResources;
+use crate::components::mattia_explorer::helpers::gather_info_from_planet;
+use crate::components::mattia_explorer::planet_info::PlanetInfo;
+use crate::components::mattia_explorer::states::ExplorerState;
+use crate::components::mattia_explorer::Explorer;
+use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
 use rand::Rng;
-use crate::components::mattia_explorer::{Explorer, Bag};
-use crate::components::mattia_explorer::helpers::gather_info_from_planet;
-use crate::components::mattia_explorer::planet_info::PlanetInfo;
-use crate::components::mattia_explorer::states::ExplorerState;
+use std::collections::HashMap;
+use std::hash::Hash;
 
 //this value will affect the noise level of utility calculations
 const RANDOMNESS_RANGE: f64 =0.1;
@@ -17,7 +16,7 @@ const RANDOMNESS_RANGE: f64 =0.1;
 const LAMBDA: f32=0.005;
 const PROPAGATION_FACTOR: f32=0.8;
 const SAFETY_TRESHOLD: f32=0.4; //todo update this dynamically
-
+#[derive(Debug)]
 enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
@@ -27,6 +26,7 @@ enum AIActionType {
     Wait,
     RunAway,
 }
+#[derive(Debug)]
 pub struct AIAction{
     pub produce_resource:HashMap<BasicResourceType, f32>, //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
     pub combine_resource:HashMap<ComplexResourceType, f32>,
@@ -66,6 +66,7 @@ impl AIAction{
 
 //this is because just in case i need it but at the moment the ai will not have any
 //benefit from producing any resources
+#[derive(Debug)]
 pub struct ResourceNeeds {
     oxygen: f32,
     carbon: f32,
@@ -78,7 +79,6 @@ pub struct ResourceNeeds {
     ai_partner: f32,
     dolphin:f32
 }
-
 impl ResourceNeeds {
     pub fn new()->Self{
         Self{
@@ -183,6 +183,7 @@ impl ResourceNeeds {
         }
     }
 }
+#[derive(Debug)]
 pub struct ai_data{
     pub global_sunray_rate: f32, //todo i don't think these 2 values are useful
     pub global_asteroid_rate: f32,

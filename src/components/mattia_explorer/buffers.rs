@@ -45,7 +45,7 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                     generate_resource_request(explorer, to_generate, true)?;
                 }
                 OrchestratorToExplorer::CombineResourceRequest { to_generate } => {
-                    combine_resource_request(explorer, to_generate)?;
+                    combine_resource_request(explorer, to_generate, true)?;
                 }
                 OrchestratorToExplorer::BagContentRequest => {
                     // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se

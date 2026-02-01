@@ -1,6 +1,6 @@
 use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{AIPartner, BasicResource, BasicResourceType, Carbon, ComplexResource, ComplexResourceRequest, ComplexResourceType, Diamond, Dolphin, GenericResource, Hydrogen, Life, Oxygen, ResourceType, Robot, Silicon, Water};
-
+#[derive(Debug)]
 pub(crate) struct Bag {
     oxygen: Vec<Oxygen>,
     hydrogen: Vec<Hydrogen>,

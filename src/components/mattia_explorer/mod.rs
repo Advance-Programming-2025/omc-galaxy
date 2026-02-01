@@ -7,21 +7,20 @@ mod helpers;
 mod explorer_ai;
 mod planet_info;
 
+use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
+use crate::components::mattia_explorer::explorer_ai::{ai_core_function, ai_data};
 use crate::components::mattia_explorer::handlers::{combine_resource_request, current_planet_request, generate_resource_request, kill_explorer, manage_combine_response, manage_generate_response, manage_supported_combination_response, manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai, start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request};
+use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::{orch_msg_match_state, planet_msg_match_state, ExplorerState};
-use crate::components::mattia_explorer::bag::Bag;
-use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
+use common_game::components::resource::ResourceType;
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
 use crossbeam_channel::{select, Receiver, Sender};
 use std::cmp::PartialEq;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::time::SystemTime;
-use crate::components::mattia_explorer::explorer_ai::{ai_core_function, ai_data, ResourceNeeds};
-use crate::components::mattia_explorer::planet_info::PlanetInfo;
+use std::collections::{HashMap, VecDeque};
 
 // this is the struct of the explorer
 pub struct Explorer {
@@ -154,7 +153,7 @@ impl Explorer {
                                         generate_resource_request(self, to_generate, true)?;
                                     }
                                     OrchestratorToExplorer::CombineResourceRequest{ to_generate } => {
-                                        combine_resource_request(self, to_generate)?;
+                                        combine_resource_request(self, to_generate, true)?;
                                     }
                                     OrchestratorToExplorer::BagContentRequest => {
                                         // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se
@@ -253,3 +252,33 @@ impl Explorer {
     }
 }
 
+use std::fmt;
+use logging_utils::{get_receiver_id, get_sender_id};
+
+impl fmt::Debug for Explorer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Explorer")
+            .field("explorer_id", &self.explorer_id)
+            .field("planet_id", &self.planet_id)
+            .field("orchestrator_channels", &format!(
+                "(RX: {:x}, TX: {:x})",
+                get_receiver_id(&self.orchestrator_channels.0),
+                get_sender_id(&self.orchestrator_channels.1)
+            ))
+            .field("planet_channels", &format!(
+                "(RX: {:x}, TX: {:x})",
+                get_receiver_id(&self.planet_channels.0),
+                get_sender_id(&self.planet_channels.1)
+            ))
+            .field("topology_info", &self.topology_info)
+            .field("state", &self.state)
+            .field("bag", &self.bag)
+            .field("time", &self.time)
+            .field("current_planet_neighbors_update", &self.current_planet_neighbors_update)
+            .field("manual_mode", &self.manual_mode)
+            // Possiamo omettere i buffer se sono troppo lunghi o includerli normalmente
+            .field("buffer_orchestrator_len", &self.buffer_orchestrator_msg.len())
+            .field("buffer_planet_len", &self.buffer_planet_msg.len())
+            .finish()
+    }
+}

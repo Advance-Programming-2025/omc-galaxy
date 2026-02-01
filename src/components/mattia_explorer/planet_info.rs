@@ -1,9 +1,9 @@
-use std::collections::HashSet;
-use std::time::SystemTime;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::utils::ID;
+use std::collections::HashSet;
 
 // struct that contains some
+#[derive(Debug)]
 pub struct PlanetInfo {
     pub basic_resources: Option<HashSet<BasicResourceType>>,
     pub complex_resources: Option<HashSet<ComplexResourceType>>,
