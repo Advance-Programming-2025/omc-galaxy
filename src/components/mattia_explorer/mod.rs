@@ -106,7 +106,7 @@ impl Explorer {
     }
 
     // the explorer loop
-    pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(&mut self) -> Result<(), String> {
         // every iteration the explorer receives messages from both planet and orchestrator channels,
         // then it behaves based on the message received, if the message received and the explorer state
         // do not match together the message is pushed into the corresponding buffer, and it will be read
@@ -156,7 +156,7 @@ impl Explorer {
                                     }
                                     OrchestratorToExplorer::BagContentRequest => {
                                         // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se
-                                        self.orchestrator_channels.1.send(ExplorerToOrchestrator::BagContentResponse {explorer_id: self.explorer_id, bag_content: self.bag.to_resource_types()})?;
+                                        self.orchestrator_channels.1.send(ExplorerToOrchestrator::BagContentResponse {explorer_id: self.explorer_id, bag_content: self.bag.to_resource_types()}).map_err(|e| e.to_string())?;
                                     }
                                     OrchestratorToExplorer::NeighborsResponse{ neighbors } => {
                                         neighbours_response(self, neighbors);
@@ -168,7 +168,6 @@ impl Explorer {
                         }
                         Err(err) => {
                             //todo logs
-                            println!("[EXPLORER DEBUG] Error in receiving the orchestrator message: {}", err);
                         }
                     }
                 },
@@ -230,20 +229,20 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("[EXPLORER DEBUG] Error in receiving the planet message: {}", err);
+                            //todo logs
                         }
                     }
                 }
                 default => {
                     if !self.buffer_planet_msg.is_empty() || !self.buffer_orchestrator_msg.is_empty() {
-                        manage_buffer_msg(self)?;
+                        manage_buffer_msg(self).map_err(|e| e.to_string())?;
                         //this is because manage_buffer_msg could possibly set the explorer state to killed
                         if self.state==ExplorerState::Killed{
                             return Ok(())
                         }
                     }
                     else if !self.manual_mode{
-                        ai_core_function(self)?;
+                        ai_core_function(self).map_err(|e| e.to_string())?;
                     }
                 }
             }

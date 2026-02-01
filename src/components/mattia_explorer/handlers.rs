@@ -16,7 +16,7 @@ use crate::components::mattia_explorer::states::ExplorerState::Idle;
 
 // this function put the explorer in the condition to receive messages (idle state),
 // it is called when the explorer receives the StartExplorerAI message
-pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     explorer.manual_mode=false;
     log_message!(
@@ -47,14 +47,14 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                     "explorer data"=>format!("{:?}", explorer)
                 )
             ).emit();
-            Err(err.into())
+            Err(err.to_string())
         }
     }
 }
 
 // this function resets the topology known by the explorer and its ai_data,
 // it is called when the explorer receives the ResetExplorerAI message
-pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     explorer.topology_info.clear();
     explorer.topology_info.insert(explorer.planet_id, PlanetInfo::new(0));
@@ -77,25 +77,25 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
         }
         Err(err) => {
             LogEvent::new(
-            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-            Some(Participant::new(ActorType::Orchestrator, 0u32)),
-            EventType::MessageExplorerToOrchestrator,
-            Channel::Error,
-            warning_payload!(
+                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                EventType::MessageExplorerToOrchestrator,
+                Channel::Error,
+                warning_payload!(
                     "ResetExplorerAIResult not sent",
                     err,
                     "reset_explorer_ai()";
                     "explorer data"=>format!("{:?}", explorer)
                 )
             ).emit();
-            Err(err.into())
+            Err(err.to_string())
         }
     }
 }
 
 // this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
 // it is called when the explorer receives the StopExplorerAI message
-pub fn stop_explorer_ai(explorer: &mut Explorer)->Result<(), Box<dyn std::error::Error>> {
+pub fn stop_explorer_ai(explorer: &mut Explorer)->Result<(), String> {
     explorer.manual_mode=true;
     log_message!(
         ActorType::Orchestrator,
@@ -125,13 +125,13 @@ pub fn stop_explorer_ai(explorer: &mut Explorer)->Result<(), Box<dyn std::error:
                     "explorer data"=>format!("{:?}", explorer)
                 )
             ).emit();
-            Err(err.into())
+            Err(err.to_string())
         }
     }
 }
 
 // this function puts the explorer in the Killed state waiting for the thread to be killed
-pub fn kill_explorer(explorer: &mut Explorer) ->Result<(), Box<dyn std::error::Error>> {
+pub fn kill_explorer(explorer: &mut Explorer) ->Result<(), String> {
     explorer.state = ExplorerState::Killed;
     log_message!(
         ActorType::Orchestrator,
@@ -160,7 +160,7 @@ pub fn kill_explorer(explorer: &mut Explorer) ->Result<(), Box<dyn std::error::E
                     "explorer data"=>format!("{:?}", explorer)
                 )
             ).emit();
-            Err(err.into())
+            Err(err.to_string())
         }
     }
 }
@@ -170,7 +170,7 @@ pub fn move_to_planet(
     explorer: &mut Explorer,
     sender_to_new_planet: Option<Sender<ExplorerToPlanet>>,
     planet_id: ID,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     //LOG
     log_message!(
@@ -212,7 +212,7 @@ pub fn move_to_planet(
                 }
             }
             //todo logs
-            gather_info_from_planet(explorer)?;
+            gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
             Ok(())
         }
         None => { //the explorer cannot move but it is not a problem
@@ -233,7 +233,7 @@ pub fn move_to_planet(
 }
 
 // this function sends the current planet id to the orchestrator
-pub fn current_planet_request(explorer: &mut Explorer)->Result<(), Box<dyn std::error::Error>> {
+pub fn current_planet_request(explorer: &mut Explorer)->Result<(), String> {
     explorer.state = ExplorerState::Idle;
     log_message!(
         ActorType::Orchestrator,
@@ -266,7 +266,7 @@ pub fn current_planet_request(explorer: &mut Explorer)->Result<(), Box<dyn std::
                     "explorer data"=>format!("{:?}", explorer)
                 )
             ).emit();
-            Err(err.into())
+            Err(err.to_string())
         }
     }
 }
@@ -274,7 +274,7 @@ pub fn current_planet_request(explorer: &mut Explorer)->Result<(), Box<dyn std::
 // this function sends the basic resources supported by the current planet to the orchestrator
 // (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
 // response and then send it back to the orchestrator)
-pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String> {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -320,7 +320,7 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), Box<dyn
                                 orch_resource: true,
                                 orch_combination: false,
                             };
-                            gather_info_from_planet(explorer)?;
+                            gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
                         }
                         _=>{
                             LogEvent::new(
@@ -354,7 +354,7 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), Box<dyn
                         orch_resource: true,
                         orch_combination: false,
                     };
-                    gather_info_from_planet(explorer)?;
+                    gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
                 }
                 _=>{
                     LogEvent::new(
@@ -381,7 +381,7 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), Box<dyn
 // this function sends the complex resources supported by the current planet to the orchestrator
 // (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
 // response and then send it back to the orchestrator)
-pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), String> {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -429,7 +429,7 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Box<
                                 orch_resource: false,
                                 orch_combination: true,
                             };
-                            gather_info_from_planet(explorer)?;
+                            gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
                         }
                         _=>{
                             LogEvent::new(
@@ -463,7 +463,7 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Box<
                         orch_resource: false,
                         orch_combination: true,
                     };
-                    gather_info_from_planet(explorer)?;
+                    gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
                 }
                 _=>{
                     LogEvent::new(
@@ -489,7 +489,7 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Box<
 
 // this function sends the GenerateResourceRequest, waits for the planet response, and,
 // if successful puts the resource in the bag
-pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResourceType, to_orchestrator:bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResourceType, to_orchestrator:bool) -> Result<(), String> {
     explorer.state = ExplorerState::GeneratingResource {orchestrator_response:to_orchestrator};
     log_message!(
         ActorType::Orchestrator,
@@ -522,7 +522,7 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                     "explorer data"=>format!("{:?}", explorer)
                 )
             ).emit();
-            Err(err.into())
+            Err(err.to_string())
         }
     }
 }
@@ -531,7 +531,7 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
 
 // this function sends the CombineResourceRequest, waits for the planet response, and,
 // if successful puts the resource in the bag
-pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexResourceType, to_orchestrator: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexResourceType, to_orchestrator: bool) -> Result<(), String> {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -583,7 +583,7 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                 )
             ).emit();
 
-            Err(err.into())
+            Err(err.to_string())
         }
     }
 
@@ -631,7 +631,7 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
 pub fn manage_supported_resource_response(
     explorer: &mut Explorer,
     resource_list:HashSet<BasicResourceType>
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), String> {
     log_message!(
         ActorType::Planet,
         explorer.planet_id,
@@ -664,7 +664,7 @@ pub fn manage_supported_resource_response(
                     Ok(_) => {}
                     Err(err) => {
                         LogEvent::new(
-                             Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                             Some(Participant::new(ActorType::Orchestrator, 0u32)),
                             EventType::MessageExplorerToOrchestrator,
                             Channel::Error,
@@ -675,7 +675,7 @@ pub fn manage_supported_resource_response(
                                     "explorer data"=>format!("{:?}", explorer)
                                 )
                         ).emit();
-                        return Err(err.into());
+                        return Err(err.to_string());
                     }
                 }
             }
@@ -715,7 +715,7 @@ pub fn manage_supported_resource_response(
 pub fn manage_supported_combination_response(
     explorer: &mut Explorer,
     combination_list:HashSet<ComplexResourceType>,
-)-> Result<(), Box<dyn std::error::Error>> {
+)-> Result<(), String> {
     log_message!(
         ActorType::Planet,
         explorer.planet_id,
@@ -759,7 +759,7 @@ pub fn manage_supported_combination_response(
                                     "explorer data"=>format!("{:?}", explorer)
                                 )
                         ).emit();
-                        return Err(err.into());
+                        return Err(err.to_string());
                     }
                 }
             }
@@ -799,7 +799,7 @@ pub fn manage_supported_combination_response(
 pub fn manage_generate_response(
     explorer: &mut Explorer,
     resource: Option<BasicResource>,
-)-> Result<(), Box<dyn std::error::Error>> {
+)-> Result<(), String> {
     log_message!(
         ActorType::Planet,
         explorer.planet_id,
@@ -846,7 +846,7 @@ pub fn manage_generate_response(
                                     "explorer data"=>format!("{:?}", explorer)
                                 )
                         ).emit();
-                        return Err(err.into());
+                        return Err(err.to_string());
                     }
                 }
             }
@@ -874,7 +874,7 @@ pub fn manage_generate_response(
 pub fn manage_combine_response(
     explorer: &mut Explorer,
     complex_response:  Result<ComplexResource, (String, GenericResource, GenericResource)>
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<(), String> {
     log_message!(
         ActorType::Planet,
         explorer.planet_id,
@@ -923,7 +923,7 @@ pub fn manage_combine_response(
                                     "explorer data"=>format!("{:?}", explorer)
                                 )
                         ).emit();
-                        return Err(err.into());
+                        return Err(err.to_string());
                     }
                 }
             }
