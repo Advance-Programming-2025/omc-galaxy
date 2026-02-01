@@ -14,7 +14,7 @@
     <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/mod.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -114,7 +114,7 @@
       <workItem from="1769592415580" duration="4986000" />
       <workItem from="1769673992782" duration="6843000" />
       <workItem from="1769848303458" duration="19831000" />
-      <workItem from="1769936151708" duration="5071000" />
+      <workItem from="1769936151708" duration="9038000" />
     </task>
     <servers />
   </component>

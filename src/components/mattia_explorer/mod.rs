@@ -20,7 +20,7 @@ use crossbeam_channel::{select, Receiver, Sender};
 use std::cmp::PartialEq;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::SystemTime;
-use crate::components::mattia_explorer::explorer_ai::{ai_data, ResourceNeeds};
+use crate::components::mattia_explorer::explorer_ai::{ai_core_function, ai_data, ResourceNeeds};
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 
 // this is the struct of the explorer
@@ -112,6 +112,9 @@ impl Explorer {
         // do not match together the message is pushed into the corresponding buffer, and it will be read
         // when the explorer will be in an "Idle" state
         loop {
+            //this way should not panic
+            self.time = self.time.wrapping_add(1);
+
             select! {
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
                     match msg_orchestrator {
@@ -239,7 +242,7 @@ impl Explorer {
                         }
                     }
                     else{
-                        //todo ai
+                        ai_core_function(self)?;
                     }
                 }
             }

@@ -2,15 +2,31 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::Hash;
 use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, ResourceType};
 use common_game::components::resource::GenericResource::BasicResources;
+use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
+use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
 use rand::Rng;
 use crate::components::mattia_explorer::{Explorer, Bag};
+use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
+use crate::components::mattia_explorer::states::ExplorerState;
+
 //this value will affect the noise level of utility calculations
 const RANDOMNESS_RANGE: f64 =0.1;
 //this value will influence how careful is the explorer in considering old values for utility calculations
 const LAMBDA: f32=0.005;
 const PROPAGATION_FACTOR: f32=0.8;
+const SAFETY_TRESHOLD: f32=0.4; //todo update this dynamically
+
+enum AIActionType {
+    Produce(BasicResourceType),
+    Combine(ComplexResourceType),
+    MoveTo(ID),
+    SurveyNeighbors,
+    SurveyEnergy,
+    Wait,
+    RunAway,
+}
 pub struct AIAction{
     pub produce_resource:HashMap<BasicResourceType, f32>, //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
     pub combine_resource:HashMap<ComplexResourceType, f32>,
@@ -473,44 +489,183 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
 }
 
 
-
-//todo da controllare la seguente funzione (vibe-codata)
+// calculating the utility to move to near planet
+// this need the run away factor to be already computed
 fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str> {
+    let target_info = explorer.get_planet_info(target_id).ok_or("Target planet info missing")?;
 
-    let current_info = explorer.get_current_planet_info()?;
-    let target_info = explorer.get_planet_info(target_id)?;
+    let current_safety = explorer.ai_data.ai_action.run_away;
 
-    // 1. Valutazione della Sicurezza Locale (Immediata)
-    let safety_factor = target_info.safety_score;
-
-    // 2. Valutazione Strategica (Dijkstra / Prossimità a Zone Safe)
-    // Qui cerchiamo il percorso più breve verso il pianeta PIÙ sicuro conosciuto.
-    // Se il target_id ci avvicina a quella zona, riceve un bonus enorme.
-    let strategic_value = calculate_strategic_proximity(explorer, target_id);
-
-    // 3. Spinta delle Risorse (Opportunità)
-    // Solo se siamo in condizioni di sicurezza accettabili (> 0.5)
-    let opportunity = if current_info.safety_score > 0.5 {
-        calculate_resource_opportunity(explorer, &target_info)
+    let base_score = if current_safety > SAFETY_TRESHOLD {
+        // if this planet is safe we can explore the neighbors
+        let data_reliability = calculate_time_decay(target_info.timestamp_neighbors, explorer.time);
+        (1.0 - data_reliability)
     } else {
-        0.0 // Se siamo in pericolo, non ci importa delle risorse
+        // if this planet is not safe we have to escape
+        target_info.safety_score
     };
 
-    // 4. Moltiplicatore di Sopravvivenza (Il "Pessimismo")
-    // Se l'energia attuale è bassa, l'utilità di muoversi verso zone sicure aumenta drasticamente
-    let energy_ratio = explorer.energy as f32 / explorer.max_energy as f32;
-    let survival_urgency = (1.0 - energy_ratio).powi(2);
-
-    let base = (safety_factor * 0.4) + (strategic_value * 0.5) + (opportunity * 0.1);
-
-    // Se l'urgenza è alta, ignoriamo l'opportunità e forziamo la sicurezza
-    let final_score = if survival_urgency > 0.7 {
-        (safety_factor * 0.7 + strategic_value * 0.3)
-    } else {
-        base
-    };
-
+    // adding noise
     let mut rng = rand::rng();
-    Ok((final_score * rng.random_range(0.95..1.05)).clamp(0.0, 1.0))
+    let noise: f32 = rng.random_range(0.98..=1.02);
 
+    Ok((base_score * noise).clamp(0.0, 1.0))
+}
+
+fn find_best_action(actions: &AIAction) -> Option<AIActionType> {
+    let mut max_val = -1.0;
+    let mut best = None;
+
+    // runaway
+    if actions.run_away > max_val {
+        max_val = actions.run_away;
+        best = Some(AIActionType::RunAway);
+    }
+
+    // MoveTo
+    for (id, val) in &actions.move_to {
+        if *val > max_val {
+            max_val = *val;
+            best = Some(AIActionType::MoveTo(*id));
+        }
+    }
+
+    // Survey
+    if actions.survey_neighbors > max_val {
+        max_val = actions.survey_neighbors;
+        best = Some(AIActionType::SurveyNeighbors);
+    }
+
+    if actions.survey_energy_cells > max_val {
+        max_val = actions.survey_energy_cells;
+        best = Some(AIActionType::SurveyEnergy);
+    }
+
+    // Production
+    for (res, val) in &actions.produce_resource {
+        if *val > max_val {
+            max_val = *val;
+            best = Some(AIActionType::Produce(*res));
+        }
+    }
+    // combination
+    for (res, val) in &actions.combine_resource {
+        if *val > max_val {
+            max_val = *val;
+            best = Some(AIActionType::Combine(*res));
+        }
+    }
+
+    // Wait
+    if actions.wait > max_val {
+        best = Some(AIActionType::Wait);
+    }
+
+    best
+}
+
+pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+    if explorer.current_planet_neighbors_update{
+        explorer.state=ExplorerState::WaitingForNeighbours;
+        explorer.orchestrator_channels.1.send(
+            ExplorerToOrchestrator::NeighborsRequest {
+                explorer_id: explorer.explorer_id,
+                current_planet_id: explorer.planet_id,
+            }
+        )?;
+    }
+    else{
+        calc_utility(explorer)?;
+        match find_best_action(&explorer.ai_data.ai_action){
+            Some(ai_action) => {
+                match ai_action {
+                    AIActionType::RunAway => {
+                        let mut max:(&ID, &f32)=(&0, &0.0);
+                        for planet in &explorer.ai_data.ai_action.move_to{
+                            if planet.1>max.1{
+                                max=planet
+                            }
+                        }
+                        if *max.0!=0{ //making sure that there is a planet to move to
+                            explorer.state=ExplorerState::Traveling;
+                            explorer.orchestrator_channels.1.send(
+                                ExplorerToOrchestrator::TravelToPlanetRequest {
+                                    explorer_id: explorer.explorer_id,
+                                    current_planet_id: explorer.planet_id,
+                                    dst_planet_id: *max.0,
+                                }
+                            )?;
+                        }
+                    }
+                    AIActionType::MoveTo(id) => {
+                        explorer.state=ExplorerState::Traveling;
+                        explorer.orchestrator_channels.1.send(
+                            ExplorerToOrchestrator::TravelToPlanetRequest {
+                                explorer_id: explorer.explorer_id,
+                                current_planet_id: explorer.planet_id,
+                                dst_planet_id: id,
+                            }
+                        )?;
+                    }
+                    AIActionType::SurveyNeighbors => {
+                        explorer.state=ExplorerState::WaitingForNeighbours;
+                        explorer.orchestrator_channels.1.send(
+                            ExplorerToOrchestrator::NeighborsRequest {
+                                explorer_id: explorer.explorer_id,
+                                current_planet_id: explorer.planet_id,
+                            }
+                        )?;
+                    }
+                    AIActionType::SurveyEnergy => {
+                        explorer.state=ExplorerState::Surveying{
+                            resources: false,
+                            combinations: false,
+                            energy_cells: true,
+                            orch_resource: false,
+                            orch_combination: false,
+                        };
+                        gather_info_from_planet(explorer)?;
+                    }
+                    AIActionType::Produce(res) => {
+                        explorer.state=ExplorerState::GeneratingResource { orchestrator_response: false };
+                        explorer.planet_channels.1.send(
+                            ExplorerToPlanet::GenerateResourceRequest {
+                                explorer_id: 0,
+                                resource: res
+                            }
+                        )?;
+                    }
+                    AIActionType::Combine(res) => {
+                        explorer.state=ExplorerState::GeneratingResource { orchestrator_response: false };
+                        let complex_resource_req = match res {
+                            //provide the requested resources from the bag for each combination
+                            ComplexResourceType::Diamond => explorer.bag.make_diamond_request(),
+                            ComplexResourceType::Water => explorer.bag.make_water_request(),
+                            ComplexResourceType::Life => explorer.bag.make_life_request(),
+                            ComplexResourceType::Robot => explorer.bag.make_robot_request(),
+                            ComplexResourceType::Dolphin => explorer.bag.make_dolphin_request(),
+                            ComplexResourceType::AIPartner => explorer.bag.make_ai_partner_request(),
+                        };
+                        match complex_resource_req {
+                            Ok(complex_resource_req) => {
+                                explorer.planet_channels.1.send(ExplorerToPlanet::CombineResourceRequest {
+                                    explorer_id: explorer.explorer_id,
+                                    msg: complex_resource_req,
+                                })?;
+                            }
+                            Err(err) => {
+                                //todo logs
+                            }
+                        }
+                    }
+                    AIActionType::Wait => {}
+                }
+            }
+            None => {
+                //wait
+            }
+        }
+
+    }
+    Ok(())
 }
