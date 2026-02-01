@@ -22,7 +22,7 @@ pub const RANDOM_ACTION_CHANCE: f64 = 0.8;
 /// A lower setting skews the balance towards sunrays, which makes 
 /// for longer games, while a value over 0.6 is pretty much
 /// intergalactic nuclear war.
-pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.5;
+pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.2;
 
 impl Orchestrator {
 
