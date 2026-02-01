@@ -13,8 +13,17 @@
   <component name="ChangeListManager">
     <list default="true" id="7469996b-a99c-4bc0-a0f4-e3710e196470" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+<<<<<<< Updated upstream
       <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/explorer_ai.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/mattia_explorer/handlers.rs" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/core.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/core.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/explorer_ai.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/explorer_ai.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/handlers/orchestrator.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/handlers/orchestrator.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/handlers/planet.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/handlers/planet.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/state.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/state.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/tommy_explorer/topology.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/tommy_explorer/topology.rs" afterDir="false" />
+>>>>>>> Stashed changes
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,6 +67,11 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+<<<<<<< Updated upstream
+=======
+    &quot;Cargo.Test components::tommy_explorer::test::tests::integration_tests::test_explorer_topology_discovery_flow.executor&quot;: &quot;Run&quot;,
+    &quot;Cargo.Test components::tommy_explorer::test::tests::pathfinding_tests::test_find_path_to_nearest_frontier_fully_discovered.executor&quot;: &quot;Run&quot;,
+>>>>>>> Stashed changes
     &quot;Cargo.Test test::tests.executor&quot;: &quot;Run&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
@@ -80,7 +94,45 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+<<<<<<< Updated upstream
   <component name="RunManager" selected="Cargo.Test test::tests">
+=======
+  <component name="RunManager" selected="Cargo.Test components::tommy_explorer::test::tests::integration_tests::test_explorer_topology_discovery_flow">
+    <configuration name="Test components::tommy_explorer::test::tests::integration_tests::test_explorer_topology_discovery_flow" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="test --package omc-galaxy --lib components::tommy_explorer::test::tests::integration_tests::test_explorer_topology_discovery_flow -- --exact" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Test components::tommy_explorer::test::tests::pathfinding_tests::test_find_path_to_nearest_frontier_fully_discovered" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
+      <option name="command" value="test --package omc-galaxy --lib components::tommy_explorer::test::tests::pathfinding_tests::test_find_path_to_nearest_frontier_fully_discovered -- --exact" />
+      <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <envs />
+      <option name="emulateTerminal" value="true" />
+      <option name="channel" value="DEFAULT" />
+      <option name="requiredFeatures" value="true" />
+      <option name="allFeatures" value="false" />
+      <option name="withSudo" value="false" />
+      <option name="buildTarget" value="REMOTE" />
+      <option name="backtrace" value="SHORT" />
+      <option name="isRedirectInput" value="false" />
+      <option name="redirectInputPath" value="" />
+      <method v="2">
+        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
+      </method>
+    </configuration>
+>>>>>>> Stashed changes
     <configuration name="Test omc-galaxy" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="buildProfileId" value="test" />
       <option name="command" value="test --workspace" />
@@ -118,6 +170,8 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Cargo.Test components::tommy_explorer::test::tests::integration_tests::test_explorer_topology_discovery_flow" />
+        <item itemvalue="Cargo.Test components::tommy_explorer::test::tests::pathfinding_tests::test_find_path_to_nearest_frontier_fully_discovered" />
         <item itemvalue="Cargo.Test test::tests" />
       </list>
     </recent_temporary>
@@ -137,7 +191,7 @@
       <workItem from="1769592415580" duration="4986000" />
       <workItem from="1769673992782" duration="6843000" />
       <workItem from="1769848303458" duration="19831000" />
-      <workItem from="1769933387672" duration="4587000" />
+      <workItem from="1769933387672" duration="6188000" />
     </task>
     <servers />
   </component>

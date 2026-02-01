@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use crossbeam_channel::{Receiver, Sender, select};
 
 use common_game::components::resource::{BasicResourceType, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType};
@@ -29,6 +29,7 @@ pub struct Explorer {
     pub buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
     pub action_queue: ActionQueue, // actions that the explorer can perform (sorted in the correct order)
     pub move_queue: MoveQueue,
+    manual_mode: bool,
 }
 
 impl Explorer {
@@ -49,13 +50,14 @@ impl Explorer {
             orchestrator_channels: explorer_to_orchestrator_channels,
             planet_channels: explorer_to_planet_channels,
             topology: TopologyManager::new(planet_id),
-            state: ExplorerState::WaitingToStartExplorerAI,
+            state: ExplorerState::Idle,
             bag: Bag::new(),
             energy_cells,
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
             action_queue: ActionQueue::new(),
             move_queue: MoveQueue::new(),
+            manual_mode: true,
         }
     }
 
@@ -86,31 +88,41 @@ impl Explorer {
         self.topology.get_mut(planet_id)
     }
 
-    /// gets the bag content as resource types
+    /// Gets the bag content as resource types.
     pub fn get_bag_content(&self) -> BagType {
         self.bag.to_resource_types()
     }
 
     // ==================== Setter Methods ====================
 
-    /// sets the explorer state
+    /// Sets the explorer state.
     pub fn set_state(&mut self, state: ExplorerState) {
         self.state = state;
     }
 
-    /// sets the planet ID
+    /// Sets the planet ID.
     pub fn set_planet_id(&mut self, planet_id: u32) {
         self.planet_id = planet_id;
     }
 
-    /// sets the planet sender channel
+    /// Sets the planet sender channel.
     pub fn set_planet_sender(&mut self, sender: Sender<ExplorerToPlanet>) {
         self.planet_channels.1 = sender;
     }
 
-    /// sets the energy cells
+    /// Sets the energy cells.
     pub fn set_energy_cells(&mut self, cells: u32) {
         self.energy_cells = cells;
+    }
+    
+    /// Sets the manual mode to on.
+    pub fn manual_mode_on(&mut self) {
+        self.manual_mode = true;
+    }
+    
+    /// Sets the manual mode to off.
+    pub fn manual_mode_off(&mut self) {
+        self.manual_mode = false;
     }
 
     // ==================== Communication Methods ====================
@@ -221,6 +233,10 @@ impl Explorer {
                 // other than managing the buffered messages
                 default => {
                     // priority to the buffered messages
+                    if self.manual_mode {
+                        continue;
+                    }
+                    
                     match self.state {
                         ExplorerState::Idle => {
                             self.process_buffered_messages()?;

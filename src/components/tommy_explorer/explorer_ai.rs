@@ -1,7 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use common_game::components::resource::ResourceType;
-use crate::components::tommy_explorer::actions::ExplorerAction;
-use crate::components::tommy_explorer::Explorer;
 use crate::components::tommy_explorer::topology::TopologyManager;
 
 impl TopologyManager {

@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
+use std::collections::{HashMap, HashSet};
+use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::utils::ID;
 
 /// Struct that contains information about a planet.
