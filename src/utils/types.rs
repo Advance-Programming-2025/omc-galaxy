@@ -166,6 +166,10 @@ impl PlanetInfo{
             rocket,
         }
     }
+    
+    pub fn get_free_energy_cells(&self) -> u32{
+        self.energy_cells.iter().filter(|&&x| x).count() as u32
+    }
 }
 
 

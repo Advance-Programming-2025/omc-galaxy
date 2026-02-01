@@ -82,6 +82,7 @@ fn reset_explorer_ai(explorer: &mut Explorer) {
         explorer_id: explorer.id(),
     }) {
         Ok(_) => {
+            explorer.manual_mode_off();
             explorer.clear_topology();
             explorer.set_state(ExplorerState::Idle);
             println!("[EXPLORER DEBUG] Reset explorer AI result sent correctly.");

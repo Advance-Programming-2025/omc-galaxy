@@ -23,7 +23,7 @@ use crate::utils::registry::PlanetType::{
 };
 use crate::{
     GalaxyTopology,
-    components::explorer::Explorer,
+    components::tommy_explorer::Explorer as TommyExplorer,
     utils::{
         Status,
         registry::{PLANET_REGISTRY, PlanetType},
@@ -31,7 +31,7 @@ use crate::{
 };
 
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
-use crate::utils::ExplorerInfo;
+use crate::utils::{ExplorerInfo, PlanetInfo};
 
 
 //Initialization game functions
@@ -329,31 +329,42 @@ impl Orchestrator {
     /// * `planet_id` - id of the planet the explorer will be spawned on
     /// * `free_cells` - the amount of currently free cells in the visiting planet
     /// * `sender_explorer` - pre-existing explorer to planet channel
-    pub(crate) fn add_explorer(
+    pub(crate) fn add_tommy_explorer(
         &mut self,
         explorer_id: u32,
         planet_id: u32,
-        free_cells: u32,
-        sender_explorer: Sender<ExplorerToPlanet>,
     ) {
         log_fn_call!(
             self,
             "add_explorer()",
             explorer_id,
-            planet_id,
-            free_cells;
+            planet_id;
             "sender_explorer"=>"Sender<ExplorerToPlanet>"
         );
         //Create the comms for the new explorer
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
             Orchestrator::init_comms_explorers();
 
+        // get the sender from explorer to planet
+        let sender_explorer = match self.planet_channels.get(&planet_id) {
+            Some((_, explorer_sender)) => Some(explorer_sender.clone()),
+            None => None, // sender does not exist
+        };
+
+        let mut free_cells = 0;
+        match self.planets_info.get_info(planet_id) {
+            None => {}
+            Some(planet_info) => {
+                free_cells = planet_info.charged_cells_count as u32;
+            }
+        }
+
         //Construct Explorer
-        let new_explorer =Explorer::new(
+        let new_explorer =TommyExplorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
-            (receiver_planet, sender_explorer),
+            (receiver_planet, sender_explorer.unwrap()), // TODO this unwrap is unsafe
             free_cells,
         );
 
@@ -476,9 +487,8 @@ impl Orchestrator {
 
 
         ////////////// EXPLORERS INITIALIZATION /////////////////////
-        // self.add_explorer(explorer_id, planet_id, free_cells, sender_explorer);
-        // passare i canali di comunicazione del 
-        // self.send_move_to_planet(explorer_id, planet_id)
+        self.add_tommy_explorer(0, 0);
+        // TODO aggiungere self.add_mattia_explorer(1, 0) o simile
 
 
 
