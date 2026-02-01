@@ -5,7 +5,6 @@ use common_game::protocols::planet_explorer::PlanetToExplorer;
 #[derive(PartialEq)]
 pub enum ExplorerState {
     Idle,
-    WaitingToStartExplorerAI,
     WaitingForNeighbours,
     Traveling,
     GeneratingResource{
@@ -28,7 +27,6 @@ pub enum ExplorerState {
 pub fn orch_msg_match_state(explorer_state: &ExplorerState, msg: &OrchestratorToExplorer) -> bool {
     match (explorer_state, msg) {
         (ExplorerState::Idle, _) => true,
-        (ExplorerState::WaitingToStartExplorerAI, OrchestratorToExplorer::StartExplorerAI) => true,
         (ExplorerState::WaitingForNeighbours, OrchestratorToExplorer::NeighborsResponse { .. }) => true,
         (ExplorerState::Traveling, OrchestratorToExplorer::MoveToPlanet { .. }) => true,
         (_, OrchestratorToExplorer::KillExplorer) => true,
