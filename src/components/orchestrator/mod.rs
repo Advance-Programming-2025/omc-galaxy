@@ -8,10 +8,10 @@ pub mod planets_comms;
 pub mod update;
 
 use crate::components::explorer::BagType;
-use crate::utils::{PlanetStatus, Status, PlanetInfoMap, ExplorerInfoMap};
+use crate::utils::{PlanetInfoMap, ExplorerInfoMap};
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
-use crate::{ExplorerStatus};
+use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use logging_utils::{log_internal_op, log_fn_call};
 use logging_utils::LoggableActor;
 use common_game::components::forge::Forge;
@@ -24,17 +24,15 @@ use crossbeam_channel::{Receiver, Sender, unbounded};
 use common_game::logging::{ActorType};
 use rand::Rng;
 use rustc_hash::FxHashMap;
-use std::collections::BTreeMap;
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::RwLock;
-
 pub enum OrchestratorEvent {
     PlanetDestroyed { planet_id: u32 },
     SunraySent { planet_id: u32 },
     SunrayReceived { planet_id: u32 },
     AsteroidSent { planet_id: u32 },
-    ExplorerMoved { origin: u32, destination: u32 },
+    ExplorerMoved { destination: u32 },
+    BasicResourceGenerated { resource: BasicResourceType },
+    ComplexResourceGenerated { resource: ComplexResourceType }
 }
 
 ///The core of the game.
