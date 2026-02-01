@@ -349,7 +349,7 @@ impl Orchestrator {
             Orchestrator::init_comms_explorers();
 
         //Construct Explorer
-        let new_explorer = Explorer::new(
+        let new_explorer =Explorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
@@ -401,9 +401,12 @@ impl Orchestrator {
     ///
     /// * `path` - path to the galaxy initialization file
     pub fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
+        
         //At the moment are allowed only id from 0 to MAX u32
         log_fn_call!(self, "initialize_galaxy_by_file()", path,);
 
+
+        ////////////// PLANET INITIALIZATION /////////////////////
         //Read the input file and handle it
         let input = fs::read_to_string(path)
             .map_err(|_| format!("Unable to read the input from {path}"))?;
@@ -470,6 +473,14 @@ impl Orchestrator {
         self.galaxy_lookup = new_lookup;
         //Initialize the orchestrator galaxy topology
         self.initialize_galaxy_by_adj_list(adj_list_for_topology)?;
+
+
+        ////////////// EXPLORERS INITIALIZATION /////////////////////
+        // self.add_explorer(explorer_id, planet_id, free_cells, sender_explorer);
+        // passare i canali di comunicazione del 
+        // self.send_move_to_planet(explorer_id, planet_id)
+
+
 
         Ok(())
     }
