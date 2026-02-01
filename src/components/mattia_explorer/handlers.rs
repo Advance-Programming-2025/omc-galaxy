@@ -17,6 +17,7 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
         ExplorerToOrchestrator::StartExplorerAIResult {explorer_id: explorer.explorer_id}) {
         Ok(_) => {
             explorer.state = ExplorerState::Idle;
+            explorer.manual_mode=false;
             println!("[EXPLORER DEBUG] Start explorer AI result sent correctly.");
             //todo logs
             Ok(())
@@ -41,6 +42,7 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
             explorer.topology_info.clear();
             explorer.topology_info.insert(explorer.planet_id, PlanetInfo::new(0));
             explorer.current_planet_neighbors_update=false;
+            explorer.manual_mode=false;
             explorer.ai_data=ai_data::new();
 
             println!("[EXPLORER DEBUG] Reset explorer AI result sent correctly.");
@@ -62,7 +64,7 @@ pub fn stop_explorer_ai(explorer: &mut Explorer)->Result<(), Box<dyn std::error:
         ExplorerToOrchestrator::StopExplorerAIResult {explorer_id: explorer.explorer_id}
     ){
         Ok(_) => {
-            explorer.state = ExplorerState::WaitingToStartExplorerAI;
+            explorer.manual_mode=true;
             println!("[EXPLORER DEBUG] Stop explorer AI result sent correctly.");
             //todo logs
             Ok(())

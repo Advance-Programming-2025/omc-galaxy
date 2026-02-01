@@ -40,6 +40,7 @@ pub struct Explorer {
     time: u64,
     ai_data: ai_data,
     current_planet_neighbors_update:bool,
+    manual_mode: bool,
 }
 
 impl Explorer {
@@ -65,13 +66,14 @@ impl Explorer {
             orchestrator_channels: explorer_to_orchestrator_channels,
             planet_channels: explorer_to_planet_channels,
             topology_info: starting_topology_info,
-            state: ExplorerState::WaitingToStartExplorerAI,
+            state: ExplorerState::Idle,
             bag: Bag::new(),
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
             time: 1,
             ai_data: ai_data::new(),
             current_planet_neighbors_update: false,
+            manual_mode: true,
         }
     }
 
@@ -237,11 +239,12 @@ impl Explorer {
                 default => {
                     if !self.buffer_planet_msg.is_empty() || !self.buffer_orchestrator_msg.is_empty() {
                         manage_buffer_msg(self)?;
+                        //this is because manage_buffer_msg could possibly set the explorer state to killed
                         if self.state==ExplorerState::Killed{
                             return Ok(())
                         }
                     }
-                    else{
+                    else if !self.manual_mode{
                         ai_core_function(self)?;
                     }
                 }
