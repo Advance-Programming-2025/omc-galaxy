@@ -5,6 +5,7 @@ pub mod handlers;
 pub mod state;
 pub mod topology;
 mod explorer_ai;
+mod test;
 
 // re-export commonly used types
 pub use core::Explorer;

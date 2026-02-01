@@ -2,7 +2,7 @@ use common_game::components::resource::{BasicResource, ComplexResource, GenericR
 use common_game::protocols::planet_explorer::PlanetToExplorer;
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
 
-/// handles all messages from the planet
+/// Handles all messages from the planet.
 pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<(), String> {
     match msg {
         PlanetToExplorer::SupportedResourceResponse { resource_list } => {
@@ -32,7 +32,7 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
     }
 }
 
-/// updates the basic resources information in the topology
+/// Updates the basic resources information in the topology.
 fn update_basic_resources(
     explorer: &mut Explorer,
     resource_list: std::collections::HashSet<common_game::components::resource::BasicResourceType>,
@@ -44,7 +44,7 @@ fn update_basic_resources(
     }
 }
 
-/// updates the complex resources information in the topology
+/// Updates the complex resources information in the topology.
 fn update_complex_resources(
     explorer: &mut Explorer,
     combination_list: std::collections::HashSet<common_game::components::resource::ComplexResourceType>,
@@ -56,7 +56,7 @@ fn update_complex_resources(
     }
 }
 
-/// puts a basic resource in the explorer bag
+/// Puts a basic resource in the explorer bag.
 pub fn put_basic_resource_in_bag(explorer: &mut Explorer, resource: Option<BasicResource>) {
     if let Some(resource) = resource {
         let new_resource = match resource {
@@ -69,7 +69,7 @@ pub fn put_basic_resource_in_bag(explorer: &mut Explorer, resource: Option<Basic
     }
 }
 
-/// puts a complex resource in the explorer bag
+/// Puts a complex resource in the explorer bag.
 pub fn put_complex_resource_in_bag(
     explorer: &mut Explorer,
     complex_response: Result<ComplexResource, (String, GenericResource, GenericResource)>,

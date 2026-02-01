@@ -14,21 +14,21 @@ use super::handlers::{orchestrator, planet};
 
 /// struct of the explorer
 pub struct Explorer {
-    explorer_id: u32,
+    pub explorer_id: u32,
     pub(crate) planet_id: u32,
-    orchestrator_channels: (
+    pub orchestrator_channels: (
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<BagType>>,
     ),
-    planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
+    pub planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
     pub(crate) topology: TopologyManager,
-    state: ExplorerState,
+    pub state: ExplorerState,
     pub bag: Bag,
-    energy_cells: u32, // of the current planet
-    buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
-    buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
-    action_queue: ActionQueue, // actions that the explorer can perform (sorted in the correct order)
-    move_queue: MoveQueue,
+    pub energy_cells: u32, // of the current planet
+    pub buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
+    pub buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
+    pub action_queue: ActionQueue, // actions that the explorer can perform (sorted in the correct order)
+    pub move_queue: MoveQueue,
 }
 
 impl Explorer {
@@ -300,7 +300,7 @@ impl Explorer {
                     }
                 }
                 ExplorerAction::AskSupportedResources => {
-                    // TODO make an "if not dicevered then ..."
+                    // TODO make an "if not discovered then ..."
                     self.action_queue.push_back(action);
                     match self.send_to_planet(ExplorerToPlanet::SupportedResourceRequest { explorer_id: self.explorer_id }) {
                         Ok(_) => {
@@ -313,7 +313,7 @@ impl Explorer {
                     }
                 }
                 ExplorerAction::AskSupportedCombinations => {
-                    // TODO make an "if not dicevered then ..."
+                    // TODO make an "if not discovered then ..."
                     self.action_queue.push_back(action);
                     match self.send_to_planet(ExplorerToPlanet::SupportedCombinationRequest { explorer_id: self.explorer_id }) {
                         Ok(_) => {
@@ -431,7 +431,7 @@ impl Explorer {
                                 current_planet_id: self.planet_id,
                                 dst_planet_id: next_planet }) {
                                 Ok(_) => {
-                                    self.set_state(ExplorerState::Traveling);
+                                    self.set_state(ExplorerState::Traveling); // TODO should be Idle, in the case in which the planet is dead and can't respond 
                                 }
                                 Err(_) => {
                                     self.move_queue.clear()

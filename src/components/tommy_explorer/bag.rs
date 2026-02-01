@@ -3,28 +3,29 @@ use common_game::components::resource::{
     ComplexResourceType, GenericResource, ResourceType,
 };
 
-/// the type that is returned to the orchestrator when he asks for the explorer's bag
+/// The type that is returned to the orchestrator when he asks for the explorer's bag,
+/// it's a vector of ResourceType.
 pub type BagType = Vec<ResourceType>;
 
-/// struct of the bag for explorer's internal use
+/// Struct of the bag for explorer's internal use.
 pub struct Bag {
     resources: Vec<GenericResource>,
 }
 
 impl Bag {
-    /// creates an empty bag
+    /// Creates an empty bag.
     pub fn new() -> Self {
         Self {
             resources: Vec::new(),
         }
     }
 
-    /// inserts a resource in the bag
+    /// Inserts a resource in the bag.
     pub fn insert(&mut self, res: GenericResource) {
         self.resources.push(res);
     }
 
-    /// takes a resource from the bag if it exists
+    /// Takes a resource from the bag if it exists.
     pub fn take_resource(&mut self, ty: ResourceType) -> Option<GenericResource> {
         let idx = self.resources
             .iter()
@@ -32,14 +33,14 @@ impl Bag {
         Some(self.resources.remove(idx))
     }
 
-    /// tells if a resource is contained in the bag
+    /// Tells if a resource is contained in the bag.
     pub fn contains(&self, ty: ResourceType) -> bool {
         self.resources
             .iter()
             .any(|r| r.get_type() == ty)
     }
 
-    /// returns a BagType containing all the ResourceType in the bag
+    /// Returns a BagType containing all the ResourceType in the bag.
     // this is needed because the bag cannot give its ownership to the orchestrator
     // and cannot be passed as a reference
     pub fn to_resource_types(&self) -> Vec<ResourceType> {
@@ -49,7 +50,7 @@ impl Bag {
             .collect()
     }
 
-    /// creates a ComplexResourceRequest based on the desired resource type
+    /// Creates a ComplexResourceRequest based on the desired resource type.
     pub fn make_complex_request(
         &mut self,
         resource_type: ComplexResourceType,
@@ -65,7 +66,7 @@ impl Bag {
     }
     
 
-    /// the following methods are the ones to combine resources
+    // The following methods are the ones to combine resources.
     pub(crate) fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
         // checks that the explorer has 2 carbons before taking any
         let carbon_count = self.resources
