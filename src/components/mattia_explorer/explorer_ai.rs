@@ -565,7 +565,9 @@ fn find_best_action(actions: &AIAction) -> Option<AIActionType> {
 }
 
 pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
-    if explorer.current_planet_neighbors_update{
+    let base_resource =explorer.get_current_planet_info()?.basic_resources.is_none();
+    let comp_resource= explorer.get_current_planet_info()?.complex_resources.is_none();
+    if explorer.current_planet_neighbors_update || explorer.get_current_planet_info()?.neighbors.is_none(){
         explorer.state=ExplorerState::WaitingForNeighbours;
         explorer.orchestrator_channels.1.send(
             ExplorerToOrchestrator::NeighborsRequest {
@@ -573,6 +575,16 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                 current_planet_id: explorer.planet_id,
             }
         )?;
+    }
+    else if base_resource||comp_resource {
+        explorer.state=ExplorerState::Surveying {
+            resources: !base_resource,
+            combinations: !comp_resource,
+            energy_cells: false,
+            orch_resource: false,
+            orch_combination: false,
+        };
+        gather_info_from_planet(explorer)?;
     }
     else{
         calc_utility(explorer)?;

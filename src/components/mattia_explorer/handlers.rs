@@ -8,6 +8,7 @@ use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
 use crossbeam_channel::Sender;
 use std::collections::HashSet;
+use crate::components::mattia_explorer::explorer_ai::ai_data;
 
 // this function put the explorer in the condition to receive messages (idle state),
 // it is called when the explorer receives the StartExplorerAI message
@@ -36,9 +37,12 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
         ExplorerToOrchestrator::ResetExplorerAIResult {explorer_id: explorer.explorer_id}
     ){
         Ok(_) => {
-            // TODO reset anche dell'inventario?
-            explorer.topology_info.clear();
             explorer.state = ExplorerState::Idle;
+            explorer.topology_info.clear();
+            explorer.topology_info.insert(explorer.planet_id, PlanetInfo::new(0));
+            explorer.current_planet_neighbors_update=false;
+            explorer.ai_data=ai_data::new();
+
             println!("[EXPLORER DEBUG] Reset explorer AI result sent correctly.");
             //todo logs
             Ok(())
