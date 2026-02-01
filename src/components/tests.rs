@@ -182,7 +182,7 @@ mod tests {
 
             // Type A (Ciuc) - Can build rockets
             let p_id_a = 1;
-            orch.add_planet(p_id_a, PlanetType::Ciuc).unwrap();
+            orch.add_planet(p_id_a, PlanetType::HoustonWeHaveABorrow).unwrap();
 
             // Type B (BlackAdidasShoe) - Cannot build rockets
             let p_id_b = 2;
@@ -207,6 +207,9 @@ mod tests {
             orch.handle_game_messages().unwrap();
             orch.handle_game_messages().unwrap();
 
+            println!("after sunray - planet a status: {:?}", orch.planets_info.get_info(p_id_a));
+            println!("after sunray - planet b status: {:?}", orch.planets_info.get_info(p_id_b));
+
             // Phase 2: Asteroid Attack
             orch.send_asteroid(p_id_a, &channel_a).unwrap();
             orch.send_asteroid(p_id_b, &channel_b).unwrap();
@@ -217,6 +220,9 @@ mod tests {
             // (In a real run, handle_game_messages would do this)
             orch.handle_game_messages().unwrap();
             orch.handle_game_messages().unwrap();
+
+            println!("after sunray - planet a status: {:?}", orch.planets_info.get_info(p_id_a));
+            println!("after sunray - planet b status: {:?}", orch.planets_info.get_info(p_id_b));
 
             // Verification: A should be Alive/Running, B should be Dead
             assert!(orch.planets_info.is_running(&p_id_a));
@@ -268,6 +274,50 @@ mod tests {
                 // some might still be Alive if they didn't finish processing the death.
                 println!("Planet {} status: {:?}", id, info.status);
             }
+        }
+
+        #[test]
+        fn sunray_flood_all_planets() {
+            let mut orch = Orchestrator::new().unwrap();
+            let mut id_counter = 0;
+
+            // Add one of every planet type
+            for p_type in PlanetType::iter() {
+                orch.add_planet(id_counter, p_type).unwrap();
+                id_counter += 1;
+            }
+
+            orch.start_all().unwrap();
+
+            //send 10 sunrays to all planets: they should all be full
+            for _ in 0..40 {
+                for id in 0..id_counter{
+                    orch.send_sunray(id, &orch.planet_channels.get(&id).unwrap().0.clone())
+                    .expect("failed sending sunray");
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+
+            std::thread::sleep(Duration::from_secs(1));
+            orch.handle_game_messages().unwrap();
+
+            //used to see all the charging statuses, even
+            // if a planet fails early
+            let mut failed_counter = 0;
+
+            //check their status after the flood
+            for id in 0..id_counter{
+                let status = orch.planets_info.get_info(id).expect("error getting planet info");
+                let max_charged = status.energy_cells.len();
+                let curr_charged = status.charged_cells_count;
+
+                println!("checking id {}: max of {} and charged to {}", id, max_charged, curr_charged);
+                if max_charged != curr_charged{
+                    failed_counter += 1;
+                }
+            }
+
+            assert!(failed_counter == 0);
         }
     }
 

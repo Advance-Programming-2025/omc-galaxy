@@ -8,7 +8,7 @@ log = "0.4"
 dotenv = "0.15"
 common-game = "3.0.0"
 logging_utils = { path = "logging_utils" }
-black-adidas-shoe = {git="https://github.com/black-adidas-shoe-org/planet.git", package="ara_kees"}
+black_adidas_shoe = {git = "https://github.com/black-adidas-shoe-org/planet.git" }
 ciuc_planet = {git = "https://github.com/Pietro-Calvi/ciuc_planet.git"}
 houston-we-have-a-borrow = {git="https://github.com/Houston-we-have-a-borrow/Planet.git", package="Planet"}
 immutable_cosmic_borrow = {git="https://github.com/ImmutableCosmicBorrow/planet.git"}
