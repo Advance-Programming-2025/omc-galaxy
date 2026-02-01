@@ -24,6 +24,7 @@ use crate::utils::registry::PlanetType::{
 use crate::{
     GalaxyTopology,
     components::tommy_explorer::Explorer as TommyExplorer,
+    components::mattia_explorer::Explorer as MattiaExplorer,
     utils::{
         Status,
         registry::{PLANET_REGISTRY, PlanetType},
@@ -399,6 +400,77 @@ impl Orchestrator {
             "explorer_id"=>explorer_id,
         );
     }
+    /// Add a new explorer to the orchestrator.
+    ///
+    /// Adds a new explorer inside the orchestrator state; it first creates the
+    /// necessary channels and the explorer instance, then adds it to the explorer
+    /// status hashmap and starts the explorer itself.
+    ///
+    /// * `explorer_id` - id of the new explorer
+    /// * `planet_id` - id of the planet the explorer will be spawned on
+    /// * `free_cells` - the amount of currently free cells in the visiting planet
+    /// * `sender_explorer` - pre-existing explorer to planet channel
+    pub(crate) fn add_mattia_explorer(
+        &mut self,
+        explorer_id: u32,
+        planet_id: u32,
+    ) {
+        log_fn_call!(
+            self,
+            "add_explorer()",
+            explorer_id,
+            planet_id;
+            "sender_explorer"=>"Sender<ExplorerToPlanet>"
+        );
+        //Create the comms for the new explorer
+        let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
+            Orchestrator::init_comms_explorers();
+
+        // get the sender from explorer to planet
+        let sender_explorer = match self.planet_channels.get(&planet_id) {
+            Some((_, explorer_sender)) => Some(explorer_sender.clone()),
+            None => None, // sender does not exist
+        };
+
+        //Construct Explorer
+        let new_explorer =MattiaExplorer::new(
+            explorer_id,
+            planet_id,
+            (receiver_orch, self.sender_explorer_orch.clone()),
+            (receiver_planet, sender_explorer.unwrap()), // TODO this unwrap is unsafe
+        );
+
+        log_internal_op!(
+            self,
+            "action"=>"explorer created",
+            "explorer_id"=>explorer_id,
+        );
+
+        //Update HashMaps
+        self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), planet_id));
+
+        log_internal_op!(
+            self,
+            "action"=>"explorer_status hashmap updated",
+        );
+        self.explorer_channels
+            .insert(new_explorer.id(), (sender_orch, sender_planet));
+        log_internal_op!(
+            self,
+            "action"=>"saved channels: sender_orch, sender_planet",
+        );
+        // self.explorers.push(explorer);
+        //Spawn the corresponding thread for the explorer
+        thread::spawn(|| -> Result<(), String> {
+            let _ = new_explorer; //TODO implement a run function for explorer to interact with orchestrator
+            Ok(())
+        });
+        log_internal_op!(
+            self,
+            "action"=>"explorer thread created",
+            "explorer_id"=>explorer_id,
+        );
+    }
 
     /// Initialize the galaxy using a topology file.
     ///
@@ -488,7 +560,7 @@ impl Orchestrator {
 
         ////////////// EXPLORERS INITIALIZATION /////////////////////
         self.add_tommy_explorer(0, 0);
-        // TODO aggiungere self.add_mattia_explorer(1, 0) o simile
+        self.add_mattia_explorer(1,0);
 
 
 

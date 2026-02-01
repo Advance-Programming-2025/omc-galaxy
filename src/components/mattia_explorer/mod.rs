@@ -52,7 +52,6 @@ impl Explorer {
             Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
         ),
         explorer_to_planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
-        energy_cells: u32, // useful in the case in which the explorer starts mid-game
     ) -> Self {
         let mut starting_topology_info = HashMap::new();
         starting_topology_info.insert(
