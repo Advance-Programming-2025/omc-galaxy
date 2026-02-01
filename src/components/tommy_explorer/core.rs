@@ -207,7 +207,7 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("[EXPLORER DEBUG] Error in receiving the orchestrator message: {}", err);
+                            println!("[EXPLORER TOMMY DEBUG] Error in receiving the orchestrator message: {}", err);
                         }
                     }
                 },
@@ -225,7 +225,7 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("[EXPLORER DEBUG] Error in receiving the planet message: {}", err);
+                            println!("[EXPLORER TOMMY DEBUG] Error in receiving the planet message: {}", err);
                         }
                     }
                 }
