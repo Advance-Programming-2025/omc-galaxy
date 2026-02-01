@@ -1,4 +1,5 @@
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::hash::Hash;
 use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, ResourceType};
 use common_game::components::resource::GenericResource::BasicResources;
 use common_game::utils::ID;
@@ -10,17 +11,41 @@ const RANDOMNESS_RANGE: f64 =0.1;
 //this value will influence how careful is the explorer in considering old values for utility calculations
 const LAMBDA: f32=0.005;
 const PROPAGATION_FACTOR: f32=0.8;
-pub enum AIAction{
-    ProduceResource(BasicResourceType), //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
-    CombineResource(ComplexResourceType),
-    MoveTo(ID),
-    SurveyPlanet {
-        resource: bool,
-        combination: bool,
-        energy_cells: bool,
-    },
-    Wait,
-    RunAway
+pub struct AIAction{
+    pub produce_resource:HashMap<BasicResourceType, f32>, //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
+    pub combine_resource:HashMap<ComplexResourceType, f32>,
+    pub move_to:HashMap<ID, f32>,
+    pub survey_energy_cells:f32,
+    pub survey_neighbors:f32,
+    pub wait:f32,
+    pub run_away:f32
+}
+impl AIAction{
+    pub fn new()->Self{
+        let mut produce_resource:HashMap<BasicResourceType, f32>= HashMap::new();
+        let mut combine_resource:HashMap<ComplexResourceType, f32> = HashMap::new();
+        //basic
+        produce_resource.insert(BasicResourceType::Silicon, 0.0);
+        produce_resource.insert(BasicResourceType::Carbon, 0.0);
+        produce_resource.insert(BasicResourceType::Oxygen, 0.0);
+        produce_resource.insert(BasicResourceType::Hydrogen, 0.0);
+        //complex
+        combine_resource.insert(ComplexResourceType::Diamond,0.0);
+        combine_resource.insert(ComplexResourceType::Robot, 0.0);
+        combine_resource.insert(ComplexResourceType::Life, 0.0);
+        combine_resource.insert(ComplexResourceType::Water, 0.0);
+        combine_resource.insert(ComplexResourceType::AIPartner, 0.0);
+        combine_resource.insert(ComplexResourceType::Dolphin, 0.0);
+        AIAction{
+            produce_resource,
+            combine_resource,
+            move_to: HashMap::new(),
+            survey_energy_cells: 0.0,
+            survey_neighbors: 0.0,
+            wait: 0.2,
+            run_away: 0.0
+        }
+    }
 }
 
 //this is because just in case i need it but at the moment the ai will not have any
@@ -143,9 +168,10 @@ impl ResourceNeeds {
     }
 }
 pub struct ai_data{
-    global_sunray_rate: f32, //todo i don't think these 2 values are useful
-    global_asteroid_rate: f32,
-    resource_needs: ResourceNeeds,
+    pub global_sunray_rate: f32, //todo i don't think these 2 values are useful
+    pub global_asteroid_rate: f32,
+    pub resource_needs: ResourceNeeds,
+    pub ai_action: AIAction
 }
 impl ai_data {
     pub fn new()->Self{
@@ -153,6 +179,7 @@ impl ai_data {
             global_asteroid_rate: 0.0,
             global_sunray_rate: 0.0,
             resource_needs: ResourceNeeds::new(),
+            ai_action: AIAction::new()
         }
     }
 }
@@ -170,20 +197,96 @@ fn calculate_time_decay(planet_timestamp: u64, current_time: u64) -> f32 {
     }
 }
 
-pub fn calc_utility(ai_action: AIAction, ai_data: &mut ai_data, explorer: &Explorer) -> Result<f32, &'static str> {
-    match ai_action {
-        AIAction::ProduceResource(resource_type) => {
-            // Non estraiamo più planet_info qui per evitare il doppio borrow
-            score_basic_resource_production(explorer, resource_type)
-        }
-        AIAction::CombineResource(resource_type) => {
-            score_complex_resource_production(explorer, resource_type)
-        }
-        AIAction::SurveyPlanet { .. } => { todo!() }
-        AIAction::MoveTo(_) => { todo!() }
-        AIAction::Wait => { todo!() }
-        AIAction::RunAway => { todo!() }
+pub fn calc_utility(explorer: &mut Explorer) -> Result<(), &'static str> {
+    // updating planet safety score
+    let known_ids: Vec<ID> = explorer.topology_info.keys().cloned().collect();
+    for id in known_ids {
+       match update_planet_safety(explorer, id){
+           Ok(_) => {}
+           Err(err) => {
+               //todo logs
+           }
+       }
     }
+    //temporary variables
+    let mut temp_produce = HashMap::new();
+    let mut temp_combine = HashMap::new();
+    let mut temp_move = HashMap::new();
+    let charge_rate;
+    //clearing move_to utility values
+    explorer.ai_data.ai_action.move_to.clear();
+
+    {
+        // current planet info
+        let planet_info = explorer.get_current_planet_info()?;
+        charge_rate = planet_info.charge_rate;
+        // base resource production
+        let base_resources_present = planet_info.basic_resources.as_ref();
+        let produce_keys: Vec<BasicResourceType> =
+            explorer.ai_data.ai_action.produce_resource.keys().cloned().collect();
+        // for every base resource in the planet production set updates the utility value
+        for res_type in produce_keys {
+            let score = match base_resources_present {
+                Some(map) => {
+                    if map.contains(&res_type) {
+                        score_basic_resource_production(explorer, res_type)?
+                    } else { // basic resource not found in the planet
+                        0.0
+                    }
+                } // basic resource not found in the planet
+                None => 0.0,
+            };
+            temp_produce.insert(res_type, score);
+        }
+        // complex resource utility calculation
+        let complex_resources_present = planet_info.complex_resources.as_ref();
+        let combine_keys: Vec<ComplexResourceType> =
+            explorer.ai_data.ai_action.combine_resource.keys().cloned().collect();
+
+        for res_type in combine_keys {
+            let score = match complex_resources_present {
+                Some(map) => {
+                    if map.contains(&res_type) {
+                        score_complex_resource_production(explorer, res_type)?
+                    } else {
+                        0.0
+                    }
+                }
+                None => 0.0,
+            };
+            temp_combine.insert(res_type, score);
+        }
+        // 4) Movimento verso vicini noti
+        if let Some(neighbors) = &planet_info.neighbors {
+            for neighbor_id in neighbors {
+                match score_move_to(explorer, *neighbor_id) {
+                    Ok(score) => {
+                        temp_move.insert(*neighbor_id, score);
+                    }
+                    Err(_) => {
+                        temp_move.insert(*neighbor_id, 0.0);
+                    }
+                }
+            }
+        }
+    }
+
+    //Survey utilities
+    explorer.ai_data.ai_action.survey_energy_cells = score_survey_energy(explorer)?;
+    explorer.ai_data.ai_action.survey_neighbors = score_survey_neighbors(explorer)?;
+
+    // wait with bonus for positive planet charge rate
+    let wait_base = 0.2f32;
+    let wait_bonus = if charge_rate > 0.0 { 0.1 } else { 0.0 };
+    explorer.ai_data.ai_action.wait = (wait_base + wait_bonus).clamp(0.0, 1.0);
+
+    // calculating run away values:
+    // using pow to make it more reactive when the safeness is low
+    let safety_score = {
+        explorer.get_current_planet_info()?.safety_score
+    };
+    explorer.ai_data.ai_action.run_away = (1.0 - safety_score).powi(2).clamp(0.0, 1.0);
+    Ok(())
 }
 
 fn score_basic_resource_production(
@@ -372,42 +475,42 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
 
 
 //todo da controllare la seguente funzione (vibe-codata)
-// fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str> {
-// 
-//     let current_info = explorer.get_current_planet_info()?;
-//     let target_info = explorer.get_planet_info(target_id)?;
-// 
-//     // 1. Valutazione della Sicurezza Locale (Immediata)
-//     let safety_factor = target_info.safety_score;
-// 
-//     // 2. Valutazione Strategica (Dijkstra / Prossimità a Zone Safe)
-//     // Qui cerchiamo il percorso più breve verso il pianeta PIÙ sicuro conosciuto.
-//     // Se il target_id ci avvicina a quella zona, riceve un bonus enorme.
-//     let strategic_value = calculate_strategic_proximity(explorer, target_id);
-// 
-//     // 3. Spinta delle Risorse (Opportunità)
-//     // Solo se siamo in condizioni di sicurezza accettabili (> 0.5)
-//     let opportunity = if current_info.safety_score > 0.5 {
-//         calculate_resource_opportunity(explorer, &target_info)
-//     } else {
-//         0.0 // Se siamo in pericolo, non ci importa delle risorse
-//     };
-// 
-//     // 4. Moltiplicatore di Sopravvivenza (Il "Pessimismo")
-//     // Se l'energia attuale è bassa, l'utilità di muoversi verso zone sicure aumenta drasticamente
-//     let energy_ratio = explorer.energy as f32 / explorer.max_energy as f32;
-//     let survival_urgency = (1.0 - energy_ratio).powi(2);
-// 
-//     let base = (safety_factor * 0.4) + (strategic_value * 0.5) + (opportunity * 0.1);
-// 
-//     // Se l'urgenza è alta, ignoriamo l'opportunità e forziamo la sicurezza
-//     let final_score = if survival_urgency > 0.7 {
-//         (safety_factor * 0.7 + strategic_value * 0.3)
-//     } else {
-//         base
-//     };
-// 
-//     let mut rng = rand::rng();
-//     Ok((final_score * rng.random_range(0.95..1.05)).clamp(0.0, 1.0))
-//     
-// }
+fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str> {
+
+    let current_info = explorer.get_current_planet_info()?;
+    let target_info = explorer.get_planet_info(target_id)?;
+
+    // 1. Valutazione della Sicurezza Locale (Immediata)
+    let safety_factor = target_info.safety_score;
+
+    // 2. Valutazione Strategica (Dijkstra / Prossimità a Zone Safe)
+    // Qui cerchiamo il percorso più breve verso il pianeta PIÙ sicuro conosciuto.
+    // Se il target_id ci avvicina a quella zona, riceve un bonus enorme.
+    let strategic_value = calculate_strategic_proximity(explorer, target_id);
+
+    // 3. Spinta delle Risorse (Opportunità)
+    // Solo se siamo in condizioni di sicurezza accettabili (> 0.5)
+    let opportunity = if current_info.safety_score > 0.5 {
+        calculate_resource_opportunity(explorer, &target_info)
+    } else {
+        0.0 // Se siamo in pericolo, non ci importa delle risorse
+    };
+
+    // 4. Moltiplicatore di Sopravvivenza (Il "Pessimismo")
+    // Se l'energia attuale è bassa, l'utilità di muoversi verso zone sicure aumenta drasticamente
+    let energy_ratio = explorer.energy as f32 / explorer.max_energy as f32;
+    let survival_urgency = (1.0 - energy_ratio).powi(2);
+
+    let base = (safety_factor * 0.4) + (strategic_value * 0.5) + (opportunity * 0.1);
+
+    // Se l'urgenza è alta, ignoriamo l'opportunità e forziamo la sicurezza
+    let final_score = if survival_urgency > 0.7 {
+        (safety_factor * 0.7 + strategic_value * 0.3)
+    } else {
+        base
+    };
+
+    let mut rng = rand::rng();
+    Ok((final_score * rng.random_range(0.95..1.05)).clamp(0.0, 1.0))
+
+}

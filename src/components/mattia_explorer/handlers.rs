@@ -337,8 +337,11 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
             explorer.current_planet_neighbors_update=false;
             //todo potrei fare la richiesta direttamente qui
             //already overriding the neighbors
-            planet_info.neighbors = Some(neighbors.into_iter().collect());
+            planet_info.neighbors = Some(neighbors.clone().into_iter().collect());
             planet_info.timestamp_neighbors=explorer.time;
+            //updating ai move_utility data
+            explorer.ai_data.ai_action.move_to.clear();
+            explorer.ai_data.ai_action.move_to=neighbors.into_iter().map(|x| (x,0.0)).collect();
         }
         None => {
             explorer.topology_info.insert(
