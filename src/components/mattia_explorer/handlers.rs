@@ -574,9 +574,9 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                 EventType::MessageExplorerToPlanet,
                 Channel::Error,
                 warning_payload!(
-                    "GenerateResourceRequest not sent",
+                    "CombineResourceRequest not sent",
                     err,
-                    "generate_resource_request()";
+                    "combine_resource_request()";
                     "to_generate" => to_generate.to_string_2(),
                     "to_orchestrator" => to_orchestrator,
                     "explorer data"=>format!("{:?}", explorer)

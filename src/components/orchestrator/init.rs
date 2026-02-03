@@ -1,4 +1,4 @@
-use logging_utils::LoggableActor;
+use logging_utils::{get_receiver_id, get_sender_id, LoggableActor};
 use std::{
     fs,
     sync::{Arc, RwLock},
@@ -271,6 +271,15 @@ impl Orchestrator {
         let (sender_orchestrator, receiver_orchestrator, sender_explorer, receiver_explorer) =
             Orchestrator::init_comms_planet();
 
+        log_internal_op!(
+            self,
+            "action"=>"Init comms OrchestratorToPlanet, ExplorerToPlanet",
+            "sender_orchestrator"=>format!("{}",get_sender_id(&sender_orchestrator)),
+            "receiver_orchestrator"=>format!("{}",get_receiver_id(&receiver_orchestrator)),
+            "sender_explorer"=>format!("{}",get_sender_id(&sender_explorer)),
+            "receiver_explorer"=>format!("{}",get_receiver_id(&receiver_explorer)),
+        );
+
         //Planet-end of orchestrator-planet/planet-orchestrator channels
         let planet_to_orchestrator_channels =
             (receiver_orchestrator, self.sender_planet_orch.clone());
@@ -347,9 +356,11 @@ impl Orchestrator {
             Orchestrator::init_comms_explorers();
 
         // get the sender from explorer to planet
-        let sender_explorer = match self.planet_channels.get(&planet_id) {
-            Some((_, explorer_sender)) => Some(explorer_sender.clone()),
-            None => None, // sender does not exist
+        let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
+            Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
+            None => {
+                (None,None)
+            }, // sender does not exist
         };
 
         let mut free_cells = 0;
@@ -365,7 +376,7 @@ impl Orchestrator {
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
-            (receiver_planet, sender_explorer.unwrap()), // TODO this unwrap is unsafe
+            (receiver_planet, expl_to_planet.unwrap()), // TODO this unwrap is unsafe
             free_cells,
         );
 
@@ -383,11 +394,29 @@ impl Orchestrator {
             "action"=>"explorer_status hashmap updated",
         );
         self.explorer_channels
-            .insert(new_explorer.id(), (sender_orch, sender_planet));
+            .insert(new_explorer.id(), (sender_orch, sender_planet.clone()));
         log_internal_op!(
             self,
             "action"=>"saved channels: sender_orch, sender_planet",
         );
+
+
+        match orch_to_planet {
+            Some(orchestrator_sender) => {
+                match orchestrator_sender.send(
+                    OrchestratorToPlanet::IncomingExplorerRequest {
+                        explorer_id,
+                        new_sender: sender_planet.clone(),
+                    }
+                ){
+                    Ok(_) => {},
+                    Err(err) => {
+                        //todo logs
+                    }
+                }
+            }
+            None => {}
+        }
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(move|| -> Result<(), String> {
@@ -427,9 +456,11 @@ impl Orchestrator {
             Orchestrator::init_comms_explorers();
 
         // get the sender from explorer to planet
-        let sender_explorer = match self.planet_channels.get(&planet_id) {
-            Some((_, explorer_sender)) => Some(explorer_sender.clone()),
-            None => None, // sender does not exist
+        let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
+            Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
+            None => {
+                (None,None)
+            }, // sender does not exist
         };
 
         //Construct Explorer
@@ -437,7 +468,7 @@ impl Orchestrator {
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
-            (receiver_planet, sender_explorer.unwrap()), // TODO this unwrap is unsafe
+            (receiver_planet, expl_to_planet.unwrap()), // TODO this unwrap is unsafe
         );
 
         log_internal_op!(
@@ -454,11 +485,28 @@ impl Orchestrator {
             "action"=>"explorer_status hashmap updated",
         );
         self.explorer_channels
-            .insert(new_explorer.id(), (sender_orch, sender_planet));
+            .insert(new_explorer.id(), (sender_orch, sender_planet.clone()));
         log_internal_op!(
             self,
             "action"=>"saved channels: sender_orch, sender_planet",
         );
+        match orch_to_planet {
+            Some(orchestrator_sender) => {
+                match orchestrator_sender.send(
+                    OrchestratorToPlanet::IncomingExplorerRequest {
+                        explorer_id,
+                        new_sender: sender_planet.clone(),
+                    }
+                ){
+                    Ok(_) => {},
+                    Err(err) => {
+                        //todo logs
+                    }
+                }
+            }
+            None => {}
+        }
+
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(move|| -> Result<(), String> {

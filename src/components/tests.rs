@@ -162,6 +162,37 @@ mod tests_file_integration {
         assert!(orch.galaxy_lookup.contains_key(&1));
     }
 }
+#[cfg(test)]
+mod test_One_million_crabs_planet{
+    use std::thread::sleep;
+    use std::time::Duration;
+    use common_game::components::resource::BasicResourceType;
+    use crate::*;
+    use crate::utils::registry::*;
+    #[test]
+    fn planet_energy_cells_management(){
+        let mut orchestrator = Orchestrator::new().unwrap();
+        let planet_id = 1;
+        let explorer_id = 2;
+        orchestrator.add_planet(planet_id, PlanetType::OneMillionCrabs).unwrap();
+        orchestrator.start_all().unwrap();
+        orchestrator.add_mattia_explorer(explorer_id,planet_id);
+        let planet_channel = orchestrator.planet_channels.get(&planet_id).unwrap().0.clone();
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        println!("SENDED 6 SUNRAY");
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        sleep(Duration::from_secs(1));
+        orchestrator.send_bag_content_request(explorer_id);
+        sleep(Duration::from_secs(1));
+    }
+}
 
 #[cfg(test)]
 mod tests {
