@@ -162,6 +162,137 @@ mod tests_file_integration {
         assert!(orch.galaxy_lookup.contains_key(&1));
     }
 }
+#[cfg(test)]
+mod test_One_million_crabs_planet{
+    use std::thread;
+    use std::thread::sleep;
+    use std::time::Duration;
+    use common_game::components::resource::BasicResourceType;
+    use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
+    use crossbeam_channel::{select, tick};
+    use logging_utils::log_internal_op;
+    use crate::*;
+    use crate::utils::ExplorerInfo;
+    use crate::utils::registry::*;
+    #[test]
+    fn planet_energy_cells_management(){
+        let mut orchestrator = Orchestrator::new().unwrap();
+        let planet_id = 1;
+        let explorer_id = 2;
+        orchestrator.add_planet(planet_id, PlanetType::OneMillionCrabs).unwrap();
+        orchestrator.start_all().unwrap();
+        orchestrator.add_mattia_explorer(explorer_id,planet_id);
+        let planet_channel = orchestrator.planet_channels.get(&planet_id).unwrap().0.clone();
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        println!("SENDED 6 SUNRAY");
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        sleep(Duration::from_secs(1));
+        orchestrator.send_bag_content_request(explorer_id);
+        orchestrator.send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
+        let timeout = tick(Duration::from_millis(1000));
+        loop{
+            select! {
+                recv(orchestrator.receiver_orch_planet) -> planet_msg => {
+                    match planet_msg {
+                        Ok(msg) => {
+                            orchestrator.handle_planet_message(msg);
+                        }
+                        Err(_) => {}
+                    }
+                }
+                recv(orchestrator.receiver_orch_explorer)-> explorer_msg=> {
+                    match explorer_msg {
+                        Ok(msg) => {
+                            orchestrator.handle_explorer_message(msg);
+                        }
+                        Err(_) => {}
+                    }
+                }
+                recv(timeout) -> _ => {
+                    break;
+                }
+            }
+        }
+        assert_eq!(orchestrator.planets_info.get_info(planet_id).unwrap().energy_cells.iter().filter(|&&x| x).count(), 0);
+        println!("explorer bag: {:?}", orchestrator.explorers_info.get(&explorer_id).unwrap().bag);
+        assert_eq!(orchestrator.explorers_info.get(&explorer_id).unwrap().bag.iter().filter(|&&x| x.is_silicon() ).count(), 6)
+    }
+    #[test]
+    fn stress_planet_energy_cells_management(){
+        let mut orchestrator = Orchestrator::new().unwrap();
+        let planet_id = 1;
+        let explorer_id = 2;
+        orchestrator.add_planet(planet_id, PlanetType::OneMillionCrabs).unwrap();
+        orchestrator.start_all().unwrap();
+        orchestrator.add_mattia_explorer(explorer_id,planet_id);
+        let planet_channel = orchestrator.planet_channels.get(&planet_id).unwrap().0.clone();
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        sleep(Duration::from_secs(1));
+        orchestrator.send_bag_content_request(explorer_id);
+        orchestrator.send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
+        let timeout = tick(Duration::from_millis(1000));
+        loop{
+            select! {
+                recv(orchestrator.receiver_orch_planet) -> planet_msg => {
+                    match planet_msg {
+                        Ok(msg) => {
+                            orchestrator.handle_planet_message(msg);
+                        }
+                        Err(_) => {}
+                    }
+                }
+                recv(orchestrator.receiver_orch_explorer)-> explorer_msg=> {
+                    match explorer_msg {
+                        Ok(msg) => {
+                            orchestrator.handle_explorer_message(msg);
+                        }
+                        Err(_) => {}
+                    }
+                }
+                recv(timeout) -> _ => {
+                    break;
+                }
+            }
+        }
+        assert!(orchestrator.explorers_info.get(&explorer_id).unwrap().bag.iter().filter(|&&x| x.is_silicon() ).count()<= 12)
+    }
+}
 
 #[cfg(test)]
 mod tests {

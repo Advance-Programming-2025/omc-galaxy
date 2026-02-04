@@ -1,5 +1,8 @@
 use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{AIPartner, BasicResource, BasicResourceType, Carbon, ComplexResource, ComplexResourceRequest, ComplexResourceType, Diamond, Dolphin, GenericResource, Hydrogen, Life, Oxygen, ResourceType, Robot, Silicon, Water};
+use common_game::logging::ActorType;
+use logging_utils::log_internal_op;
+
 #[derive(Debug)]
 pub(crate) struct Bag {
     oxygen: Vec<Oxygen>,
@@ -153,6 +156,11 @@ impl Bag {
         for _ in 0..self.robot.len() { types.push(ResourceType::Complex(ComplexResourceType::Robot)); }
         for _ in 0..self.dolphin.len() { types.push(ResourceType::Complex(ComplexResourceType::Dolphin)); }
         for _ in 0..self.ai_partner.len() { types.push(ResourceType::Complex(ComplexResourceType::AIPartner)); }
+        log_internal_op!(dir
+            ActorType::Explorer,
+            0u32,
+            "bag"=>format!("{:?}",types)
+        );
         types
     }
 

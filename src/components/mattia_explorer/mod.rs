@@ -6,7 +6,9 @@ mod handlers;
 mod helpers;
 mod explorer_ai;
 mod planet_info;
+mod tests;
 
+use std::any::Any;
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
 use crate::components::mattia_explorer::explorer_ai::{ai_core_function, ai_data};
@@ -53,6 +55,15 @@ impl Explorer {
         ),
         explorer_to_planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
     ) -> Self {
+        log_fn_call!(dir
+            ActorType::Explorer,
+            explorer_id,
+            "Explorer::new()",
+            explorer_id,
+            planet_id;
+            "explorer_to_orchestrator_channels" => format!("({}, {})", get_receiver_id(&explorer_to_orchestrator_channels.0), get_sender_id(&explorer_to_orchestrator_channels.1)),
+            "explorer_to_planet_channels"=>format!("({}, {})", get_receiver_id(&explorer_to_planet_channels.0), get_sender_id(&explorer_to_planet_channels.1)),
+        );
         let mut starting_topology_info = HashMap::new();
         starting_topology_info.insert(
             planet_id,
@@ -119,6 +130,15 @@ impl Explorer {
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
                     match msg_orchestrator {
                         Ok(msg) => {
+                            log_message!(
+                                ActorType::Orchestrator,
+                                0u32,
+                                ActorType::Explorer,
+                                self.explorer_id,
+                                EventType::MessageOrchestratorToExplorer,
+                                "message received";
+                                "explorer data"=>format!("{:?}", self)
+                            );
                             if orch_msg_match_state(&self.state, &msg) {
                                 match msg {
                                     OrchestratorToExplorer::StartExplorerAI => {
@@ -167,6 +187,8 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
+                            println!("{}", err);
+                            return Err(err.to_string());
                             //todo logs
                         }
                     }
@@ -229,6 +251,7 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
+                            println!("{}", err);
                             //todo logs
                         }
                     }
@@ -251,7 +274,9 @@ impl Explorer {
 }
 
 use std::fmt;
-use logging_utils::{get_receiver_id, get_sender_id};
+use std::fmt::format;
+use common_game::logging::{ActorType, EventType};
+use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, LoggableActor};
 
 impl fmt::Debug for Explorer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -278,5 +303,15 @@ impl fmt::Debug for Explorer {
             .field("buffer_orchestrator_len", &self.buffer_orchestrator_msg.len())
             .field("buffer_planet_len", &self.buffer_planet_msg.len())
             .finish()
+    }
+}
+
+impl LoggableActor for Explorer {
+    fn actor_type(&self) -> ActorType {
+        ActorType::Explorer
+    }
+
+    fn actor_id(&self) -> u32 {
+        self.explorer_id
     }
 }
