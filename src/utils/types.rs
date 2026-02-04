@@ -37,7 +37,7 @@ pub type ExplorerStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
 pub type GalaxySnapshot = Vec<(u32, u32)>;
 
 pub struct PlanetInfoMap {
-    map: BTreeMap<u32, PlanetInfo>,
+    pub(crate) map: BTreeMap<u32, PlanetInfo>,  // todo i made this public for testing purpose
 }
 impl PlanetInfoMap {
     pub fn new() -> Self {
@@ -174,7 +174,7 @@ impl PlanetInfo{
 
 
 pub struct ExplorerInfoMap {
-    map: BTreeMap<u32, ExplorerInfo>
+    pub(crate) map: BTreeMap<u32, ExplorerInfo>  // todo i made this public for testing purpose
 }
 
 impl ExplorerInfoMap {

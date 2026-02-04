@@ -209,6 +209,10 @@ impl Orchestrator {
         &mut self,
         msg: ExplorerToOrchestrator<BagType>,
     ) -> Result<(), String> {
+        log_internal_op!(
+            self,
+            "explorer message received"
+        );
         match msg {
             ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
                 //LOG

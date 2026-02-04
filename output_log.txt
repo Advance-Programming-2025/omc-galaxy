@@ -93,36 +93,6 @@ warning: unused import: `log::info`
 6 | use log::info;
   |     ^^^^^^^^^
 
-warning: unused imports: `PlanetStatus` and `Status`
-  --> src\components\orchestrator\mod.rs:11:20
-   |
-11 | use crate::utils::{PlanetStatus, Status, PlanetInfoMap, ExplorerInfoMap};
-   |                    ^^^^^^^^^^^^  ^^^^^^
-
-warning: unused import: `ExplorerStatus`
-  --> src\components\orchestrator\mod.rs:14:13
-   |
-14 | use crate::{ExplorerStatus};
-   |             ^^^^^^^^^^^^^^
-
-warning: unused import: `std::collections::BTreeMap`
-  --> src\components\orchestrator\mod.rs:27:5
-   |
-27 | use std::collections::BTreeMap;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-warning: unused import: `std::sync::Arc`
-  --> src\components\orchestrator\mod.rs:29:5
-   |
-29 | use std::sync::Arc;
-   |     ^^^^^^^^^^^^^^
-
-warning: unused import: `std::sync::RwLock`
-  --> src\components\orchestrator\mod.rs:30:5
-   |
-30 | use std::sync::RwLock;
-   |     ^^^^^^^^^^^^^^^^^
-
 warning: unused import: `crate::utils::Status`
  --> src\components\tests.rs:3:5
   |
@@ -138,8 +108,8 @@ warning: unused import: `crate::utils::registry::PlanetType`
 warning: unused import: `ResourceType`
  --> src\components\mattia_explorer\handlers.rs:6:130
   |
-6 | ...Resource, ComplexResourceType, GenericResource, ResourceType};
-  |                                                    ^^^^^^^^^^^^
+6 | use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, GenericResource, ResourceType};
+  |                                                                                                                                  ^^^^^^^^^^^^
 
 warning: unused import: `SendError`
   --> src\components\mattia_explorer\handlers.rs:10:25
@@ -198,22 +168,28 @@ help: remove these parentheses
 503 +         1.0 - data_reliability
     |
 
-warning: unused import: `crate::components::mattia_explorer::resource_management::ToGeneric`
-  --> src\components\mattia_explorer\mod.rs:15:5
+warning: unused import: `std::any::Any`
+  --> src\components\mattia_explorer\mod.rs:10:5
    |
-15 | use crate::components::mattia_explorer::resource_management::ToGeneric;
+10 | use std::any::Any;
+   |     ^^^^^^^^^^^^^
+
+warning: unused import: `crate::components::mattia_explorer::resource_management::ToGeneric`
+  --> src\components\mattia_explorer\mod.rs:16:5
+   |
+16 | use crate::components::mattia_explorer::resource_management::ToGeneric;
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: unused import: `std::cmp::PartialEq`
-  --> src\components\mattia_explorer\mod.rs:22:5
+  --> src\components\mattia_explorer\mod.rs:23:5
    |
-22 | use std::cmp::PartialEq;
+23 | use std::cmp::PartialEq;
    |     ^^^^^^^^^^^^^^^^^^^
 
 warning: unused import: `std::fmt::format`
-   --> src\components\mattia_explorer\mod.rs:263:5
+   --> src\components\mattia_explorer\mod.rs:276:5
     |
-263 | use std::fmt::format;
+276 | use std::fmt::format;
     |     ^^^^^^^^^^^^^^^^
 
 warning: unused import: `crate::components::tommy_explorer::actions::ActionQueue`
@@ -282,11 +258,23 @@ warning: unused variable: `planet_id`
 916 |                 planet_id,
     |                 ^^^^^^^^^ help: try ignoring the field: `planet_id: _`
 
-warning: unused variable: `handle`
-   --> src\components\orchestrator\init.rs:394:17
+warning: unused variable: `err`
+   --> src\components\orchestrator\init.rs:413:25
     |
-394 | ...   let handle = new_explorer.run()?; //TODO implement a run function for explorer to interact with orchestr...
-    |           ^^^^^^ help: if this is intentional, prefix it with an underscore: `_handle`
+413 |                     Err(err) => {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_err`
+
+warning: unused variable: `handle`
+   --> src\components\orchestrator\init.rs:423:17
+    |
+423 |             let handle = new_explorer.run()?; //TODO implement a run function for explorer to interact with orchestrator
+    |                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_handle`
+
+warning: unused variable: `err`
+   --> src\components\orchestrator\init.rs:502:25
+    |
+502 |                     Err(err) => {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_err`
 
 warning: unused variable: `msg`
   --> src\components\orchestrator\planets_comms.rs:20:13
@@ -366,18 +354,6 @@ warning: unused variable: `err`
     |
 669 | ...                   Err(err) => {
     |                           ^^^ help: if this is intentional, prefix it with an underscore: `_err`
-
-warning: unused variable: `err`
-   --> src\components\mattia_explorer\mod.rs:178:29
-    |
-178 |                         Err(err) => {
-    |                             ^^^ help: if this is intentional, prefix it with an underscore: `_err`
-
-warning: unused variable: `err`
-   --> src\components\mattia_explorer\mod.rs:240:29
-    |
-240 |                         Err(err) => {
-    |                             ^^^ help: if this is intentional, prefix it with an underscore: `_err`
 
 warning: unused variable: `err`
    --> src\components\tommy_explorer\core.rs:326:29
@@ -649,12 +625,12 @@ warning: method `send_planet_kill_to_all` is never used
     |                   ^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: method `get_current_planet_info_mut` is never used
-   --> src\components\mattia_explorer\mod.rs:108:12
+   --> src\components\mattia_explorer\mod.rs:109:12
     |
- 45 | impl Explorer {
+ 46 | impl Explorer {
     | ------------- method in this implementation
 ...
-108 |     pub fn get_current_planet_info_mut(&mut self) -> Result<&mut PlanetInfo, &'static str> {
+109 |     pub fn get_current_planet_info_mut(&mut self) -> Result<&mut PlanetInfo, &'static str> {
     |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: function `put_complex_resource_in_the_bag` is never used
@@ -904,7 +880,7 @@ warning: function `kill_explorer` is never used
 warning: function `move_to_planet` is never used
    --> src\components\manual_explorer.rs:303:8
     |
-303 | pub fn move_to_planet(explorer: &mut Explorer, sender_to_new_planet: Option<Sender<ExplorerToPlanet>>, planet_...
+303 | pub fn move_to_planet(explorer: &mut Explorer, sender_to_new_planet: Option<Sender<ExplorerToPlanet>>, planet_id: u32) {
     |        ^^^^^^^^^^^^^^
 
 warning: function `current_planet_request` is never used
@@ -946,7 +922,7 @@ warning: function `combine_resource_request` is never used
 warning: function `put_complex_resource_in_the_bag` is never used
    --> src\components\manual_explorer.rs:535:8
     |
-535 | pub fn put_complex_resource_in_the_bag(explorer: &mut Explorer, complex_response: Result<ComplexResource, (Str...
+535 | pub fn put_complex_resource_in_the_bag(explorer: &mut Explorer, complex_response: Result<ComplexResource, (String, GenericResource, GenericResource)>) {
     |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: function `neighbours_response` is never used
@@ -998,30 +974,6 @@ help: use `let _ = ...` to ignore the resulting value
 99 |                         let _ = self.planets_info.update_status(planet_id, Status::Dead);
    |                         +++++++
 
-warning: unused import: `ResourceType`
- --> src\components\mattia_explorer\handlers.rs:6:130
-  |
-6 | ...Type, ComplexResource, ComplexResourceType, GenericResource, ResourceType};
-  |                                                                 ^^^^^^^^^^^^
-
-warning: unused variable: `handle`
-   --> src\components\orchestrator\init.rs:394:17
-    |
-394 |             let handle = new_explorer.run()?; //TODO implement a run function for explorer to interact with orchestrator
-    |                 ^^^^^^ help: if this is intentional, prefix it with an underscore: `_handle`
-
-warning: function `move_to_planet` is never used
-   --> src\components\manual_explorer.rs:303:8
-    |
-303 | pub fn move_to_planet(explorer: &mut Explorer, sender_to_new_planet: Option<Sender<ExplorerToPlanet>>, planet_id: u32) {
-    |        ^^^^^^^^^^^^^^
-
-warning: function `put_complex_resource_in_the_bag` is never used
-   --> src\components\manual_explorer.rs:535:8
-    |
-535 | pub fn put_complex_resource_in_the_bag(explorer: &mut Explorer, complex_response: Result<ComplexResource, (String, GenericResource, Gener...
-    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 warning: module `test_One_million_crabs_planet` should have a snake case name
    --> src\components\tests.rs:166:5
     |
@@ -1029,30 +981,6 @@ warning: module `test_One_million_crabs_planet` should have a snake case name
     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case (notice the capitalization): `test_one_million_crabs_planet`
     |
     = note: `#[warn(non_snake_case)]` on by default
-
-warning: unused `Result` that must be used
-   --> src\components\tests.rs:179:9
-    |
-179 |         orchestrator.send_sunray(planet_id, &planet_channel);
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-help: use `let _ = ...` to ignore the resulting value
-    |
-179 |         let _ = orchestrator.send_sunray(planet_id, &planet_channel);
-    |         +++++++
-
-warning: unused `Result` that must be used
-   --> src\components\tests.rs:180:9
-    |
-180 |         orchestrator.send_sunray(planet_id, &planet_channel);
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-help: use `let _ = ...` to ignore the resulting value
-    |
-180 |         let _ = orchestrator.send_sunray(planet_id, &planet_channel);
-    |         +++++++
 
 warning: unused `Result` that must be used
    --> src\components\tests.rs:181:9
@@ -1105,116 +1033,203 @@ help: use `let _ = ...` to ignore the resulting value
 warning: unused `Result` that must be used
    --> src\components\tests.rs:185:9
     |
-185 |         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+185 |         orchestrator.send_sunray(planet_id, &planet_channel);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 help: use `let _ = ...` to ignore the resulting value
     |
-185 |         let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+185 |         let _ = orchestrator.send_sunray(planet_id, &planet_channel);
     |         +++++++
 
 warning: unused `Result` that must be used
    --> src\components\tests.rs:186:9
     |
-186 |         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+186 |         orchestrator.send_sunray(planet_id, &planet_channel);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 help: use `let _ = ...` to ignore the resulting value
     |
-186 |         let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+186 |         let _ = orchestrator.send_sunray(planet_id, &planet_channel);
     |         +++++++
 
 warning: unused `Result` that must be used
-   --> src\components\tests.rs:187:9
+   --> src\components\tests.rs:188:9
     |
-187 |         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+188 |         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 help: use `let _ = ...` to ignore the resulting value
     |
-187 |         let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+188 |         let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
     |         +++++++
 
-warning: `omc-galaxy` (lib) generated 127 warnings (run `cargo fix --lib -p omc-galaxy` to apply 33 suggestions)
-warning: `omc-galaxy` (lib test) generated 129 warnings (115 duplicates) (run `cargo fix --lib -p omc-galaxy --tests` to apply 1 suggestion)
+warning: unused `Result` that must be used
+   --> src\components\tests.rs:189:9
+    |
+189 |         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+help: use `let _ = ...` to ignore the resulting value
+    |
+189 |         let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+    |         +++++++
+
+warning: unused `Result` that must be used
+   --> src\components\tests.rs:190:9
+    |
+190 |         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+help: use `let _ = ...` to ignore the resulting value
+    |
+190 |         let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+    |         +++++++
+
+warning: unused `Result` that must be used
+   --> src\components\tests.rs:192:9
+    |
+192 |         orchestrator.send_bag_content_request(explorer_id);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+help: use `let _ = ...` to ignore the resulting value
+    |
+192 |         let _ = orchestrator.send_bag_content_request(explorer_id);
+    |         +++++++
+
+warning: `omc-galaxy` (lib) generated 123 warnings (run `cargo fix --lib -p omc-galaxy` to apply 29 suggestions)
+warning: `omc-galaxy` (lib test) generated 126 warnings (115 duplicates)
     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
 ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
- Nextest run ID 68780760-1875-455c-812a-9e8fab6c7095 with nextest profile: default
+ Nextest run ID 7474b162-1731-4419-ab1f-4421f06e6f1c with nextest profile: default
     Starting 1 test across 1 binary (65 tests skipped)
      Running [ 00:00:00] 0/1: 0 running, 0 passed, 0 skipped
        START [         ] (1/1) omc-galaxy components::tests::test_One_million_crabs_planet::planet_energy_cells_management
 
 running 1 test
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "new()"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "new_gtop()"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "add_planet()", "id": "1", "type_id": "OneMillionCrabs"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "init_comms_planet()"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Debug, payload: {"fn": "create_planet()", "rx_explorer": "memory address: 190032368416", "rx_orchestrator": "memory address: 190032368384", "tx_orchestrator": "memory address: 190032368400"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Debug, payload: {"fn": "OneMillionCrabs::new()", "planet_id": "1"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"explorer_id": "2", "fn": "add_explorer()", "planet_id": "1", "sender_explorer": "Sender<ExplorerToPlanet>"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "init_comms_explorers()"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Explorer, id: 2 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: InternalExplorerAction, channel: Debug, payload: {"explorer_id": "2", "explorer_to_orchestrator_channels": "(190032373664, 190032373680)", "explorer_to_planet_channels": "(190032373712, 190032373728)", "fn": "Explorer::new()", "planet_id": "1"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "start_all()"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "start_all_planet_ais()"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "StartPlanetAI", "planet_id": "1"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"_combinator": "&Combinator", "_generator": "&Generator", "fn": "on_start()", "state": "DummyPlanetState { energy_cells: [false, false, false, false, false], charged_cells_count: 0, has_rocket: false }"} }
-[2026-02-03T16:18:46Z INFO  common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: MessagePlanetToOrchestrator, channel: Info, payload: {"message": "StartPlanetAIResult", "planet_id": "1", "status": "Running"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "start_all_explorer_ais()"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"explorer_id": "2", "message": "StartExplorerAI"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "explorer ai started"} }
-[2026-02-03T16:18:46Z INFO  common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Explorer, id: 2 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: MessageExplorerToOrchestrator, channel: Info, payload: {"explorer_id": "2", "message": "StartExplorerAIResult", "status": "Running"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 0", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, false, false, false, false], charged_cells_count: 1, has_rocket: false }", "sunray": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, false, false, false, false], charged_cells_count: 1, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, false, false, false, false], charged_cells_count: 1, has_rocket: false }"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 1", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, false, false, false], charged_cells_count: 2, has_rocket: false }", "sunray": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, false, false, false], charged_cells_count: 2, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, false, false, false], charged_cells_count: 2, has_rocket: false }"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 2", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, false, false], charged_cells_count: 3, has_rocket: false }", "sunray": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, false, false], charged_cells_count: 3, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, false, false], charged_cells_count: 3, has_rocket: false }"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 3", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, false], charged_cells_count: 4, has_rocket: false }", "sunray": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, true, false], charged_cells_count: 4, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, false], charged_cells_count: 4, has_rocket: false }"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 4", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "sunray": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "No free cell found", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "sunray": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "GenerateResourceRequest"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "GenerateResourceRequest"} }
-[2026-02-03T16:18:46Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770135526, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "GenerateResourceRequest"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "new()"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "channels initialized", "from": "planet, explorer", "to": "orchestrator"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "new_gtop()"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "add_planet()", "id": "1", "type_id": "OneMillionCrabs"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "init_comms_planet()"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "channels initialized", "from": "orchestrator, explorer", "to": "planet"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "Init comms OrchestratorToPlanet, ExplorerToPlanet", "receiver_explorer": "123769707936", "receiver_orchestrator": "123769707904", "sender_explorer": "123769707920", "sender_orchestrator": "123769707888"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "channel initialized", "from": "planet", "id": "1", "to": "orchestrator"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Debug, payload: {"fn": "create_planet()", "rx_explorer": "memory address: 123769703280", "rx_orchestrator": "memory address: 123769703248", "tx_orchestrator": "memory address: 123769703264"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Debug, payload: {"fn": "OneMillionCrabs::new()", "planet_id": "1"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "initialize_free_cell_stack()", "result": "FREE_CELL_STACK initialized!\nCHARGED_CELL_STACK initialized!"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "new planet created", "comb_rules": "\"carbon, hydrogen, oxygen, silicon, \"", "gen_rules": "\"carbon, hydrogen, oxygen, silicon, \"", "planet_id": "1", "planet_type": "D"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "planet created", "id": "1"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "planet thread started", "planet_id": "1"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "start_all()"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "start_all_planet_ais()"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "StartPlanetAI", "planet_id": "1"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"_combinator": "&Combinator", "_generator": "&Generator", "fn": "on_start()", "state": "DummyPlanetState { energy_cells: [false, false, false, false, false], charged_cells_count: 0, has_rocket: false }"} }
+[2026-02-03T21:27:34Z INFO  common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: MessagePlanetToOrchestrator, channel: Info, payload: {"message": "StartPlanetAIResult", "planet_id": "1", "status": "Running"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "all planets started", "count": "1"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "start_all_explorer_ais()"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "all explorers started", "count": "0"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "all systems started", "status": "success"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"explorer_id": "2", "fn": "add_explorer()", "planet_id": "1", "sender_explorer": "Sender<ExplorerToPlanet>"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "init_comms_explorers()"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "channels initialized", "from": "orchestrator, planet", "to": "explorer"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Explorer, id: 2 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: InternalExplorerAction, channel: Debug, payload: {"explorer_id": "2", "explorer_to_orchestrator_channels": "(123769709488, 123769709504)", "explorer_to_planet_channels": "(123769709536, 123769709552)", "fn": "Explorer::new()", "planet_id": "1"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "explorer created", "explorer_id": "2"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "explorer_status hashmap updated"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "saved channels: sender_orch, sender_planet"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Trace, payload: {"action": "explorer thread created", "explorer_id": "2"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_free_cell_index()", "result": "Free cell index 0"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_charged_cell()", "index": "0", "result": "Pushed new charged cell with index 0"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "new cell charged", "index": "0"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 0", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, false, false, false, false], charged_cells_count: 1, has_rocket: false }", "sunray": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, false, false, false, false], charged_cells_count: 1, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, false, false, false, false], charged_cells_count: 1, has_rocket: false }"} }
+[2026-02-03T21:27:34Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_free_cell_index()", "result": "Free cell index 1"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_charged_cell()", "index": "1", "result": "Pushed new charged cell with index 1"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "new cell charged", "index": "1"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 1", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, false, false, false], charged_cells_count: 2, has_rocket: false }", "sunray": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, false, false, false], charged_cells_count: 2, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, false, false, false], charged_cells_count: 2, has_rocket: false }"} }
+[2026-02-03T21:27:34Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_free_cell_index()", "result": "Free cell index 2"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_charged_cell()", "index": "2", "result": "Pushed new charged cell with index 2"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "new cell charged", "index": "2"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 2", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, false, false], charged_cells_count: 3, has_rocket: false }", "sunray": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, false, false], charged_cells_count: 3, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, false, false], charged_cells_count: 3, has_rocket: false }"} }
+[2026-02-03T21:27:34Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_free_cell_index()", "result": "Free cell index 3"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_charged_cell()", "index": "3", "result": "Pushed new charged cell with index 3"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "new cell charged", "index": "3"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 3", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, false], charged_cells_count: 4, has_rocket: false }", "sunray": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, true, false], charged_cells_count: 4, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, false], charged_cells_count: 4, has_rocket: false }"} }
+[2026-02-03T21:27:34Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_free_cell_index()", "result": "Free cell index 4"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_charged_cell()", "index": "4", "result": "Pushed new charged cell with index 4"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "new cell charged", "index": "4"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "New cell charged: 4", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "sunray": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_sunray()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }"} }
+[2026-02-03T21:27:34Z INFO  omc_galaxy::components::orchestrator::gui_comms] sunray-send: THIS FUNCTION IS STILL BEING BUILT
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_free_cell_index()", "result": "No free cell available"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Orchestrator, id: 0 }), event_type: InternalOrchestratorAction, channel: Debug, payload: {"fn": "send_internal_state_request()", "sender": "Sender<OrchestratorToPlanet>"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "No free cell found", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_sunray()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "sunray": "Sunray"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 0 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "RequestPlanetState"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"Result": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_internal_state_req()", "state": "DummyPlanetState { energy_cells: [true, true, true, true, true], charged_cells_count: 5, has_rocket: false }"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageOrchestratorToPlanet, channel: Debug, payload: {"message": "Sunray"} }
+SENDED 6 SUNRAY
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "GenerateResourceRequest"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"explorer data": "Explorer { explorer_id: 2, planet_id: 1, orchestrator_channels: \"(RX: 1cd17fde30, TX: 1cd17fde40)\", planet_channels: \"(RX: 1cd17fde50, TX: 1cd17fde60)\", topology_info: {1: PlanetInfo { basic_resources: None, complex_resources: None, neighbors: None, energy_cells: 0, charge_rate: 1.0, timestamp_neighbors: 0, timestamp_energy: 0, safety_score: 1.0 }}, state: Idle, bag: Bag { oxygen: [], hydrogen: [], carbon: [], silicon: [], diamond: [], water: [], life: [], robot: [], dolphin: [], ai_partner: [] }, time: 3944, current_planet_neighbors_update: false, manual_mode: true, buffer_orchestrator_len: 0, buffer_planet_len: 0 }", "message": "message received"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "GenerateResourceRequest"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "generate resource request", "planet_id": "1", "to_generate": "silicon", "to_orchestrator": "true"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "GenerateResourceRequest"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_charged_cell_index()", "result": "Charged cell index 4"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"explorer data": "Explorer { explorer_id: 2, planet_id: 1, orchestrator_channels: \"(RX: 1cd17fde30, TX: 1cd17fde40)\", planet_channels: \"(RX: 1cd17fde50, TX: 1cd17fde60)\", topology_info: {1: PlanetInfo { basic_resources: None, complex_resources: None, neighbors: None, energy_cells: 0, charge_rate: 1.0, timestamp_neighbors: 0, timestamp_energy: 0, safety_score: 1.0 }}, state: GeneratingResource { orchestrator_response: true }, bag: Bag { oxygen: [], hydrogen: [], carbon: [], silicon: [], diamond: [], water: [], life: [], robot: [], dolphin: [], ai_partner: [] }, time: 3945, current_planet_neighbors_update: false, manual_mode: true, buffer_orchestrator_len: 0, buffer_planet_len: 0 }", "message": "message received"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_free_cell()", "index": "4", "result": "Pushed new free cell with index 4"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"explorer data": "Explorer { explorer_id: 2, planet_id: 1, orchestrator_channels: \"(RX: 1cd17fde30, TX: 1cd17fde40)\", planet_channels: \"(RX: 1cd17fde50, TX: 1cd17fde60)\", topology_info: {1: PlanetInfo { basic_resources: None, complex_resources: None, neighbors: None, energy_cells: 0, charge_rate: 1.0, timestamp_neighbors: 0, timestamp_energy: 0, safety_score: 1.0 }}, state: GeneratingResource { orchestrator_response: true }, bag: Bag { oxygen: [], hydrogen: [], carbon: [], silicon: [], diamond: [], water: [], life: [], robot: [], dolphin: [], ai_partner: [] }, time: 3946, current_planet_neighbors_update: false, manual_mode: true, buffer_orchestrator_len: 1, buffer_planet_len: 0 }", "message": "message received"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Explorer, id: 2 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageExplorerToPlanet, channel: Debug, payload: {"Result": "Resource created: Silicon(Silicon { _private: () }), using energy cell at index: 4", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_explorer_msg()", "msg": "GenerateResourceRequest { explorer_id: 2, resource: Silicon }", "state": "DummyPlanetState { energy_cells: [true, true, true, true, false], charged_cells_count: 4, has_rocket: false }"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessagePlanetToExplorer, channel: Debug, payload: {"message": "generated resource received", "resource": "Some(Silicon(Silicon { _private: () }))"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "generate resource request", "planet_id": "1", "to_generate": "silicon", "to_orchestrator": "true"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_charged_cell_index()", "result": "Charged cell index 3"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_free_cell()", "index": "3", "result": "Pushed new free cell with index 3"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Explorer, id: 2 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageExplorerToPlanet, channel: Debug, payload: {"Result": "Resource created: Silicon(Silicon { _private: () }), using energy cell at index: 3", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_explorer_msg()", "msg": "GenerateResourceRequest { explorer_id: 2, resource: Silicon }", "state": "DummyPlanetState { energy_cells: [true, true, true, false, false], charged_cells_count: 3, has_rocket: false }"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessagePlanetToExplorer, channel: Debug, payload: {"message": "generated resource received", "resource": "Some(Silicon(Silicon { _private: () }))"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "generate resource request", "planet_id": "1", "to_generate": "silicon", "to_orchestrator": "true"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "get_charged_cell_index()", "result": "Charged cell index 2"} }
+[2026-02-03T21:27:34Z TRACE common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: InternalPlanetAction, channel: Trace, payload: {"action": "push_free_cell()", "index": "2", "result": "Pushed new free cell with index 2"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Explorer, id: 2 }), receiver: Some(Participant { actor_type: Planet, id: 1 }), event_type: MessageExplorerToPlanet, channel: Debug, payload: {"Result": "Resource created: Silicon(Silicon { _private: () }), using energy cell at index: 2", "_combinator": "&Combinator", "_generator": "&Generator", "fn": "handle_explorer_msg()", "msg": "GenerateResourceRequest { explorer_id: 2, resource: Silicon }", "state": "DummyPlanetState { energy_cells: [true, true, false, false, false], charged_cells_count: 2, has_rocket: false }"} }
+[2026-02-03T21:27:34Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154054, sender: Some(Participant { actor_type: Planet, id: 1 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessagePlanetToExplorer, channel: Debug, payload: {"message": "generated resource received", "resource": "Some(Silicon(Silicon { _private: () }))"} }
+[2026-02-03T21:27:35Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154055, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"message": "BagContentRequest"} }
+[2026-02-03T21:27:35Z DEBUG common_game::logging] LogEvent { timestamp_unix: 1770154055, sender: Some(Participant { actor_type: Orchestrator, id: 0 }), receiver: Some(Participant { actor_type: Explorer, id: 2 }), event_type: MessageOrchestratorToExplorer, channel: Debug, payload: {"explorer data": "Explorer { explorer_id: 2, planet_id: 1, orchestrator_channels: \"(RX: 1cd17fde30, TX: 1cd17fde40)\", planet_channels: \"(RX: 1cd17fde50, TX: 1cd17fde60)\", topology_info: {1: PlanetInfo { basic_resources: None, complex_resources: None, neighbors: None, energy_cells: 0, charge_rate: 1.0, timestamp_neighbors: 0, timestamp_energy: 0, safety_score: 1.0 }}, state: Idle, bag: Bag { oxygen: [], hydrogen: [], carbon: [], silicon: [Silicon { _private: () }, Silicon { _private: () }, Silicon { _private: () }], diamond: [], water: [], life: [], robot: [], dolphin: [], ai_partner: [] }, time: 1523824, current_planet_neighbors_update: false, manual_mode: true, buffer_orchestrator_len: 0, buffer_planet_len: 0 }", "message": "message received"} }
+receiving on an empty and disconnected channel
 test components::tests::test_One_million_crabs_planet::planet_energy_cells_management ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 65 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 65 filtered out; finished in 2.01s
 
-        PASS [   0.011s] (1/1) omc-galaxy components::tests::test_One_million_crabs_planet::planet_energy_cells_management
+        PASS [   2.011s] (1/1) omc-galaxy components::tests::test_One_million_crabs_planet::planet_energy_cells_management
 ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
-     Summary [   0.011s] 1 test run: 1 passed, 65 skipped
+     Summary [   2.012s] 1 test run: 1 passed, 65 skipped

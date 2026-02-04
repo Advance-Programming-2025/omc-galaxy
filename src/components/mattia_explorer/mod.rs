@@ -6,6 +6,7 @@ mod handlers;
 mod helpers;
 mod explorer_ai;
 mod planet_info;
+mod tests;
 
 use std::any::Any;
 use crate::components::mattia_explorer::bag::Bag;
@@ -186,6 +187,8 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
+                            println!("{}", err);
+                            return Err(err.to_string());
                             //todo logs
                         }
                     }
@@ -248,6 +251,7 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
+                            println!("{}", err);
                             //todo logs
                         }
                     }
