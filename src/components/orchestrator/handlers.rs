@@ -467,6 +467,7 @@ impl Orchestrator {
                 if !is_neighbour {
                     return Err("Planet id not found".to_string());
                 }
+                //todo add incomingexplorerRequest and outgoingexplorerrequest
 
                 // else send the move to planet
                 return self.send_move_to_planet(explorer_id, dst_planet_id);

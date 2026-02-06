@@ -1,3 +1,4 @@
+use crate::components::mattia_explorer::ActorType;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::ExplorerState;
@@ -9,6 +10,7 @@ use common_game::utils::ID;
 use rand::Rng;
 use std::collections::HashMap;
 use std::hash::Hash;
+use logging_utils::{log_fn_call, log_internal_op, LoggableActor};
 
 //this value will affect the noise level of utility calculations
 const RANDOMNESS_RANGE: f64 =0.1;
@@ -287,6 +289,9 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), &'static str> {
             }
         }
     }
+    explorer.ai_data.ai_action.move_to=temp_move;
+    explorer.ai_data.ai_action.produce_resource=temp_produce;
+    explorer.ai_data.ai_action.combine_resource=temp_combine;
 
     //Survey utilities
     explorer.ai_data.ai_action.survey_energy_cells = score_survey_energy(explorer)?;
@@ -365,7 +370,7 @@ fn calculate_safety_score(explorer: &mut Explorer) -> Result<f32, &'static str>{
     let explorer_time=explorer.time.clone();
     let planet_info = explorer.get_current_planet_info_mut()?;
     let sustainability = if planet_info.charge_rate>0f32{1.0}else{0.5};
-    let physical_safety = 1.0 - (1.0 / planet_info.energy_cells.max(1) as f32);
+    let physical_safety = 1.0 - (1.0 / planet_info.energy_cells.max(2) as f32);
     //calculating reliability of the topology data
     let neighbors_reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer_time);
     // Bonus for the connectivity
@@ -400,7 +405,7 @@ fn update_planet_safety(explorer: &mut Explorer, planet_id: ID) -> Result<f32, &
     };
 
     let sustainability = if planet_info.charge_rate > 0.0 { 1.0 } else { 0.5 };
-    let physical_safety = 1.0 - (1.0 / planet_info.energy_cells.max(1) as f32);
+    let physical_safety = 1.0 - (1.0 / planet_info.energy_cells.max(2) as f32);
 
     // Affidabilità dei dati basata su quando è stata fatta l'ultima survey
     let neighbors_reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer_time);
@@ -566,9 +571,20 @@ fn find_best_action(actions: &AIAction) -> Option<AIActionType> {
 }
 
 pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+    //LOG
+    log_fn_call!(
+        explorer,
+        "ai_core_function",
+        explorer,
+    );
+    //LOG
     let base_resource =explorer.get_current_planet_info()?.basic_resources.is_none();
     let comp_resource= explorer.get_current_planet_info()?.complex_resources.is_none();
     if explorer.current_planet_neighbors_update || explorer.get_current_planet_info()?.neighbors.is_none(){
+        log_internal_op!(
+            explorer,
+            "updating neighbors"
+        );
         explorer.state=ExplorerState::WaitingForNeighbours;
         explorer.orchestrator_channels.1.send(
             ExplorerToOrchestrator::NeighborsRequest {
@@ -578,9 +594,13 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
         )?;
     }
     else if base_resource||comp_resource {
+        log_internal_op!(
+            explorer,
+            "surveying resources"
+        );
         explorer.state=ExplorerState::Surveying {
-            resources: !base_resource,
-            combinations: !comp_resource,
+            resources: base_resource,
+            combinations: comp_resource,
             energy_cells: false,
             orch_resource: false,
             orch_combination: false,
@@ -589,6 +609,10 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
     }
     else{
         calc_utility(explorer)?;
+        log_internal_op!(
+            explorer,
+            "utility scores" => format!("{:?}",explorer.ai_data.ai_action),
+        );
         match find_best_action(&explorer.ai_data.ai_action){
             Some(ai_action) => {
                 match ai_action {

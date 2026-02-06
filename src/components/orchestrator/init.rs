@@ -339,6 +339,8 @@ impl Orchestrator {
     /// * `planet_id` - id of the planet the explorer will be spawned on
     /// * `free_cells` - the amount of currently free cells in the visiting planet
     /// * `sender_explorer` - pre-existing explorer to planet channel
+    /// REMEMBER in order to work this function needs to be called when the planet ai is ALREADY
+    /// running, not before
     pub(crate) fn add_tommy_explorer(
         &mut self,
         explorer_id: u32,
@@ -346,7 +348,7 @@ impl Orchestrator {
     ) {
         log_fn_call!(
             self,
-            "add_explorer()",
+            "add_tommy_explorer()",
             explorer_id,
             planet_id;
             "sender_explorer"=>"Sender<ExplorerToPlanet>"
@@ -439,6 +441,8 @@ impl Orchestrator {
     /// * `planet_id` - id of the planet the explorer will be spawned on
     /// * `free_cells` - the amount of currently free cells in the visiting planet
     /// * `sender_explorer` - pre-existing explorer to planet channel
+    /// REMEMBER in order to work this function needs to be called when the planet ai is ALREADY
+    /// running, not before
     pub(crate) fn add_mattia_explorer(
         &mut self,
         explorer_id: u32,
@@ -446,7 +450,7 @@ impl Orchestrator {
     ) {
         log_fn_call!(
             self,
-            "add_explorer()",
+            "add_mattia_explorer()",
             explorer_id,
             planet_id;
             "sender_explorer"=>"Sender<ExplorerToPlanet>"
@@ -539,8 +543,25 @@ impl Orchestrator {
 
         ////////////// PLANET INITIALIZATION /////////////////////
         //Read the input file and handle it
-        let input = fs::read_to_string(path)
-            .map_err(|_| format!("Unable to read the input from {path}"))?;
+        let input = match fs::read_to_string(path).map_err(|_| format!("Unable to read the input from {path}")){
+            Ok(input) => input,
+            Err(err)=>{
+                LogEvent::self_directed(
+                    Participant::new(ActorType::Orchestrator, 0u32),
+                    EventType::InternalOrchestratorAction,
+                    Channel::Error,
+                    warning_payload!(
+                        "Failed to read the input from {path}",
+                        err,
+                        "initialize_galaxy_by_file()",
+                        path
+                    ),
+                ).emit();
+                return Err(err);
+            }
+        };
+
+        log_internal_op!(self,  "input"=>input);
 
         let mut adj_list_for_topology = Vec::new();
 
@@ -607,8 +628,8 @@ impl Orchestrator {
 
 
         ////////////// EXPLORERS INITIALIZATION /////////////////////
-        self.add_tommy_explorer(0, 0);
-        self.add_mattia_explorer(1,0);
+        //self.add_tommy_explorer(0, 0);  //todo i commented this because it was breaking every test i was doing :)
+        //self.add_mattia_explorer(1,0);
 
 
 
