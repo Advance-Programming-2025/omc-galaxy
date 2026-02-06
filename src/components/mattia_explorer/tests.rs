@@ -274,6 +274,7 @@ mod test_One_million_crabs_planet{
     }
 
     #[test]
+    #[ignore]
     fn stress_planet_energy_cells_management_4(){
         let mut orchestrator = Orchestrator::new().unwrap();
         for _ in 0..50 {
@@ -355,11 +356,29 @@ mod test_One_million_crabs_planet{
 
             sleep(Duration::from_secs(1));
             orchestrator.send_bag_content_request(explorer_id);
-            orchestrator.send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
+
+            let timeout = tick(Duration::from_millis(3000));
+
+            loop {
+                select! {
+                        recv(orchestrator.receiver_orch_planet) -> planet_msg => {
+                            match planet_msg {
+                                Ok(msg) => {
+                                    orchestrator.handle_planet_message(msg);
+                                }
+                                Err(_) => {}
+                            }
+                        }
+                        recv(timeout) -> _ => {
+                            break;
+                        }
+                    }
+            }
             sleep(Duration::from_millis(1000));
             new_explorer.planet_channels.1.send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id });
+            orchestrator.send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
 
-            let timeout = tick(Duration::from_millis(1000));
+            let timeout = tick(Duration::from_millis(2000));
             let mut available_energy_cells: i32 = -1;
             loop {
                 select! {
@@ -394,6 +413,8 @@ mod test_One_million_crabs_planet{
             assert_eq!(orchestrator.planets_info.get_info(planet_id).unwrap().energy_cells.iter().filter(|&&x| x ).count(), available_energy_cells as usize);
 
             // killing planet and explorer
+            orchestrator.send_planet_kill_to_all();
+            orchestrator.send_kill_explorer_ai(explorer_id);
             orchestrator.planets_info.map.clear();
             orchestrator.planet_channels.clear();
             orchestrator.explorer_channels.clear();

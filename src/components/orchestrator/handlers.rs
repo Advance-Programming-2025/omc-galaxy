@@ -188,7 +188,7 @@ impl Orchestrator {
                     planet_id
                 )
             }
-            _ => {
+            a => {
                 let event = LogEvent::self_directed(
                     Participant::new(ActorType::Orchestrator, 0u32),
                     EventType::MessagePlanetToOrchestrator,
@@ -197,6 +197,7 @@ impl Orchestrator {
                         "unhandled planet message",
                         "_",
                         "handle_planet_message()";
+                        "message"=>format!("{:?}", a)
                     ),
                 );
                 event.emit();
