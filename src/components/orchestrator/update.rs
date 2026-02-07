@@ -298,7 +298,7 @@ impl Orchestrator {
             match receive_channel {
                 ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
                     debug_println!("Started Explorer AI: {}", explorer_id);
-
+                    //println!("Started Explorer AI: {}", explorer_id);
                     //LOG
                     let event = LogEvent::new(
                         Some(Participant::new(ActorType::Explorer, explorer_id)),
@@ -318,6 +318,8 @@ impl Orchestrator {
                     count += 1;
                 }
                 _ => {
+                    //println!("ignoring explorer messages");
+                    debug_println!("ignoring explorer messages")
                     // ignores other events
                 }
             }

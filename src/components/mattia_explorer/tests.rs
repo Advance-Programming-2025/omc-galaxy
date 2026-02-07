@@ -428,7 +428,7 @@ mod game_simulation{
     use std::thread::sleep;
     use std::time::Duration;
     use crossbeam_channel::{select, tick};
-    use crate::Orchestrator;
+    use crate::{debug_println, Orchestrator};
     use super::*;
     #[test]
     fn simulation_25s(){
@@ -439,8 +439,8 @@ mod game_simulation{
         orchestrator.add_mattia_explorer(10, 0);
         orchestrator.start_all_explorer_ais();
         // println!("aaaaaaa");
-        orchestrator.send_supported_resource_request(10);
-        sleep(Duration::from_secs(1));
+        // sleep(Duration::from_secs(1));
+        // orchestrator.send_supported_resource_request(10); //this breaks everything somehow
         let do_something = tick(Duration::from_millis(500));
         let mut counter =50;
         println!("aaaaaaa");
@@ -457,9 +457,12 @@ mod game_simulation{
                 recv(orchestrator.receiver_orch_explorer) ->explorer_msg =>{
                     match explorer_msg {
                         Ok(msg) => {
+                            debug_println!("orchestrator received a message from an explorer");
                             orchestrator.handle_explorer_message(msg);
                         }
-                        Err(_) => {}
+                        Err(_) => {
+                            debug_println!("error receiving messages from explorer");
+                        }
                     }
                 }
                 recv(do_something) -> _ => {

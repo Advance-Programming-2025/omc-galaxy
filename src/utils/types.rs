@@ -211,11 +211,11 @@ impl ExplorerInfoMap {
     }
 
     pub fn get_status(&self, explorer_id: &u32) -> Status {
-        self.map.get(explorer_id).unwrap().status
+        self.map.get(explorer_id).unwrap().status //todo paura questi unwrap
     }
 
     pub fn get_current_planet(&self, explorer_id: &u32) -> u32 {
-        self.get(explorer_id).unwrap().current_planet_id
+        self.get(explorer_id).unwrap().current_planet_id //todo paura questi unwrap
     }
 
     pub fn is_empty(&self) -> bool {
@@ -285,6 +285,7 @@ pub struct ExplorerInfo{
     pub status: Status,
     pub bag: Vec<ResourceType>,
     pub current_planet_id: u32,
+    pub move_to_planet_id: i32,
 }
 
 impl ExplorerInfo{
@@ -299,6 +300,7 @@ impl ExplorerInfo{
             status,
             bag,
             current_planet_id,
+            move_to_planet_id:-1, //at this time is not relevant
         }
     }
 }

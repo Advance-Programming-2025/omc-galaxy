@@ -585,6 +585,7 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
             explorer,
             "updating neighbors"
         );
+        explorer.current_planet_neighbors_update=false;
         explorer.state=ExplorerState::WaitingForNeighbours;
         explorer.orchestrator_channels.1.send(
             ExplorerToOrchestrator::NeighborsRequest {
