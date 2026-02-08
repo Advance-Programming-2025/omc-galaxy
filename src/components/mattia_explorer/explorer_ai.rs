@@ -315,7 +315,7 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), &'static str> {
     // updating planet safety score
     let known_ids: Vec<ID> = explorer.topology_info.keys().cloned().collect();
     for id in known_ids {
-       match update_planet_safety(explorer, id){
+       match calculate_safety_score(explorer, Some(id)){
            Ok(_) => {}
            Err(err) => {
                //todo logs
@@ -461,9 +461,12 @@ fn score_complex_resource_production(
 }
 
 
-fn calculate_safety_score(explorer: &mut Explorer) -> Result<f32, &'static str>{
+fn calculate_safety_score(explorer: &mut Explorer, planet_id:Option<ID>) -> Result<f32, &'static str>{
     let explorer_time=explorer.time.clone();
-    let planet_info = explorer.get_current_planet_info_mut()?;
+    let planet_info = match planet_id {
+        Some(id) => explorer.get_planet_info_mut(id).ok_or("Planet info not found in topology")?,
+        None => explorer.get_current_planet_info_mut()?
+    };
     // Predict current energy considering charge rate
     let (predicted_energy, energy_confidence) = estimate_current_energy(planet_info, explorer_time);
 
