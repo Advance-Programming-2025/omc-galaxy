@@ -274,7 +274,7 @@ mod test_One_million_crabs_planet{
     }
 
     #[test]
-    #[ignore]
+    #[ignore] //takes about 7/8 minutes to execute with debug logs
     fn stress_planet_energy_cells_management_4(){
         let mut orchestrator = Orchestrator::new().unwrap();
         for _ in 0..50 {
@@ -420,6 +420,64 @@ mod test_One_million_crabs_planet{
             orchestrator.explorer_channels.clear();
             orchestrator.explorers_info.map.clear();
             sleep(Duration::from_millis(100));
+        }
+    }
+}
+
+mod game_simulation{
+    use std::thread::sleep;
+    use std::time::Duration;
+    use crossbeam_channel::{select, tick};
+    use crate::{debug_println, Orchestrator};
+    use super::*;
+    #[test]
+    fn simulation_25s(){
+        let mut orchestrator= Orchestrator::new().unwrap();
+        orchestrator.initialize_galaxy_by_file("./src/components/mattia_explorer/test_topology_files/t0.txt");
+        orchestrator.start_all_planet_ais();
+        // println!("galaxy topology: {:?}", orchestrator.get_topology());
+        orchestrator.add_mattia_explorer(10, 0);
+        orchestrator.start_all_explorer_ais();
+        // println!("aaaaaaa");
+        // sleep(Duration::from_secs(1));
+        // orchestrator.send_supported_resource_request(10); //this breaks everything somehow
+        let do_something = tick(Duration::from_millis(500));
+        let mut counter =50;
+        println!("aaaaaaa");
+        loop {
+            select! {
+                recv(orchestrator.receiver_orch_planet) -> planet_msg => {
+                    match planet_msg {
+                        Ok(msg) => {
+                            orchestrator.handle_planet_message(msg);
+                        }
+                        Err(_) => {}
+                    }
+                }
+                recv(orchestrator.receiver_orch_explorer) ->explorer_msg =>{
+                    match explorer_msg {
+                        Ok(msg) => {
+                            debug_println!("orchestrator received a message from an explorer");
+                            orchestrator.handle_explorer_message(msg);
+                        }
+                        Err(_) => {
+                            debug_println!("error receiving messages from explorer");
+                        }
+                    }
+                }
+                recv(do_something) -> _ => {
+                    counter -= 1;
+                    if counter == 0 {
+                        orchestrator.send_planet_kill_to_all();
+                    }
+                    else if counter < 0 {
+                        break;
+                    }
+                    else{
+                        orchestrator.choose_random_action();
+                    }
+                }
+            }
         }
     }
 }

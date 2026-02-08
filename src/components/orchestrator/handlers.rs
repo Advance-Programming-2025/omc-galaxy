@@ -108,8 +108,6 @@ impl Orchestrator {
                     }
                 }
             }
-            // PlanetToOrchestrator::IncomingExplorerResponse { planet_id, res }=>{},
-            //TODO at this point this functions don't do anything at all
             PlanetToOrchestrator::InternalStateResponse {
                 planet_id,
                 planet_state,
@@ -188,19 +186,57 @@ impl Orchestrator {
                     planet_id
                 )
             }
-            a => {
-                let event = LogEvent::self_directed(
-                    Participant::new(ActorType::Orchestrator, 0u32),
-                    EventType::MessagePlanetToOrchestrator,
-                    Channel::Warning,
-                    warning_payload!(
-                        "unhandled planet message",
-                        "_",
-                        "handle_planet_message()";
-                        "message"=>format!("{:?}", a)
-                    ),
-                );
-                event.emit();
+            PlanetToOrchestrator::IncomingExplorerResponse {planet_id, explorer_id, res }=>{
+                match res{
+                    Ok(_) => {
+                        let current_planet_id=self.explorers_info.get_current_planet(&explorer_id);
+                        let orch_current_planet_sender=match self.planet_channels.get(&current_planet_id){
+                            Some(sender) => sender,
+                            None=>{
+                                return Err(format!("Planet not found: {}", planet_id));
+                            }
+                        };
+                        //this is safe because we already checked it before
+                        let move_to_planet_id=self.explorers_info.get(&explorer_id).unwrap().move_to_planet_id;
+                        if move_to_planet_id >=0 {
+                            match orch_current_planet_sender.0.send(OrchestratorToPlanet::OutgoingExplorerRequest {
+                                explorer_id,
+                            }) {
+                                Ok(_) => {}
+                                Err(err) => {
+                                    //todo logs
+                                    return Err(format!("Failed to send explorer request: {}", err));
+                                }
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        //todo logs
+                    }
+                }
+            }
+            PlanetToOrchestrator::OutgoingExplorerResponse {planet_id, explorer_id, res}=>{
+                match res {
+                    Ok(_) => {
+                        let dst_planet_id=match self.explorers_info.get(&explorer_id){
+                            Some(explorer_info) => explorer_info.move_to_planet_id,
+                            None=>{
+                                //todo logs
+                                return Err(format!("Planet not found: {}", planet_id));
+                            }
+                        };
+                        match self.send_move_to_planet(explorer_id, dst_planet_id as u32){
+                            Ok(_) => {}
+                            Err(err)=>{
+                                //todo logs
+                                return Err(format!("Failed to send explorer request: {}", err));
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        //todo logs
+                    }
+                }
             }
         }
         Ok(())
@@ -467,9 +503,29 @@ impl Orchestrator {
                 if !is_neighbour {
                     return Err("Planet id not found".to_string());
                 }
+                //todo add incomingexplorerRequest and outgoingexplorerrequest
+                //updating move_to_planet_id
+                match self.explorers_info.get_mut(&explorer_id){
+                    Some(explorer_info)=>{
+                        explorer_info.move_to_planet_id=dst_planet_id as i32;
+                    }
+                    None=>{
+                        //todo logs
+                        return Err(format!("Explorer {} not found", explorer_id));
+                    }
+                }
+                match self.send_incoming_explorer_request(
+                    dst_planet_id,
+                    explorer_id,
+                ){
+                    Ok(_) => {}
+                    Err(e) => {
+                        //todo logs
+                    }
+                }
 
                 // else send the move to planet
-                return self.send_move_to_planet(explorer_id, dst_planet_id);
+                //return self.send_move_to_planet(explorer_id, dst_planet_id);
             }
         }
         Ok(())

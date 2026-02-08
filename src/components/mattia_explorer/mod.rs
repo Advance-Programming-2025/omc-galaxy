@@ -118,6 +118,7 @@ impl Explorer {
 
     // the explorer loop
     pub fn run(&mut self) -> Result<(), String> {
+        //sleep(Duration::from_secs(1));
         // every iteration the explorer receives messages from both planet and orchestrator channels,
         // then it behaves based on the message received, if the message received and the explorer state
         // do not match together the message is pushed into the corresponding buffer, and it will be read
@@ -137,6 +138,7 @@ impl Explorer {
                                 self.explorer_id,
                                 EventType::MessageOrchestratorToExplorer,
                                 "message received";
+                                "message"=>format!("{:?}", msg),
                                 "explorer data"=>format!("{:?}", self)
                             );
                             if orch_msg_match_state(&self.state, &msg) {
@@ -197,6 +199,16 @@ impl Explorer {
                 recv(self.planet_channels.0) -> msg_planet => {
                     match msg_planet {
                         Ok(msg) => {
+                            log_message!(
+                                ActorType::Planet,
+                                self.planet_id,
+                                ActorType::Explorer,
+                                self.explorer_id,
+                                EventType::MessagePlanetToExplorer,
+                                "message received";
+                                "message"=>format!("{:?}", msg),
+                                "explorer data"=>format!("{:?}", self)
+                            );
                             if planet_msg_match_state(&self.state, &msg) {
                                 match msg {
                                     PlanetToExplorer::SupportedResourceResponse{ resource_list } => {
@@ -251,21 +263,35 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("{}", err);
-                            //todo logs
+                            LogEvent::new(
+                                Some(Participant::new(ActorType::Planet, self.planet_id)),
+                                Some(Participant::new(ActorType::Explorer, self.explorer_id)),
+                                EventType::MessagePlanetToExplorer,
+                                Channel::Error,
+                                warning_payload!(
+                                    "receiving channel from planet disconnected",
+                                    err,
+                                    "mattia_explorer::run()"
+                                )
+                            ).emit();
                         }
                     }
                 }
                 default => {
+                    debug_println!("{}", format!("no message in the channels {}", self.manual_mode));
                     if !self.buffer_planet_msg.is_empty() || !self.buffer_orchestrator_msg.is_empty() {
+                        debug_println!("{}", format!("buffer_planet_msg len: {}, buffer_orchestrator_msg len: {}", self.buffer_planet_msg.len(), self.buffer_orchestrator_msg.len()));
                         manage_buffer_msg(self).map_err(|e| e.to_string())?;
                         //this is because manage_buffer_msg could possibly set the explorer state to killed
                         if self.state==ExplorerState::Killed{
                             return Ok(())
                         }
                     }
-                    else if !self.manual_mode{
+                    else if !self.manual_mode && self.state==ExplorerState::Idle{
+                        debug_println!("trying to run explorer ai");
                         ai_core_function(self).map_err(|e| e.to_string())?;
+                        //todo remove this sleep
+                        sleep(Duration::from_millis(500));
                     }
                 }
             }
@@ -275,8 +301,11 @@ impl Explorer {
 
 use std::fmt;
 use std::fmt::format;
-use common_game::logging::{ActorType, EventType};
-use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, LoggableActor};
+use std::thread::sleep;
+use std::time::Duration;
+use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
+use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload, LoggableActor};
+use crate::debug_println;
 
 impl fmt::Debug for Explorer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

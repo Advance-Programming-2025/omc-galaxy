@@ -3,6 +3,8 @@ use common_game::{
     logging::{ActorType, EventType},
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
+use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
+use common_game::utils::ID;
 use crossbeam_channel::Sender;
 use log::info;
 use logging_utils::{LoggableActor, log_fn_call, log_message};
@@ -263,6 +265,38 @@ impl Orchestrator {
             EventType::MessageOrchestratorToPlanet,
             "RequestPlanetState",
         );
+        Ok(())
+    }
+
+    pub fn send_incoming_explorer_request(
+        &self,
+        planet_id: ID,
+        explorer_id: ID,
+    )->Result<(), String>{
+        //todo logs
+        let sender = match self.planet_channels.get(&planet_id){
+            Some(sender) => sender,
+            None => return Err(format!("Unknown planet: {}", planet_id)),
+        };
+
+        let new_planet_to_explorer_sender=match self.explorer_channels.get(&explorer_id){
+            Some(sender) => sender,
+            None => return Err(format!("Unknown explorer: {}", explorer_id)),
+        };
+
+        match sender.0.send(OrchestratorToPlanet::IncomingExplorerRequest {
+            explorer_id,
+            new_sender: new_planet_to_explorer_sender.1.clone(),
+        }){
+            Ok(_) => {
+
+            }
+            Err(err) => {
+                //todo logs
+                return Err(err.to_string());
+            }
+        }
+
         Ok(())
     }
 }
