@@ -4,9 +4,10 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
+use common_game::logging::EventType::MessageOrchestratorToExplorer;
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
 use common_game::utils::ID;
-use crossbeam_channel::select;
+use crossbeam_channel::{select, SendError};
 use log::info;
 use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
@@ -96,12 +97,19 @@ impl Orchestrator {
                         //LOG
 
                         //Update planet State
-                        self.planets_info.update_status(planet_id, Status::Dead);
+                        match self.planets_info.update_status(planet_id, Status::Dead){
+                            Ok(_) => {}
+                            Err(err) => {
+                                //todo logs
+                                debug_println!("planet status not updated: {}", err)
+                            }
+                        }
                         //LOG
                         log_internal_op!(
                             self,
                             "action"=>"planet status updated to Dead",
-                            "planet_id"=>planet_id
+                            "planet_id"=>planet_id,
+                            "planet status"=> format!("{:?}",self.planets_info.get_status(&planet_id))
                         );
                         //LOG
                         //TODO we need to do a check if some explorer is on that planet
@@ -128,9 +136,10 @@ impl Orchestrator {
                     .update_from_planet_state(planet_id, planet_state);
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
+                //todo send kill to every explorer on the planet
+                self.emit_planet_death(planet_id);
                 //LOG
                 debug_println!("Planet killed: {}", planet_id);
-                self.emit_planet_death(planet_id);
                 let event = LogEvent::new(
                     Some(Participant::new(ActorType::Planet, planet_id)),
                     Some(Participant::new(ActorType::Orchestrator, 0u32)),
@@ -187,6 +196,17 @@ impl Orchestrator {
                 )
             }
             PlanetToOrchestrator::IncomingExplorerResponse {planet_id, explorer_id, res }=>{
+                log_message!(
+                    ActorType::Planet,
+                    planet_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessagePlanetToOrchestrator,
+                    "PlanetToOrchestrator::IncomingExplorerResponse";
+                    "planet_id"=>planet_id,
+                    "explorer_id" => explorer_id,
+                    "Result"=> format!("{:?}", res)
+                );
                 match res{
                     Ok(_) => {
                         let current_planet_id=self.explorers_info.get_current_planet(&explorer_id);
@@ -481,13 +501,40 @@ impl Orchestrator {
                 self.explorers_info.update_bag(explorer_id, bag_content);
             }
             ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "NeighborsRequest",
+                    explorer_id;
+                    "current_planet_id" => current_planet_id
+                );
+                //LOG
                 self.send_neighbours_response(explorer_id, current_planet_id)?;
             }
-            ExplorerToOrchestrator::TravelToPlanetRequest {
-                explorer_id,
+            ExplorerToOrchestrator::TravelToPlanetRequest { //todo nel caso non sia possibile muoversi la funzione
+                explorer_id,                            //todo deve mandare un MoveToPlanet con il sender None
                 current_planet_id,
                 dst_planet_id,
             } => {
+                //LOG
+                log_message!(
+                    ActorType::Explorer,
+                    explorer_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessageExplorerToOrchestrator,
+                    "TravelToPlanetRequest",
+                    explorer_id;
+                    "current_planet_id" => current_planet_id,
+                    "dst_planet_id" => dst_planet_id,
+                );
+                //LOG
+                //todo un explorer può andare su un pianeta che è stoppato?
+
                 // verify that the planet exists and that the destination planet is a neighbour
                 let is_neighbour = {
                     let guard = self.galaxy_topology.read().unwrap();
@@ -500,7 +547,19 @@ impl Orchestrator {
                 };
 
                 // if not existing or not a neighbour of the current planet return and Err
-                if !is_neighbour {
+                //todo questa sarebbe da rimuovere in favore di un aggiornamento corretto della topologia
+                if !is_neighbour || self.planets_info.get_status(&dst_planet_id) !=Status::Running{
+                    match self.explorer_channels.get(&explorer_id).unwrap().0.send(
+                        OrchestratorToExplorer::MoveToPlanet {
+                            sender_to_new_planet: None,
+                            planet_id: dst_planet_id,
+                        }
+                    ){
+                        Ok(_) => {}
+                        Err(_) => {
+                            //todo logs
+                        }
+                    }
                     return Err("Planet id not found".to_string());
                 }
                 //todo add incomingexplorerRequest and outgoingexplorerrequest

@@ -1,8 +1,10 @@
+use std::sync::LockResult;
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
 use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
+use common_game::utils::ID;
 use log::info;
 use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload
@@ -10,6 +12,7 @@ use logging_utils::{
 use rand::{Rng, random, seq::IndexedRandom};
 
 use crate::{components::orchestrator::Orchestrator, utils::Status};
+use crate::utils::registry::PlanetType;
 
 /// regulates the chance that the orchestrator decides to do anything
 /// that might change the state of the galaxy (i.e. send either an 
@@ -34,7 +37,7 @@ impl Orchestrator {
     ///
     /// * `planet_one_pos` - Position of the first planet in the matrix. Must be a valid index
     /// * `planet_two_pos` - Position of the second planet in the matrix. Must be a valid index
-    pub fn destroy_topology_link(
+    pub fn destroy_topology_link( //todo aggiornare questa funzione in quanto gli id dei pianeti non sono più necessariamente consecutivi
         &mut self,
         planet_one_pos: usize,
         planet_two_pos: usize,
@@ -105,6 +108,28 @@ impl Orchestrator {
                 Err(e.to_string())
             }
         }
+    }
+    /// remove planet from the galaxy
+    pub fn remove_planet_from_topology(
+        &mut self,
+        planet_id: ID,
+    ) -> Result<(), String> {
+        match self.galaxy_topology.write() {
+            Ok(mut gtop) => {
+                let idx=match self.galaxy_lookup.get(&planet_id){
+                    Some(index) => {index.0}
+                    None => {
+                        //todo logs
+                        return Err(format!("No planet found with id: {}", planet_id))
+                    }
+                };
+                for planet in &gtop[idx as usize]{
+                    todo!()
+                }
+            }
+            Err(_) => {}
+        }
+        Ok(())
     }
 
     /// Starts the AI of every planet.

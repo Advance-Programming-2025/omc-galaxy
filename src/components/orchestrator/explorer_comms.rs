@@ -320,7 +320,7 @@ impl Orchestrator {
     }
 
     /// gets the neighbors and sends them with the NeighborsResponse message
-    pub fn send_neighbours_response(
+    pub fn send_neighbours_response( //todo modificare questa funzione in quanto gli id dei pianeti non sono più necessariamente consecutivi
         &mut self,
         explorer_id: u32,
         planet_id: u32,

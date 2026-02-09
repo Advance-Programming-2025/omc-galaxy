@@ -1,6 +1,8 @@
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::utils::ID;
 use std::collections::HashSet;
+use common_game::logging::ActorType;
+use logging_utils::log_fn_call;
 use crate::utils::registry::PlanetType;
 
 #[derive(Debug)]
@@ -55,7 +57,14 @@ impl PlanetInfo {
             inferred_planet_type: None,
         }
     }
-    pub fn update_charge_rate(&mut self, current_energy: u32, current_time: u64) {
+    pub fn update_charge_rate(&mut self, current_energy: u32, current_time: u64) { //todo importare explorer_id per log
+        log_fn_call!(dir
+            ActorType::Explorer,
+            0u32,
+            "update_charge_rate()",
+            current_energy,
+            current_time
+        );
         // first visit
         if self.timestamp_energy == 0 || self.energy_cells.is_none() {
             self.energy_cells = Some(current_energy);

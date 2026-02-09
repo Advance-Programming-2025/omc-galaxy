@@ -243,15 +243,20 @@ fn calculate_time_decay(planet_timestamp: u64, current_time: u64) -> f32 {
     }
     else{
         let delta_t = (current_time - planet_timestamp) as f32;
-        let lambda = 0.005;
 
         // e^(-lambda*delta_t)
-        (-lambda * delta_t).exp()
+        (-LAMBDA * delta_t).exp()
     }
 }
+
 fn calculate_max_number_cells(planet_info: &PlanetInfo) -> u32 {
-    //todo
-    5
+    // Use inferred planet type if available
+    if let Some(planet_type) = &planet_info.inferred_planet_type {
+        planet_type.max_energy_cells()
+    } else {
+        // Default optimistic assumption if type not yet inferred
+        3
+    }
 }
 
 fn add_noise(value: f32) -> f32 {
@@ -284,12 +289,7 @@ fn estimate_current_energy(
     current_time: u64,
 ) -> (u32, f32) {
     let time_elapsed = current_time.saturating_sub(planet_info.timestamp_energy);
-    let max_cells = match planet_info.inferred_planet_type.as_ref(){
-        Some(typ) => {typ.max_energy_cells()}
-        None => {
-            5 //optimistic prediction
-        }
-    };
+    let max_cells = calculate_max_number_cells(planet_info);
 
     // Predict current energy
     let predicted_energy = predict_energy_cells(
@@ -300,7 +300,10 @@ fn estimate_current_energy(
     );
 
     // Confidence in prediction decreases with time elapsed
-    let confidence = if time_elapsed <= PERFECT_INFO_MAX_TIME {
+    let confidence = if planet_info.energy_cells.is_none() {
+        // No energy info at all
+        0.0
+    } else if time_elapsed <= PERFECT_INFO_MAX_TIME {
         1.0 // Perfect information
     } else if time_elapsed <= MAX_ENERGY_INFO_AGE { // 1 to 0.5
         1.0 - (time_elapsed as f32 / (MAX_ENERGY_INFO_AGE as f32 * 2.0))
@@ -444,7 +447,6 @@ fn score_complex_resource_production(
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { 1.0 } else { 0.8 })
         * (reliability*0.2 +0.8); //in this case the reliability on the information about the energy cells it isn't very important
 
-    // can_craft ora viene chiamato direttamente da explorer.bag
     let (_, _, has_a, _, has_b) = explorer.bag.can_craft(resource_type);
     let readiness_factor = match (has_a, has_b) {
         (true, true) => 1.0,
@@ -490,26 +492,28 @@ fn calculate_safety_score(explorer: &mut Explorer, planet_id:Option<ID>) -> Resu
     // Physical safety scales with energy/max ratio
     let energy_ratio = (effective_energy / max_cells).clamp(0.0, 1.0);
     let physical_safety = if effective_energy >= ENERGY_CELLS_DEFENSE_THRESHOLD as f32 {
-        0.5 + (energy_ratio * 0.5) // 0.5 to 1.0 range for defended planets
+        0.6 + (energy_ratio * 0.4) // 0.6 to 1.0 for defended planets
+    } else if effective_energy > 0.0 {
+        0.3 + (energy_ratio * 0.3) // 0.3 to 0.6 for some energy
     } else {
-        energy_ratio * 0.5 // 0.0 to 0.5 range for vulnerable planets
+        0.2 // Minimum baseline even with no energy
     };
 
     //calculating reliability of the topology data
     let neighbors_reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer_time);
     // Bonus for the connectivity
     let escape_factor = match planet_info.neighbors.as_ref() {
-        None => {0.0}
+        None => {0.3} // Unknown neighbors = assume some exist
         Some(neighbours) => {
             match neighbours.len(){
-                0 => 0.0,
-                1 => 0.4,
+                0 => 0.2,
+                1 => 0.5,
                 2 => 0.8,
                 _ => 1.0,
             }
         }
     };
-    let pessimistic_minimum = 0.08;
+    let pessimistic_minimum = 0.15;
     let adjusted_escape_factor = (escape_factor * neighbors_reliability)
         + (pessimistic_minimum * (1.0 - neighbors_reliability));
     let rocket=if planet_info.inferred_planet_type.as_ref().is_some_and(|x| x.can_have_rocket()){
@@ -529,12 +533,40 @@ fn calculate_safety_score(explorer: &mut Explorer, planet_id:Option<ID>) -> Resu
 //calculating the utility of updating neighbors
 fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> { //todo tenere in conto il tempo anche
     let planet_info = explorer.get_current_planet_info()?;
-    // critic information for navigation
-    // safety score is calculated on data eta, number of escape routes and defense capability
-    let base = ((1.0 - planet_info.safety_score.unwrap_or(SAFETY_WARNING)) * 0.9); //todo troppo influente, meglio dare priorità all'età dei dati
 
-    let mut rng = rand::rng();
-    let noise: f32 = rng.random_range(0.95..=1.05);
+    let reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer.time);
+
+    // Base utility from staleness
+    let staleness_component = (1.0 - reliability) * 0.7;
+
+    // Small bonus if current planet is unsafe (want to know escape routes)
+    let safety_bonus = if let Some(safety) = planet_info.safety_score {
+        if safety < SAFETY_WARNING {
+            0.2 // Moderate bonus when threatened
+        } else {
+            0.0
+        }
+    } else {
+        0.1 // Unknown safety = some bonus
+    };
+
+    // High priority if we don't know neighbors at all
+    let unknown_bonus = if planet_info.neighbors.is_none() {
+        0.3
+    } else {
+        0.0
+    };
+
+    let base = 0.1 + staleness_component + safety_bonus + unknown_bonus;
+
+    let noise = add_noise(1.0);
+
+    // // critic information for navigation
+    // // safety score is calculated on data eta, number of escape routes and defense capability
+    // let base = ((1.0 - planet_info.safety_score.unwrap_or(SAFETY_WARNING)) * 0.9); //todo troppo influente, meglio dare priorità all'età dei dati
+    //
+    // let mut rng = rand::rng();
+    // let noise: f32 = rng.random_range(0.95..=1.05);
     Ok((base * noise).clamp(0.0, 1.0))
 }
 
@@ -731,7 +763,12 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
             "utility scores" => format!("{:?}",explorer.ai_data.ai_action),
             "explorer state" =>format!("{:?}", explorer),
         );
-        match find_best_action(&explorer.ai_data.ai_action){
+        let best_action=find_best_action(&explorer.ai_data.ai_action);
+        log_internal_op!(
+            explorer,
+            "action to be taken" => format!("{:?}", best_action)
+        );
+        match best_action{
             Some(ai_action) => {
                 match ai_action {
                     AIActionType::RunAway => {

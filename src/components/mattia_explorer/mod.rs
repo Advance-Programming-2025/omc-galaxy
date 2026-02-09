@@ -138,7 +138,7 @@ impl Explorer {
                                 self.explorer_id,
                                 EventType::MessageOrchestratorToExplorer,
                                 "message received";
-                                "message"=>format!("{:?}", msg),
+                                "msg"=>format!("{:?}", msg),
                                 "explorer data"=>format!("{:?}", self)
                             );
                             if orch_msg_match_state(&self.state, &msg) {
@@ -206,7 +206,7 @@ impl Explorer {
                                 self.explorer_id,
                                 EventType::MessagePlanetToExplorer,
                                 "message received";
-                                "message"=>format!("{:?}", msg),
+                                "msg"=>format!("{:?}", msg),
                                 "explorer data"=>format!("{:?}", self)
                             );
                             if planet_msg_match_state(&self.state, &msg) {
@@ -226,7 +226,7 @@ impl Explorer {
                                     PlanetToExplorer::AvailableEnergyCellResponse{ available_cells } => {
                                         match self.state{
                                             ExplorerState::Surveying {resources,combinations,energy_cells:true,orch_resource,orch_combination}=>{
-                                                match self.topology_info.get_mut(&self.explorer_id){
+                                                match self.topology_info.get_mut(&self.planet_id){
                                                     Some(planet_info) => {
                                                         planet_info.update_charge_rate(available_cells, self.time);
                                                     }
@@ -248,6 +248,19 @@ impl Explorer {
                                                 }
                                             }
                                             _ => {
+                                                LogEvent::new(
+                                                    Some(Participant::new(ActorType::Planet, self.planet_id)),
+                                                    Some(Participant::new(ActorType::Explorer, self.explorer_id)),
+                                                    EventType::MessagePlanetToExplorer,
+                                                    Channel::Warning,
+                                                    warning_payload!(
+                                                        "received AvailableEnergyCellResponse while not in Surveying state\
+                                                        this should not happen",
+                                                        "",
+                                                        "Explorer::run()";
+                                                        "explorer state"=>format!("{:?}", self.state)
+                                                    )
+                                                ).emit()
                                                 //todo logs this should not happen
                                             }
                                         }
@@ -279,6 +292,7 @@ impl Explorer {
                 }
                 default => {
                     debug_println!("{}", format!("no message in the channels {}", self.manual_mode));
+                    debug_println!("explorer state: {:?}", self.state);
                     if !self.buffer_planet_msg.is_empty() || !self.buffer_orchestrator_msg.is_empty() {
                         debug_println!("{}", format!("buffer_planet_msg len: {}, buffer_orchestrator_msg len: {}", self.buffer_planet_msg.len(), self.buffer_orchestrator_msg.len()));
                         manage_buffer_msg(self).map_err(|e| e.to_string())?;
@@ -290,11 +304,10 @@ impl Explorer {
                     else if !self.manual_mode && self.state==ExplorerState::Idle{
                         debug_println!("trying to run explorer ai");
                         ai_core_function(self).map_err(|e| e.to_string())?;
-                        //todo remove this sleep
-                        sleep(Duration::from_millis(500));
                     }
                 }
             }
+            sleep(Duration::from_millis(20));
         }
     }
 }

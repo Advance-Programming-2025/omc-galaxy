@@ -201,6 +201,7 @@ pub fn move_to_planet(
                     };
                 }
                 None => {
+                    explorer.current_planet_neighbors_update=true;
                     explorer.topology_info.insert(planet_id, PlanetInfo::new(0));
                     explorer.state=ExplorerState::Surveying {
                         resources: true,
@@ -646,6 +647,9 @@ pub fn manage_supported_resource_response(
             match explorer.topology_info.get_mut(&explorer.planet_id) {
                 Some(planet_info) => {
                     planet_info.basic_resources = Some(resource_list.clone());
+                    if planet_info.complex_resources.is_some(){
+                        planet_info.calculate_planet_type()?;
+                    }
                 }
                 None => {
                     explorer.topology_info.insert(
@@ -679,6 +683,8 @@ pub fn manage_supported_resource_response(
                     }
                 }
             }
+
+            //updating explorer state
             if !combinations && !energy_cells {
                 explorer.state = ExplorerState::Idle;
             }
@@ -730,6 +736,9 @@ pub fn manage_supported_combination_response(
             match explorer.topology_info.get_mut(&explorer.planet_id) {
                 Some(planet_info) => {
                     planet_info.complex_resources = Some(combination_list.clone());
+                    if planet_info.basic_resources.is_some(){
+                        planet_info.calculate_planet_type()?;
+                    }
                 }
                 None => {
                     explorer.topology_info.insert(

@@ -441,8 +441,8 @@ mod game_simulation{
         // println!("aaaaaaa");
         // sleep(Duration::from_secs(1));
         // orchestrator.send_supported_resource_request(10); //this breaks everything somehow
-        let do_something = tick(Duration::from_millis(500));
-        let mut counter =50;
+        let do_something = tick(Duration::from_millis(50));
+        let mut counter =500;
         println!("aaaaaaa");
         loop {
             select! {

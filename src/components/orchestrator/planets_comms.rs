@@ -3,11 +3,12 @@ use common_game::{
     logging::{ActorType, EventType},
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
+use common_game::logging::{Channel, LogEvent, Participant};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
 use crossbeam_channel::Sender;
 use log::info;
-use logging_utils::{LoggableActor, log_fn_call, log_message};
+use logging_utils::{LoggableActor, log_fn_call, log_message, warning_payload, debug_println};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
@@ -273,15 +274,27 @@ impl Orchestrator {
         planet_id: ID,
         explorer_id: ID,
     )->Result<(), String>{
+        log_fn_call!(
+            self,
+            "send_incoming_explorer_request()",
+            planet_id,
+            explorer_id,
+        );
         //todo logs
         let sender = match self.planet_channels.get(&planet_id){
             Some(sender) => sender,
-            None => return Err(format!("Unknown planet: {}", planet_id)),
+            None => {
+                debug_println!("Unknown planet: {}", planet_id);
+                return Err(format!("Unknown planet: {}", planet_id))
+            },
         };
 
         let new_planet_to_explorer_sender=match self.explorer_channels.get(&explorer_id){
             Some(sender) => sender,
-            None => return Err(format!("Unknown explorer: {}", explorer_id)),
+            None => {
+                debug_println!("Unknown planet: {}", planet_id);
+                return Err(format!("Unknown explorer: {}", explorer_id))
+            },
         };
 
         match sender.0.send(OrchestratorToPlanet::IncomingExplorerRequest {
@@ -289,9 +302,22 @@ impl Orchestrator {
             new_sender: new_planet_to_explorer_sender.1.clone(),
         }){
             Ok(_) => {
-
+                debug_println!("IncomingExplorerRequest sent correctly")
             }
             Err(err) => {
+                LogEvent::new(
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                    Some(Participant::new(ActorType::Planet, planet_id)),
+                    EventType::MessageOrchestratorToPlanet,
+                    Channel::Warning,
+                    warning_payload!(
+                        "impossible to send IncomingExplorerRequest message to planet",
+                        err,
+                        "send_incoming_explorer_request()";
+                        "explorer_id"=>explorer_id,
+                        "planet_id"=>planet_id
+                    )
+                ).emit();
                 //todo logs
                 return Err(err.to_string());
             }
