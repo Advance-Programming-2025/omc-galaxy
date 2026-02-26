@@ -222,9 +222,27 @@ impl Orchestrator {
                             match orch_current_planet_sender.0.send(OrchestratorToPlanet::OutgoingExplorerRequest {
                                 explorer_id,
                             }) {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    log_internal_op!(
+                                        self,
+                                        "Action"=>"sended OutgoingExplorerRequest",
+                                        "planet_id"=>current_planet_id
+                                    )
+                                }
                                 Err(err) => {
-                                    //todo logs
+                                    LogEvent::new(
+                                        Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                                        Some(Participant::new(ActorType::Planet, current_planet_id)),
+                                        EventType::MessageOrchestratorToPlanet,
+                                        Channel::Warning,
+                                        warning_payload!(
+                                            "Failed to send OutgoingExplorerRequest",
+                                            err,
+                                            "handle_planet_msg()";
+                                            "msg" => format!("PlanetToOrchestrator::IncomingExplorerResponse {{ {}, {}, {:?} }}",planet_id, explorer_id, res )
+                                        )
+                                    ).emit();
+
                                     return Err(format!("Failed to send explorer request: {}", err));
                                 }
                             }

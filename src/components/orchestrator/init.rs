@@ -345,7 +345,7 @@ impl Orchestrator {
         &mut self,
         explorer_id: u32,
         planet_id: u32,
-    ) {
+    )->Result<(), String> {
         log_fn_call!(
             self,
             "add_tommy_explorer()",
@@ -361,7 +361,7 @@ impl Orchestrator {
         let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
             Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
             None => {
-                (None,None)
+                return Err("sender orchestrator to planet and explorer to planet don't exists".to_string());
             }, // sender does not exist
         };
 
@@ -378,7 +378,7 @@ impl Orchestrator {
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
-            (receiver_planet, expl_to_planet.unwrap()), // TODO this unwrap is unsafe
+            (receiver_planet, expl_to_planet.unwrap()), //this unwrap is safe because is already checked
             free_cells,
         );
 
@@ -414,6 +414,7 @@ impl Orchestrator {
                     Ok(_) => {},
                     Err(err) => {
                         //todo logs
+                        return Err(err.to_string())
                     }
                 }
             }
@@ -430,6 +431,7 @@ impl Orchestrator {
             "action"=>"explorer thread created",
             "explorer_id"=>explorer_id,
         );
+        Ok(())
     }
     /// Add a new explorer to the orchestrator.
     ///
@@ -447,7 +449,7 @@ impl Orchestrator {
         &mut self,
         explorer_id: u32,
         planet_id: u32,
-    ) {
+    )->Result<(), String>{
         log_fn_call!(
             self,
             "add_mattia_explorer()",
@@ -463,7 +465,7 @@ impl Orchestrator {
         let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
             Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
             None => {
-                (None,None)
+                return Err("sender orchestrator to planet and explorer to planet don't exists".to_string());
             }, // sender does not exist
         };
 
@@ -472,7 +474,7 @@ impl Orchestrator {
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
-            (receiver_planet, expl_to_planet.unwrap()), // TODO this unwrap is unsafe
+            (receiver_planet, expl_to_planet.unwrap()), // this unwrap is safe because it is checked before
         );
 
         log_internal_op!(
@@ -505,6 +507,7 @@ impl Orchestrator {
                     Ok(_) => {},
                     Err(err) => {
                         //todo logs
+                        return Err(err.to_string())
                     }
                 }
             }
@@ -522,6 +525,7 @@ impl Orchestrator {
             "action"=>"explorer thread created",
             "explorer_id"=>explorer_id,
         );
+        Ok(())
     }
 
     /// Initialize the galaxy using a topology file.
