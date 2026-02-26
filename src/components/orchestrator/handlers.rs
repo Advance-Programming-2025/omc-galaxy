@@ -96,6 +96,8 @@ impl Orchestrator {
                         );
                         //LOG
 
+                        self.destroy_topology_link(planet_id as usize)?;
+
                         //Update planet State
                         match self.planets_info.update_status(planet_id, Status::Dead){
                             Ok(_) => {}
@@ -136,6 +138,7 @@ impl Orchestrator {
                     .update_from_planet_state(planet_id, planet_state);
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
+                self.destroy_topology_link(planet_id as usize)?;
                 //todo send kill to every explorer on the planet
                 self.emit_planet_death(planet_id);
                 //LOG

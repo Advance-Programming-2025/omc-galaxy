@@ -30,33 +30,34 @@ pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.2;
 impl Orchestrator {
 
 
-    /// Removes the link between two planets if one of them explodes.
+    /// Removes the links to a dead planet
     ///
     /// Returns Err if the given indexes are out of bounds, Ok otherwise;
-    /// it does NOT currently check wether the link was already set to false beforehand
+    /// it does NOT currently check wether the link was already set to false beforehand.
+    /// The function uses CONTIGUOUS indexes; you can go from real to contiguous indexes
+    /// using the galaxy lookup hashmap.
     ///
-    /// * `planet_one_pos` - Position of the first planet in the matrix. Must be a valid index
-    /// * `planet_two_pos` - Position of the second planet in the matrix. Must be a valid index
-    pub fn destroy_topology_link( //todo aggiornare questa funzione in quanto gli id dei pianeti non sono più necessariamente consecutivi
+    /// * `dead_planet_pos` - Position of the dead planet in the matrix. Must be a valid index
+    pub fn destroy_topology_link(
         &mut self,
-        planet_one_pos: usize,
-        planet_two_pos: usize,
+        dead_planet_pos: usize,
     ) -> Result<(), String> {
         //LOG
         log_fn_call!(
             self,
             "destroy_topology_link()",
-            planet_one_pos,
-            planet_two_pos,
+            dead_planet_pos,
         );
         //LOG
 
         match self.galaxy_topology.write() {
             Ok(mut gtop) => {
                 let gtop_len = gtop.len();
-                if planet_one_pos < gtop_len && planet_two_pos < gtop_len {
-                    gtop[planet_one_pos][planet_two_pos] = false;
-                    gtop[planet_two_pos][planet_one_pos] = false;
+                if dead_planet_pos < gtop_len {
+                    for i in 0..gtop_len {
+                        gtop[dead_planet_pos][i] = false;
+                        gtop[i][dead_planet_pos] = false;
+                    }
                     //LOG
                     log_internal_op!(
                         self,
@@ -79,8 +80,7 @@ impl Orchestrator {
                             ),
                             "_",
                             "destroy_topology_link()",
-                            planet_one_pos,
-                            planet_two_pos
+                            dead_planet_pos
                         ),
                     );
                     event.emit();
@@ -98,8 +98,7 @@ impl Orchestrator {
                         "ERROR galaxy topology lock failed.",
                         e,
                         "destroy_topology_link()",
-                        planet_one_pos,
-                        planet_two_pos
+                        dead_planet_pos
                     ),
                 );
                 event.emit();
@@ -108,28 +107,6 @@ impl Orchestrator {
                 Err(e.to_string())
             }
         }
-    }
-    /// remove planet from the galaxy
-    pub fn remove_planet_from_topology(
-        &mut self,
-        planet_id: ID,
-    ) -> Result<(), String> {
-        match self.galaxy_topology.write() {
-            Ok(mut gtop) => {
-                let idx=match self.galaxy_lookup.get(&planet_id){
-                    Some(index) => {index.0}
-                    None => {
-                        //todo logs
-                        return Err(format!("No planet found with id: {}", planet_id))
-                    }
-                };
-                for planet in &gtop[idx as usize]{
-                    todo!()
-                }
-            }
-            Err(_) => {}
-        }
-        Ok(())
     }
 
     /// Starts the AI of every planet.
