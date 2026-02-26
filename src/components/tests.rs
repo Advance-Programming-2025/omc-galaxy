@@ -84,7 +84,7 @@ mod tests_topology_logic {
         let adj_list = vec![vec![1], vec![0]];
         orch.initialize_galaxy_by_adj_list(adj_list).unwrap();
 
-        orch.destroy_topology_link(0, 1).unwrap();
+        orch.destroy_topology_link(0).unwrap();
 
         let gtop = orch.galaxy_topology.read().unwrap();
         assert_eq!(gtop[0][1], false);
@@ -95,7 +95,7 @@ mod tests_topology_logic {
         let mut orch = Orchestrator::new().unwrap();
         orch.initialize_galaxy_by_adj_list(vec![vec![]]).unwrap();
 
-        let result = orch.destroy_topology_link(0, 5);
+        let result = orch.destroy_topology_link(5);
         assert!(result.is_err());
     }
 }
@@ -110,6 +110,12 @@ mod tests_messaging_protocol {
         let mut orch = Orchestrator::new().unwrap();
         let planet_id = 1;
 
+        let adj_list = vec![vec![1], vec![0]];
+        orch.initialize_galaxy_by_adj_list(adj_list).unwrap();
+
+        let a = orch.galaxy_topology.as_ref().read().unwrap()[1][0];
+        assert!(a); // we want the link to exist
+
         // Setup a planet
         orch.add_planet(planet_id, PlanetType::Ciuc).unwrap();
 
@@ -119,8 +125,9 @@ mod tests_messaging_protocol {
             rocket: None,
         };
         orch.handle_planet_message(msg).unwrap();
-
+        let b = orch.galaxy_topology.as_ref().read().unwrap()[1][0];
         assert!(orch.planets_info.is_dead(&planet_id));
+        assert!(!b); // not b, we don't want the planet to have a link
     }
 
     #[test]
@@ -148,7 +155,7 @@ mod tests_file_integration {
         let file_path = "test_galaxy.csv";
 
         // Format: ID, Type, Neighbors...
-        let content = "0, 4, 1\n1, 4, 0";
+        let content = "0, 4, 1, 400\n1, 4, 0, 400\n400, 4, 0, 1";
         let mut file = File::create(file_path).unwrap();
         file.write_all(content.as_bytes()).unwrap();
 
