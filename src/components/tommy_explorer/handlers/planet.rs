@@ -7,14 +7,17 @@ use common_game::protocols::planet_explorer::PlanetToExplorer;
 pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<(), String> {
     match msg {
         PlanetToExplorer::SupportedResourceResponse { resource_list } => {
+            println!("[TEST] Supported resource list: {:?}", resource_list);
             update_basic_resources(explorer, resource_list);
             Ok(())
         }
         PlanetToExplorer::SupportedCombinationResponse { combination_list } => {
+            println!("[TEST] Supported combination list: {:?}", combination_list);
             update_complex_resources(explorer, combination_list);
             Ok(())
         }
         PlanetToExplorer::GenerateResourceResponse { resource } => {
+            println!("[TEST] Generated resource: {:?}", resource);
             put_basic_resource_in_bag(explorer, resource);
             // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
             //     ExplorerToOrchestrator::BagContentResponse {
@@ -24,6 +27,7 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
             Ok(())
         }
         PlanetToExplorer::CombineResourceResponse { complex_response } => {
+            println!("[TEST] Combined resource: {:?}", complex_response);
             put_complex_resource_in_bag(explorer, complex_response);
             // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
             //     ExplorerToOrchestrator::BagContentResponse {
@@ -33,10 +37,12 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
             Ok(())
         }
         PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {
+            println!("[TEST] Available energy cell: {:?}", available_cells);
             explorer.set_energy_cells(available_cells);
             Ok(())
         }
         PlanetToExplorer::Stopped => {
+            println!("[TEST] planet stopped");
             explorer.set_state(ExplorerState::WaitingToStartExplorerAI);
             Ok(())
         }

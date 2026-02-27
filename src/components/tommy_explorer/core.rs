@@ -318,6 +318,7 @@ impl Explorer {
                             // if the sending is successful change the state to WaitingForNeighbours
                             // and push back the action
                             self.set_state(ExplorerState::WaitingForNeighbours);
+                            println!("[EXPLORER TOMY DEBUG] AskNeighbours"); 
                         }
                         Err(err) => {
                             println!(
@@ -336,6 +337,7 @@ impl Explorer {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedResources
                             self.set_state(ExplorerState::WaitingForSupportedResources);
+                            println!("[EXPLORER TOMY DEBUG] AskSupportedResources");
                         }
                         Err(err) => {
                             // TODO
@@ -351,6 +353,7 @@ impl Explorer {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedCombinations
                             self.set_state(ExplorerState::WaitingForSupportedCombinations);
+                            println!("[EXPLORER TOMY DEBUG] AskSupportedCombinations");
                         }
                         Err(err) => {
                             // TODO
@@ -364,6 +367,7 @@ impl Explorer {
                     }) {
                         Ok(_) => {
                             self.set_state(ExplorerState::WaitingForAvailableEnergyCells);
+                            println!("[EXPLORER TOMY DEBUG] AvailableEnergyCellRequest");
                         }
                         Err(err) => {
                             // TODO
@@ -386,6 +390,7 @@ impl Explorer {
                     self.action_queue.push_back(action);
 
                     if self.energy_cells > 0 {
+                        println!("[EXPLORER TOMY DEBUG] GenerateOrCombine");
                         if let Some(resource) = self.decide_resource_action() {
                             match resource {
                                 ResourceType::Basic(basic_resource) => match basic_resource {
@@ -479,9 +484,13 @@ impl Explorer {
                                 },
                             ) {
                                 Ok(_) => {
-                                    self.set_state(ExplorerState::Traveling); // TODO should be Idle, in the case in which the planet is dead and can't respond 
+                                    self.set_state(ExplorerState::Traveling); // TODO should be Idle, in the case in which the planet is dead and can't respond
+                                    println!("[EXPLORER TOMY DEBUG] Traveling");
                                 }
-                                Err(_) => self.move_queue.clear(),
+                                Err(_) => { 
+                                    self.move_queue.clear(); 
+                                    println!("[EXPLORER TOMY DEBUG] Not traveling");
+                                },
                             }
                         } else {
                             self.move_queue.clear();

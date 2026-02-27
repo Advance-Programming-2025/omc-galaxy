@@ -79,7 +79,7 @@ impl Orchestrator {
                         warning_payload!(
                             format!(
                                 "One of the indexes is out of bounds. upper bound: {}",
-                                gtop_len - 1
+                                gtop_len.saturating_sub(1)
                             ),
                             "_",
                             "destroy_topology_link()",

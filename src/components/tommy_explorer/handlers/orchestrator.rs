@@ -18,18 +18,22 @@ pub fn handle_message(
 ) -> Result<bool, String> {
     match msg {
         OrchestratorToExplorer::StartExplorerAI => {
+            println!("[TEST] StartExplorerAI");
             start_explorer_ai(explorer)?;
             Ok(false)
         }
         OrchestratorToExplorer::ResetExplorerAI => {
+            println!("[TEST] ResetExplorerAI");
             reset_explorer_ai(explorer);
             Ok(false)
         }
         OrchestratorToExplorer::StopExplorerAI => {
+            println!("[TEST] StopExplorerAI");
             stop_explorer_ai(explorer);
             Ok(false)
         }
         OrchestratorToExplorer::KillExplorer => {
+            println!("[TEST] KillExplorer");
             kill_explorer(explorer)?;
             Ok(true)
         }
@@ -37,34 +41,42 @@ pub fn handle_message(
             sender_to_new_planet,
             planet_id,
         } => {
+            println!("[TEST] MoveToPlanet");
             move_to_planet(explorer, sender_to_new_planet, planet_id);
             Ok(false)
         }
         OrchestratorToExplorer::CurrentPlanetRequest => {
+            println!("[TEST] CurrentPlanetRequest");
             current_planet_request(explorer);
             Ok(false)
         }
         OrchestratorToExplorer::SupportedResourceRequest => {
+            println!("[TEST] SupportedResourceRequest");
             supported_resource_request(explorer);
             Ok(false)
         }
         OrchestratorToExplorer::SupportedCombinationRequest => {
+            println!("[TEST] SupportedCombinationRequest");
             supported_combination_request(explorer);
             Ok(false)
         }
         OrchestratorToExplorer::GenerateResourceRequest { to_generate } => {
+            println!("[TEST] GenerateResourceRequest");
             generate_resource_request(explorer, to_generate);
             Ok(false)
         }
         OrchestratorToExplorer::CombineResourceRequest { to_generate } => {
+            println!("[TEST] CombineResourceRequest");
             combine_resource_request(explorer, to_generate);
             Ok(false)
         }
         OrchestratorToExplorer::BagContentRequest => {
+            println!("[TEST] BagContentRequest");
             bag_content_request(explorer);
             Ok(false)
         }
         OrchestratorToExplorer::NeighborsResponse { neighbors } => {
+            println!("[TEST] NeighborsResponse");
             neighbors_response(explorer, neighbors);
             Ok(false)
         }

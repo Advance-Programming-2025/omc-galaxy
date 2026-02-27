@@ -141,6 +141,7 @@ impl Orchestrator {
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
                 self.destroy_topology_link(planet_id as usize)?;
+                self.planets_info.update_status(planet_id, Status::Dead);
                 //todo send kill to every explorer on the planet
                 self.emit_planet_death(planet_id);
                 //LOG
@@ -160,6 +161,7 @@ impl Orchestrator {
             }
             // PlanetToOrchestrator::OutgoingExplorerResponse { planet_id, res }=>{},
             PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
+                self.planets_info.update_status(planet_id, Status::Running);
                 //LOG
                 let event = LogEvent::new(
                     Some(Participant::new(ActorType::Planet, planet_id)),
