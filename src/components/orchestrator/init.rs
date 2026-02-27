@@ -1,4 +1,4 @@
-use logging_utils::{get_receiver_id, get_sender_id, LoggableActor};
+use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
 use std::{
     fs,
     sync::{Arc, RwLock},
@@ -23,17 +23,16 @@ use crate::utils::registry::PlanetType::{
 };
 use crate::{
     GalaxyTopology,
-    components::tommy_explorer::Explorer as TommyExplorer,
     components::mattia_explorer::Explorer as MattiaExplorer,
+    components::tommy_explorer::Explorer as TommyExplorer,
     utils::{
         Status,
         registry::{PLANET_REGISTRY, PlanetType},
     },
 };
 
-use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
 use crate::utils::{ExplorerInfo, PlanetInfo};
-
+use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
 
 //Initialization game functions
 impl Orchestrator {
@@ -241,7 +240,7 @@ impl Orchestrator {
         ) = unbounded();
 
         //Log
-        log_internal_op!(dir ActorType::Orchestrator, 0u32, 
+        log_internal_op!(dir ActorType::Orchestrator, 0u32,
             "action"=>"channels initialized",
             "from"=>"orchestrator, planet",
             "to"=>"explorer"
@@ -312,7 +311,8 @@ impl Orchestrator {
         //LOG
 
         //Update HashMaps
-        self.planets_info.insert_status(new_planet.id(), type_id, Status::Paused);
+        self.planets_info
+            .insert_status(new_planet.id(), type_id, Status::Paused);
         self.planet_channels
             .insert(new_planet.id(), (sender_orchestrator, sender_explorer));
 
@@ -374,7 +374,7 @@ impl Orchestrator {
         }
 
         //Construct Explorer
-        let mut new_explorer =TommyExplorer::new(
+        let mut new_explorer = TommyExplorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
@@ -389,7 +389,10 @@ impl Orchestrator {
         );
 
         //Update HashMaps
-        self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), planet_id));
+        self.explorers_info.insert(
+            explorer_id,
+            ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), planet_id),
+        );
 
         log_internal_op!(
             self,
@@ -402,16 +405,13 @@ impl Orchestrator {
             "action"=>"saved channels: sender_orch, sender_planet",
         );
 
-
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                match orchestrator_sender.send(
-                    OrchestratorToPlanet::IncomingExplorerRequest {
-                        explorer_id,
-                        new_sender: sender_planet.clone(),
-                    }
-                ){
-                    Ok(_) => {},
+                match orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                    explorer_id,
+                    new_sender: sender_planet.clone(),
+                }) {
+                    Ok(_) => {}
                     Err(err) => {
                         //todo logs
                         return Err(err.to_string())
@@ -422,12 +422,12 @@ impl Orchestrator {
         }
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
-        thread::spawn(move|| -> Result<(), String> {
+        thread::spawn(move || -> Result<(), String> {
             let handle = new_explorer.run()?; //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
         log_internal_op!(
-            self, 
+            self,
             "action"=>"explorer thread created",
             "explorer_id"=>explorer_id,
         );
@@ -470,7 +470,7 @@ impl Orchestrator {
         };
 
         //Construct Explorer
-        let mut new_explorer =MattiaExplorer::new(
+        let mut new_explorer = MattiaExplorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, self.sender_explorer_orch.clone()),
@@ -484,7 +484,10 @@ impl Orchestrator {
         );
 
         //Update HashMaps
-        self.explorers_info.insert(explorer_id, ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), planet_id));
+        self.explorers_info.insert(
+            explorer_id,
+            ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), planet_id),
+        );
 
         log_internal_op!(
             self,
@@ -498,13 +501,11 @@ impl Orchestrator {
         );
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                match orchestrator_sender.send(
-                    OrchestratorToPlanet::IncomingExplorerRequest {
-                        explorer_id,
-                        new_sender: sender_planet.clone(),
-                    }
-                ){
-                    Ok(_) => {},
+                match orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                    explorer_id,
+                    new_sender: sender_planet.clone(),
+                }) {
+                    Ok(_) => {}
                     Err(err) => {
                         //todo logs
                         return Err(err.to_string())
@@ -516,8 +517,8 @@ impl Orchestrator {
 
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
-        thread::spawn(move|| -> Result<(), String> {
-            let _ = new_explorer.run().map_err(|_|"Error run"); //TODO implement a run function for explorer to interact with orchestrator
+        thread::spawn(move || -> Result<(), String> {
+            let _ = new_explorer.run().map_err(|_| "Error run"); //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
         log_internal_op!(
@@ -540,16 +541,16 @@ impl Orchestrator {
     ///
     /// * `path` - path to the galaxy initialization file
     pub fn initialize_galaxy_by_file(&mut self, path: &str) -> Result<(), String> {
-        
         //At the moment are allowed only id from 0 to MAX u32
         log_fn_call!(self, "initialize_galaxy_by_file()", path,);
 
-
         ////////////// PLANET INITIALIZATION /////////////////////
         //Read the input file and handle it
-        let input = match fs::read_to_string(path).map_err(|_| format!("Unable to read the input from {path}")){
+        let input = match fs::read_to_string(path)
+            .map_err(|_| format!("Unable to read the input from {path}"))
+        {
             Ok(input) => input,
-            Err(err)=>{
+            Err(err) => {
                 LogEvent::self_directed(
                     Participant::new(ActorType::Orchestrator, 0u32),
                     EventType::InternalOrchestratorAction,
@@ -560,7 +561,8 @@ impl Orchestrator {
                         "initialize_galaxy_by_file()",
                         path
                     ),
-                ).emit();
+                )
+                .emit();
                 return Err(err);
             }
         };
@@ -630,12 +632,9 @@ impl Orchestrator {
         //Initialize the orchestrator galaxy topology
         self.initialize_galaxy_by_adj_list(adj_list_for_topology)?;
 
-
         ////////////// EXPLORERS INITIALIZATION /////////////////////
         //self.add_tommy_explorer(0, 0);  //todo i commented this because it was breaking every test i was doing :)
         //self.add_mattia_explorer(1,0);
-
-
 
         Ok(())
     }

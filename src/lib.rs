@@ -3,7 +3,7 @@ pub mod settings;
 pub mod utils;
 
 //Orchestrator example
-pub use utils::{ExplorerStatus, GalaxyTopology, PlanetInfoMap, PlanetStatus};
+pub use utils::{GalaxyTopology, PlanetInfoMap, PlanetStatus};
 
 //Both GUIs
 pub use components::orchestrator::Orchestrator;

@@ -1,28 +1,31 @@
-use std::sync::LockResult;
+use common_game::protocols::orchestrator_explorer::{
+    ExplorerToOrchestrator, OrchestratorToExplorer,
+};
+use common_game::utils::ID;
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
-use common_game::utils::ID;
 use log::info;
 use logging_utils::{
-    LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload
+    LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op,
+    log_message, payload, warning_payload,
 };
 use rand::{Rng, random, seq::IndexedRandom};
+use std::sync::LockResult;
 
-use crate::{components::orchestrator::Orchestrator, utils::Status};
 use crate::utils::registry::PlanetType;
+use crate::{components::orchestrator::Orchestrator, utils::Status};
 
 /// regulates the chance that the orchestrator decides to do anything
-/// that might change the state of the galaxy (i.e. send either an 
-/// asteroid or a sunray). Ideally this should be pretty high but not 1 
+/// that might change the state of the galaxy (i.e. send either an
+/// asteroid or a sunray). Ideally this should be pretty high but not 1
 pub const RANDOM_ACTION_CHANCE: f64 = 0.8;
 
 /// regulates the chance that the orchestrator, when asked to launch
 /// a celestial body, launches either a sunray or an asteroid.
-/// 
-/// A lower setting skews the balance towards sunrays, which makes 
+///
+/// A lower setting skews the balance towards sunrays, which makes
 /// for longer games, while a value over 0.6 is pretty much
 /// intergalactic nuclear war.
 pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.2;
@@ -30,7 +33,7 @@ pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.2;
 impl Orchestrator {
 
 
-    /// Removes the links to a dead planet
+    /// Removes the link between two planets if one of them explodes.
     ///
     /// Returns Err if the given indexes are out of bounds, Ok otherwise;
     /// it does NOT currently check wether the link was already set to false beforehand.
@@ -173,7 +176,8 @@ impl Orchestrator {
                     );
                     event.emit();
                     //LOG
-                    self.planets_info.update_status(planet_id, Status::Running)?;
+                    self.planets_info
+                        .update_status(planet_id, Status::Running)?;
                     count += 1;
                 }
                 _ => {}
@@ -316,7 +320,8 @@ impl Orchestrator {
                     event.emit();
                     //LOG
 
-                    self.explorers_info.insert_status(explorer_id, Status::Running);
+                    self.explorers_info
+                        .insert_status(explorer_id, Status::Running);
                     count += 1;
                 }
                 _ => {
@@ -395,7 +400,8 @@ impl Orchestrator {
                     event.emit();
                     //LOG
 
-                    self.explorers_info.insert_status(explorer_id, Status::Paused);
+                    self.explorers_info
+                        .insert_status(explorer_id, Status::Paused);
                     count += 1;
                 }
                 _ => {
@@ -453,7 +459,6 @@ impl Orchestrator {
         Ok(())
     }
 
-
     pub fn choose_random_action(&mut self) -> Result<(), String> {
         let mut rng = rand::rng();
         let living_things = self.planets_info.get_list_id_alive();
@@ -466,8 +471,8 @@ impl Orchestrator {
                 Some(num) => num,
                 None => return Ok(()),
             };
-            
-            let mut params: Option<(u32,Sender<OrchestratorToPlanet>)> = None;
+
+            let mut params: Option<(u32, Sender<OrchestratorToPlanet>)> = None;
 
             // find the set of channels that correspond to the chosen ID
             for (&id, channels) in self.planet_channels.iter() {
@@ -476,11 +481,11 @@ impl Orchestrator {
                     params = Some((id, channels.0.to_owned()));
                 }
             }
-        
+
             // if there is at least one living planet...
             if let Some((id, channel)) = params {
                 // ...choose whether to do anything at all (probably will)
-                if rng.random_bool(RANDOM_ACTION_CHANCE){
+                if rng.random_bool(RANDOM_ACTION_CHANCE) {
                     // chooses between sunray or asteroid
                     if rng.random_bool(SUNRAY_ASTEROID_CHANCE) {
                         self.send_asteroid(id, &channel)?;
@@ -494,60 +499,52 @@ impl Orchestrator {
         Ok(())
     }
 
-
     // TODO unify this function and the next one in send_celestial_from_gui
-    pub fn send_sunray_from_gui(&mut self, id_list: Vec<u32>) -> Result<(),String> {
+    pub fn send_sunray_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
         let alive = self.planets_info.get_list_id_alive();
-        
-        for planet_id in id_list{
-        if !alive.contains(&planet_id) {
-            continue;
-        }
-        
-        let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> = self.planet_channels
-            .iter()
-            .find_map(|(&id, (sender, _))| {
-                if id == planet_id {
-                    Some((id, sender.clone()))
-                } else {
-                    None
-                }
-            });
 
-        match parameters {
-            Some(valid) => {
-                self.send_sunray(valid.0, &valid.1)?
-            }, 
-            None => todo!()
+        for planet_id in id_list {
+            if !alive.contains(&planet_id) {
+                continue;
+            }
+
+            let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
+                self.planet_channels.iter().find_map(|(&id, (sender, _))| {
+                    if id == planet_id {
+                        Some((id, sender.clone()))
+                    } else {
+                        None
+                    }
+                });
+
+            match parameters {
+                Some(valid) => self.send_sunray(valid.0, &valid.1)?,
+                None => todo!(),
+            }
         }
-    }
-    Ok(())
+        Ok(())
     }
 
-    pub fn send_asteroid_from_gui(&mut self, id_list: Vec<u32>) -> Result<(),String> {
-        for planet_id in id_list{
-        if !self.planets_info.get_list_id_alive().contains(&planet_id) {
-            return Err("Planet is either dead or not valid".to_string())
-        }
-        
-        let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> = self.planet_channels
-            .iter()
-            .find_map(|(&id, (sender, _))| {
-                if id == planet_id {
-                    Some((id, sender.clone()))
-                } else {
-                    None
-                }
-            });
+    pub fn send_asteroid_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
+        for planet_id in id_list {
+            if !self.planets_info.get_list_id_alive().contains(&planet_id) {
+                return Err("Planet is either dead or not valid".to_string());
+            }
 
-        match parameters {
-            Some(valid) => {
-                self.send_asteroid(valid.0, &valid.1)?
-            }, 
-            None => {}
+            let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
+                self.planet_channels.iter().find_map(|(&id, (sender, _))| {
+                    if id == planet_id {
+                        Some((id, sender.clone()))
+                    } else {
+                        None
+                    }
+                });
+
+            match parameters {
+                Some(valid) => self.send_asteroid(valid.0, &valid.1)?,
+                None => {}
+            }
         }
-    }
-    Ok(())
-        
+        Ok(())
     }
 }

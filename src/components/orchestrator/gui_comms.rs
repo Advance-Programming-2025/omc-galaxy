@@ -4,14 +4,14 @@ use std::sync::Arc;
 use log::info;
 use rustc_hash::FxHashMap;
 
+use crate::utils::ExplorerInfoMap;
 use crate::{
-    ExplorerStatus, GalaxyTopology, PlanetStatus,
+    GalaxyTopology, PlanetStatus,
     components::orchestrator::{Orchestrator, OrchestratorEvent},
     utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
 };
 use logging_utils::LoggableActor;
 use logging_utils::log_fn_call;
-use crate::utils::ExplorerInfoMap;
 
 impl Orchestrator {
     /// Get a snapshot of the current galaxy topology
@@ -57,8 +57,8 @@ impl Orchestrator {
         let explorer_status = self.explorers_info.clone();
         explorer_status
     }
-    pub fn get_galaxy_topology(&self)->Vec<Vec<bool>>{
-        self.galaxy_topology.read().unwrap().clone()    
+    pub fn get_galaxy_topology(&self) -> Vec<Vec<bool>> {
+        self.galaxy_topology.read().unwrap().clone()
     }
 
     // Bevy stuff

@@ -1,22 +1,24 @@
 use std::time::{Duration, Instant};
 
+use common_game::logging::EventType::MessageOrchestratorToExplorer;
+use common_game::protocols::orchestrator_explorer::{
+    ExplorerToOrchestrator, OrchestratorToExplorer,
+};
+use common_game::utils::ID;
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use common_game::logging::EventType::MessageOrchestratorToExplorer;
-use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
-use common_game::utils::ID;
-use crossbeam_channel::{select, SendError};
+use crossbeam_channel::{SendError, select};
 use log::info;
 use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
     payload, warning_payload,
 };
 
-use crate::{components::orchestrator::{Orchestrator}, utils::Status, ExplorerStatus};
 use crate::components::explorer::BagType;
 use crate::utils::ExplorerInfoMap;
+use crate::{components::orchestrator::Orchestrator, utils::Status};
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -68,7 +70,7 @@ impl Orchestrator {
                     "has_rocket"=>rocket.is_some()
                 );
                 //LOG
-                
+
                 match rocket {
                     Some(_) => {
                         info!("I'm planet {planet_id} and I got an asteroid. Got rocket!");
@@ -99,7 +101,7 @@ impl Orchestrator {
                         self.destroy_topology_link(planet_id as usize)?;
 
                         //Update planet State
-                        match self.planets_info.update_status(planet_id, Status::Dead){
+                        match self.planets_info.update_status(planet_id, Status::Dead) {
                             Ok(_) => {}
                             Err(err) => {
                                 //todo logs
@@ -198,7 +200,11 @@ impl Orchestrator {
                     planet_id
                 )
             }
-            PlanetToOrchestrator::IncomingExplorerResponse {planet_id, explorer_id, res }=>{
+            PlanetToOrchestrator::IncomingExplorerResponse {
+                planet_id,
+                explorer_id,
+                res,
+            } => {
                 log_message!(
                     ActorType::Planet,
                     planet_id,
@@ -210,15 +216,17 @@ impl Orchestrator {
                     "explorer_id" => explorer_id,
                     "Result"=> format!("{:?}", res)
                 );
-                match res{
+                match res {
                     Ok(_) => {
-                        let current_planet_id=self.explorers_info.get_current_planet(&explorer_id);
-                        let orch_current_planet_sender=match self.planet_channels.get(&current_planet_id){
-                            Some(sender) => sender,
-                            None=>{
-                                return Err(format!("Planet not found: {}", planet_id));
-                            }
-                        };
+                        let current_planet_id =
+                            self.explorers_info.get_current_planet(&explorer_id);
+                        let orch_current_planet_sender =
+                            match self.planet_channels.get(&current_planet_id) {
+                                Some(sender) => sender,
+                                None => {
+                                    return Err(format!("Planet not found: {}", planet_id));
+                                }
+                            };
                         //this is safe because we already checked it before
                         let move_to_planet_id=self.explorers_info.get(&explorer_id).unwrap().move_to_planet_id;
                         if move_to_planet_id >=0 {
@@ -256,19 +264,23 @@ impl Orchestrator {
                     }
                 }
             }
-            PlanetToOrchestrator::OutgoingExplorerResponse {planet_id, explorer_id, res}=>{
+            PlanetToOrchestrator::OutgoingExplorerResponse {
+                planet_id,
+                explorer_id,
+                res,
+            } => {
                 match res {
                     Ok(_) => {
-                        let dst_planet_id=match self.explorers_info.get(&explorer_id){
+                        let dst_planet_id = match self.explorers_info.get(&explorer_id) {
                             Some(explorer_info) => explorer_info.move_to_planet_id,
-                            None=>{
+                            None => {
                                 //todo logs
                                 return Err(format!("Planet not found: {}", planet_id));
                             }
                         };
-                        match self.send_move_to_planet(explorer_id, dst_planet_id as u32){
+                        match self.send_move_to_planet(explorer_id, dst_planet_id as u32) {
                             Ok(_) => {}
-                            Err(err)=>{
+                            Err(err) => {
                                 //todo logs
                                 return Err(format!("Failed to send explorer request: {}", err));
                             }
@@ -287,10 +299,7 @@ impl Orchestrator {
         &mut self,
         msg: ExplorerToOrchestrator<BagType>,
     ) -> Result<(), String> {
-        log_internal_op!(
-            self,
-            "explorer message received"
-        );
+        log_internal_op!(self, "explorer message received");
         match msg {
             ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
                 //LOG
@@ -305,7 +314,8 @@ impl Orchestrator {
                 );
                 //LOG
 
-                self.explorers_info.insert_status(explorer_id, Status::Running);
+                self.explorers_info
+                    .insert_status(explorer_id, Status::Running);
                 if self.explorers_info.get(&explorer_id).is_none() {
                     self.send_current_planet_request(explorer_id)?;
                 }
@@ -377,7 +387,8 @@ impl Orchestrator {
                 );
                 //LOG
 
-                self.explorers_info.insert_status(explorer_id, Status::Paused);
+                self.explorers_info
+                    .insert_status(explorer_id, Status::Paused);
                 if self.explorers_info.get(&explorer_id).is_none() {
                     self.send_current_planet_request(explorer_id)?;
                 }
@@ -409,7 +420,8 @@ impl Orchestrator {
                 );
                 //LOG
 
-                self.explorers_info.update_current_planet(explorer_id, planet_id);
+                self.explorers_info
+                    .update_current_planet(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::CurrentPlanetResult {
                 explorer_id,
@@ -428,7 +440,8 @@ impl Orchestrator {
                 );
                 //LOG
 
-                self.explorers_info.update_current_planet(explorer_id, planet_id);
+                self.explorers_info
+                    .update_current_planet(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::SupportedResourceResult {
                 explorer_id,
@@ -446,6 +459,11 @@ impl Orchestrator {
                     "resources_count" => supported_resources.len()
                 );
                 //LOG
+
+                //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
+                let planet_id = self.explorers_info.get_current_planet(&explorer_id);
+                self.planets_info
+                    .update_supported_resources(planet_id, supported_resources)?;
             }
             ExplorerToOrchestrator::SupportedCombinationResult {
                 explorer_id,
@@ -463,6 +481,11 @@ impl Orchestrator {
                     "combinations_count" => combination_list.len()
                 );
                 //LOG
+
+                //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
+                let planet_id = self.explorers_info.get_current_planet(&explorer_id);
+                self.planets_info
+                    .update_supported_combination(planet_id, combination_list)?;
             }
             ExplorerToOrchestrator::GenerateResourceResponse {
                 explorer_id,
@@ -521,7 +544,10 @@ impl Orchestrator {
 
                 self.explorers_info.update_bag(explorer_id, bag_content);
             }
-            ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
+            ExplorerToOrchestrator::NeighborsRequest {
+                explorer_id,
+                current_planet_id,
+            } => {
                 //LOG
                 log_message!(
                     ActorType::Explorer,
@@ -536,8 +562,9 @@ impl Orchestrator {
                 //LOG
                 self.send_neighbours_response(explorer_id, current_planet_id)?;
             }
-            ExplorerToOrchestrator::TravelToPlanetRequest { //todo nel caso non sia possibile muoversi la funzione
-                explorer_id,                            //todo deve mandare un MoveToPlanet con il sender None
+            ExplorerToOrchestrator::TravelToPlanetRequest {
+                //todo nel caso non sia possibile muoversi la funzione
+                explorer_id, //todo deve mandare un MoveToPlanet con il sender None
                 current_planet_id,
                 dst_planet_id,
             } => {
@@ -569,13 +596,14 @@ impl Orchestrator {
 
                 // if not existing or not a neighbour of the current planet return and Err
                 //todo questa sarebbe da rimuovere in favore di un aggiornamento corretto della topologia
-                if !is_neighbour || self.planets_info.get_status(&dst_planet_id) !=Status::Running{
+                if !is_neighbour || self.planets_info.get_status(&dst_planet_id) != Status::Running
+                {
                     match self.explorer_channels.get(&explorer_id).unwrap().0.send(
                         OrchestratorToExplorer::MoveToPlanet {
                             sender_to_new_planet: None,
                             planet_id: dst_planet_id,
-                        }
-                    ){
+                        },
+                    ) {
                         Ok(_) => {}
                         Err(_) => {
                             //todo logs
@@ -585,19 +613,16 @@ impl Orchestrator {
                 }
                 //todo add incomingexplorerRequest and outgoingexplorerrequest
                 //updating move_to_planet_id
-                match self.explorers_info.get_mut(&explorer_id){
-                    Some(explorer_info)=>{
-                        explorer_info.move_to_planet_id=dst_planet_id as i32;
+                match self.explorers_info.get_mut(&explorer_id) {
+                    Some(explorer_info) => {
+                        explorer_info.move_to_planet_id = dst_planet_id as i32;
                     }
-                    None=>{
+                    None => {
                         //todo logs
                         return Err(format!("Explorer {} not found", explorer_id));
                     }
                 }
-                match self.send_incoming_explorer_request(
-                    dst_planet_id,
-                    explorer_id,
-                ){
+                match self.send_incoming_explorer_request(dst_planet_id, explorer_id) {
                     Ok(_) => {}
                     Err(e) => {
                         //todo logs

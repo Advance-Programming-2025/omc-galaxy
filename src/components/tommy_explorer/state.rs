@@ -22,10 +22,15 @@ impl ExplorerState {
         match (self, msg) {
             (ExplorerState::Idle, _) => true,
             (_, OrchestratorToExplorer::KillExplorer) => true,
-            (ExplorerState::WaitingToStartExplorerAI, OrchestratorToExplorer::StartExplorerAI) => true,
-            (ExplorerState::WaitingForNeighbours, OrchestratorToExplorer::NeighborsResponse { .. }) => true,
+            (ExplorerState::WaitingToStartExplorerAI, OrchestratorToExplorer::StartExplorerAI) => {
+                true
+            }
+            (
+                ExplorerState::WaitingForNeighbours,
+                OrchestratorToExplorer::NeighborsResponse { .. },
+            ) => true,
             (ExplorerState::Traveling, OrchestratorToExplorer::MoveToPlanet { .. }) => true,
-            _ => false
+            _ => false,
         }
     }
 
@@ -33,12 +38,27 @@ impl ExplorerState {
     pub fn matches_planet_msg(&self, msg: &PlanetToExplorer) -> bool {
         match (self, msg) {
             (ExplorerState::Idle, _) => true,
-            (ExplorerState::GeneratingResource, PlanetToExplorer::GenerateResourceResponse { .. }) => true,
-            (ExplorerState::CombiningResources, PlanetToExplorer::CombineResourceResponse { .. }) => true,
-            (ExplorerState::WaitingForSupportedResources, PlanetToExplorer::SupportedResourceResponse { .. }) => true,
-            (ExplorerState::WaitingForSupportedCombinations, PlanetToExplorer::CombineResourceResponse { .. }) => true,
-            (ExplorerState::WaitingForAvailableEnergyCells, PlanetToExplorer::AvailableEnergyCellResponse { .. }) => true,
-            _ => false
+            (
+                ExplorerState::GeneratingResource,
+                PlanetToExplorer::GenerateResourceResponse { .. },
+            ) => true,
+            (
+                ExplorerState::CombiningResources,
+                PlanetToExplorer::CombineResourceResponse { .. },
+            ) => true,
+            (
+                ExplorerState::WaitingForSupportedResources,
+                PlanetToExplorer::SupportedResourceResponse { .. },
+            ) => true,
+            (
+                ExplorerState::WaitingForSupportedCombinations,
+                PlanetToExplorer::CombineResourceResponse { .. },
+            ) => true,
+            (
+                ExplorerState::WaitingForAvailableEnergyCells,
+                PlanetToExplorer::AvailableEnergyCellResponse { .. },
+            ) => true,
+            _ => false,
         }
     }
 

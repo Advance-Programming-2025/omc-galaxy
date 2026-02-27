@@ -22,7 +22,6 @@ pub const LOG_ACTORS_ACTIVITY: Channel = Channel::Info;
 // LOG Macros
 // ---------------------------------------------------------------------------------------
 
-
 /// Creates a BTreeMap payload from key-value pairs for use in log events.
 ///
 /// This macro simplifies the creation of structured metadata for logging by automatically
@@ -846,7 +845,6 @@ macro_rules! log_explorer_to_planet {
     }};
 }
 
-
 /// Traces communication and message flow between different actors.
 ///
 /// This macro unifies the logging of messages to visualize the
@@ -896,7 +894,6 @@ macro_rules! log_message {
     }};
 }
 
-
 #[cfg(feature = "debug-prints")]
 #[macro_export]
 macro_rules! debug_println {
@@ -910,7 +907,6 @@ macro_rules! debug_println {
         ()
     };
 }
-
 
 pub trait LoggableActor {
     fn actor_type(&self) -> ActorType;

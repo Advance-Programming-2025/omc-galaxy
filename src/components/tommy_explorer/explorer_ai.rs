@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use common_game::components::resource::ResourceType;
 use crate::components::tommy_explorer::topology::TopologyManager;
+use common_game::components::resource::ResourceType;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 impl TopologyManager {
     /// Returns a path (list of Planet IDs) to the nearest planet that
@@ -52,7 +52,11 @@ impl TopologyManager {
 
     /// Finds the fastest path to a planet that has the specified resource through a BFS.
     /// Returns Some(path) if the path exists, None otherwise.
-    pub fn find_path_to_resource(&self, start_id: u32, target: ResourceType) -> Option<VecDeque<u32>> {
+    pub fn find_path_to_resource(
+        &self,
+        start_id: u32,
+        target: ResourceType,
+    ) -> Option<VecDeque<u32>> {
         let mut queue = VecDeque::new();
         let mut visited = HashSet::new();
         let mut parent_map = HashMap::new();
@@ -62,11 +66,14 @@ impl TopologyManager {
 
         while let Some(current) = queue.pop_front() {
             if let Some(info) = self.get(current) {
-
                 // verify that the planet has the target resource
                 let can_provide = match target {
-                    ResourceType::Basic(b) => info.get_basic_resources().map_or(false, |s| s.contains(&b)),
-                    ResourceType::Complex(c) => info.get_complex_resources().map_or(false, |s| s.contains(&c)),
+                    ResourceType::Basic(b) => {
+                        info.get_basic_resources().map_or(false, |s| s.contains(&b))
+                    }
+                    ResourceType::Complex(c) => info
+                        .get_complex_resources()
+                        .map_or(false, |s| s.contains(&c)),
                 };
 
                 if can_provide {
@@ -86,5 +93,4 @@ impl TopologyManager {
         }
         None
     }
-
 }

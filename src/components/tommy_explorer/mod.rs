@@ -1,11 +1,11 @@
 pub mod actions;
 pub mod bag;
 pub mod core;
+mod explorer_ai;
 pub mod handlers;
 pub mod state;
-pub mod topology;
-mod explorer_ai;
 mod test;
+pub mod topology;
 
 // re-export commonly used types
 pub use core::Explorer;

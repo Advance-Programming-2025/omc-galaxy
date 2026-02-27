@@ -8,20 +8,20 @@ pub mod planets_comms;
 pub mod update;
 
 use crate::components::explorer::BagType;
-use crate::utils::{PlanetInfoMap, ExplorerInfoMap};
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
-use common_game::components::resource::{BasicResourceType, ComplexResourceType};
-use logging_utils::{log_internal_op, log_fn_call};
-use logging_utils::LoggableActor;
+use crate::utils::{ExplorerInfoMap, PlanetInfoMap};
 use common_game::components::forge::Forge;
+use common_game::components::resource::{BasicResourceType, ComplexResourceType};
+use common_game::logging::ActorType;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use crossbeam_channel::{Receiver, Sender, unbounded};
-use common_game::logging::{ActorType};
+use logging_utils::LoggableActor;
+use logging_utils::{log_fn_call, log_internal_op};
 use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
@@ -32,7 +32,7 @@ pub enum OrchestratorEvent {
     AsteroidSent { planet_id: u32 },
     ExplorerMoved { destination: u32 },
     BasicResourceGenerated { resource: BasicResourceType },
-    ComplexResourceGenerated { resource: ComplexResourceType }
+    ComplexResourceGenerated { resource: ComplexResourceType },
 }
 
 ///The core of the game.
@@ -62,7 +62,7 @@ pub struct Orchestrator {
     //Status for each planet and explorers, BTreeMaps are useful for printing
     pub planets_info: PlanetInfoMap,
     pub explorers_info: ExplorerInfoMap,
-    
+
     //Communication channels for sending messages to planets and explorers
     pub planet_channels: HashMap<u32, (Sender<OrchestratorToPlanet>, Sender<ExplorerToPlanet>)>,
     pub explorer_channels: HashMap<u32, (Sender<OrchestratorToExplorer>, Sender<PlanetToExplorer>)>,
@@ -75,7 +75,7 @@ pub struct Orchestrator {
     pub sender_explorer_orch: Sender<ExplorerToOrchestrator<BagType>>,
     pub receiver_orch_explorer: Receiver<ExplorerToOrchestrator<BagType>>,
 
-    pub gui_messages: Vec<OrchestratorEvent>
+    pub gui_messages: Vec<OrchestratorEvent>,
 }
 impl Orchestrator {
     /// Create a new orchestrator instance.
@@ -122,7 +122,7 @@ impl Orchestrator {
         log_fn_call!(self, "get_random_planet_id()");
 
         let ids = self.planets_info.get_list_id_alive();
-        if ids.len() == 0{
+        if ids.len() == 0 {
             return Err("No more planets alive".to_string());
         }
         let index: usize = rand::rng().random_range(0..ids.len());

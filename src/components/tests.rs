@@ -19,7 +19,8 @@ mod tests_core_lifecycle {
     fn test_lifecycle_reset_clears_internal_maps() {
         let mut orch = Orchestrator::new().unwrap();
         // Manually pollute state
-        orch.planets_info.insert_status(1, PlanetType::OneMillionCrabs, Status::Dead);
+        orch.planets_info
+            .insert_status(1, PlanetType::OneMillionCrabs, Status::Dead);
         orch.explorers_info.insert_status(1, Status::Running);
 
         orch.reset().unwrap();
@@ -52,10 +53,7 @@ mod tests_actor_management {
         orch.add_tommy_explorer(1, 10);
 
         assert!(orch.explorers_info.get(&1).is_some());
-        assert_eq!(
-            orch.explorers_info.get_status(&1),
-            Status::Paused
-        );
+        assert_eq!(orch.explorers_info.get_status(&1), Status::Paused);
         assert!(orch.explorer_channels.contains_key(&1));
     }
 }
@@ -170,26 +168,33 @@ mod tests_file_integration {
     }
 }
 #[cfg(test)]
-mod test_One_million_crabs_planet{
-    use std::thread;
-    use std::thread::sleep;
-    use std::time::Duration;
+mod test_One_million_crabs_planet {
+    use crate::utils::ExplorerInfo;
+    use crate::utils::registry::*;
+    use crate::*;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
     use crossbeam_channel::{select, tick};
     use logging_utils::log_internal_op;
-    use crate::*;
-    use crate::utils::ExplorerInfo;
-    use crate::utils::registry::*;
+    use std::thread;
+    use std::thread::sleep;
+    use std::time::Duration;
     #[test]
-    fn planet_energy_cells_management(){
+    fn planet_energy_cells_management() {
         let mut orchestrator = Orchestrator::new().unwrap();
         let planet_id = 1;
         let explorer_id = 2;
-        orchestrator.add_planet(planet_id, PlanetType::OneMillionCrabs).unwrap();
+        orchestrator
+            .add_planet(planet_id, PlanetType::OneMillionCrabs)
+            .unwrap();
         orchestrator.start_all().unwrap();
-        orchestrator.add_mattia_explorer(explorer_id,planet_id);
-        let planet_channel = orchestrator.planet_channels.get(&planet_id).unwrap().0.clone();
+        orchestrator.add_mattia_explorer(explorer_id, planet_id);
+        let planet_channel = orchestrator
+            .planet_channels
+            .get(&planet_id)
+            .unwrap()
+            .0
+            .clone();
         orchestrator.send_sunray(planet_id, &planet_channel);
         orchestrator.send_sunray(planet_id, &planet_channel);
         orchestrator.send_sunray(planet_id, &planet_channel);
@@ -208,9 +213,10 @@ mod test_One_million_crabs_planet{
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_secs(1));
         orchestrator.send_bag_content_request(explorer_id);
-        orchestrator.send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
+        orchestrator
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
         let timeout = tick(Duration::from_millis(1000));
-        loop{
+        loop {
             select! {
                 recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                     match planet_msg {
@@ -233,19 +239,49 @@ mod test_One_million_crabs_planet{
                 }
             }
         }
-        assert_eq!(orchestrator.planets_info.get_info(planet_id).unwrap().energy_cells.iter().filter(|&&x| x).count(), 0);
-        println!("explorer bag: {:?}", orchestrator.explorers_info.get(&explorer_id).unwrap().bag);
-        assert_eq!(orchestrator.explorers_info.get(&explorer_id).unwrap().bag.iter().filter(|&&x| x.is_silicon() ).count(), 6)
+        assert_eq!(
+            orchestrator
+                .planets_info
+                .get_info(planet_id)
+                .unwrap()
+                .energy_cells
+                .iter()
+                .filter(|&&x| x)
+                .count(),
+            0
+        );
+        println!(
+            "explorer bag: {:?}",
+            orchestrator.explorers_info.get(&explorer_id).unwrap().bag
+        );
+        assert_eq!(
+            orchestrator
+                .explorers_info
+                .get(&explorer_id)
+                .unwrap()
+                .bag
+                .iter()
+                .filter(|&&x| x.is_silicon())
+                .count(),
+            6
+        )
     }
     #[test]
-    fn stress_planet_energy_cells_management(){
+    fn stress_planet_energy_cells_management() {
         let mut orchestrator = Orchestrator::new().unwrap();
         let planet_id = 1;
         let explorer_id = 2;
-        orchestrator.add_planet(planet_id, PlanetType::OneMillionCrabs).unwrap();
+        orchestrator
+            .add_planet(planet_id, PlanetType::OneMillionCrabs)
+            .unwrap();
         orchestrator.start_all().unwrap();
-        orchestrator.add_mattia_explorer(explorer_id,planet_id);
-        let planet_channel = orchestrator.planet_channels.get(&planet_id).unwrap().0.clone();
+        orchestrator.add_mattia_explorer(explorer_id, planet_id);
+        let planet_channel = orchestrator
+            .planet_channels
+            .get(&planet_id)
+            .unwrap()
+            .0
+            .clone();
         orchestrator.send_sunray(planet_id, &planet_channel);
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         orchestrator.send_sunray(planet_id, &planet_channel);
@@ -272,9 +308,10 @@ mod test_One_million_crabs_planet{
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_secs(1));
         orchestrator.send_bag_content_request(explorer_id);
-        orchestrator.send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
+        orchestrator
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
         let timeout = tick(Duration::from_millis(1000));
-        loop{
+        loop {
             select! {
                 recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                     match planet_msg {
@@ -297,7 +334,17 @@ mod test_One_million_crabs_planet{
                 }
             }
         }
-        assert!(orchestrator.explorers_info.get(&explorer_id).unwrap().bag.iter().filter(|&&x| x.is_silicon() ).count()<= 12)
+        assert!(
+            orchestrator
+                .explorers_info
+                .get(&explorer_id)
+                .unwrap()
+                .bag
+                .iter()
+                .filter(|&&x| x.is_silicon())
+                .count()
+                <= 12
+        )
     }
 }
 
@@ -318,7 +365,8 @@ mod tests {
 
             // Type A (Ciuc) - Can build rockets
             let p_id_a = 1;
-            orch.add_planet(p_id_a, PlanetType::HoustonWeHaveABorrow).unwrap();
+            orch.add_planet(p_id_a, PlanetType::HoustonWeHaveABorrow)
+                .unwrap();
 
             // Type B (BlackAdidasShoe) - Cannot build rockets
             let p_id_b = 2;
@@ -343,8 +391,14 @@ mod tests {
             orch.handle_game_messages().unwrap();
             orch.handle_game_messages().unwrap();
 
-            println!("after sunray - planet a status: {:?}", orch.planets_info.get_info(p_id_a));
-            println!("after sunray - planet b status: {:?}", orch.planets_info.get_info(p_id_b));
+            println!(
+                "after sunray - planet a status: {:?}",
+                orch.planets_info.get_info(p_id_a)
+            );
+            println!(
+                "after sunray - planet b status: {:?}",
+                orch.planets_info.get_info(p_id_b)
+            );
 
             // Phase 2: Asteroid Attack
             orch.send_asteroid(p_id_a, &channel_a).unwrap();
@@ -357,8 +411,14 @@ mod tests {
             orch.handle_game_messages().unwrap();
             orch.handle_game_messages().unwrap();
 
-            println!("after sunray - planet a status: {:?}", orch.planets_info.get_info(p_id_a));
-            println!("after sunray - planet b status: {:?}", orch.planets_info.get_info(p_id_b));
+            println!(
+                "after sunray - planet a status: {:?}",
+                orch.planets_info.get_info(p_id_a)
+            );
+            println!(
+                "after sunray - planet b status: {:?}",
+                orch.planets_info.get_info(p_id_b)
+            );
 
             // Verification: A should be Alive/Running, B should be Dead
             assert!(orch.planets_info.is_running(&p_id_a));
@@ -427,9 +487,9 @@ mod tests {
 
             //send 10 sunrays to all planets: they should all be full
             for _ in 0..40 {
-                for id in 0..id_counter{
+                for id in 0..id_counter {
                     orch.send_sunray(id, &orch.planet_channels.get(&id).unwrap().0.clone())
-                    .expect("failed sending sunray");
+                        .expect("failed sending sunray");
                 }
                 std::thread::sleep(Duration::from_millis(100));
             }
@@ -442,13 +502,19 @@ mod tests {
             let mut failed_counter = 0;
 
             //check their status after the flood
-            for id in 0..id_counter{
-                let status = orch.planets_info.get_info(id).expect("error getting planet info");
+            for id in 0..id_counter {
+                let status = orch
+                    .planets_info
+                    .get_info(id)
+                    .expect("error getting planet info");
                 let max_charged = status.energy_cells.len();
                 let curr_charged = status.charged_cells_count;
 
-                println!("checking id {}: max of {} and charged to {}", id, max_charged, curr_charged);
-                if max_charged != curr_charged{
+                println!(
+                    "checking id {}: max of {} and charged to {}",
+                    id, max_charged, curr_charged
+                );
+                if max_charged != curr_charged {
                     failed_counter += 1;
                 }
             }

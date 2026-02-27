@@ -1,5 +1,9 @@
 use crate::components::mattia_explorer::Explorer;
-use common_game::components::resource::{AIPartner, BasicResource, BasicResourceType, Carbon, ComplexResource, ComplexResourceRequest, ComplexResourceType, Diamond, Dolphin, GenericResource, Hydrogen, Life, Oxygen, ResourceType, Robot, Silicon, Water};
+use common_game::components::resource::{
+    AIPartner, BasicResource, BasicResourceType, Carbon, ComplexResource, ComplexResourceRequest,
+    ComplexResourceType, Diamond, Dolphin, GenericResource, Hydrogen, Life, Oxygen, ResourceType,
+    Robot, Silicon, Water,
+};
 use common_game::logging::ActorType;
 use logging_utils::log_internal_op;
 
@@ -39,16 +43,24 @@ impl Bag {
         match res {
             // base
             GenericResource::BasicResources(BasicResource::Oxygen(val)) => self.oxygen.push(val),
-            GenericResource::BasicResources(BasicResource::Hydrogen(val)) => self.hydrogen.push(val),
+            GenericResource::BasicResources(BasicResource::Hydrogen(val)) => {
+                self.hydrogen.push(val)
+            }
             GenericResource::BasicResources(BasicResource::Carbon(val)) => self.carbon.push(val),
             GenericResource::BasicResources(BasicResource::Silicon(val)) => self.silicon.push(val),
             //complex
-            GenericResource::ComplexResources(ComplexResource::Diamond(val)) => self.diamond.push(val),
+            GenericResource::ComplexResources(ComplexResource::Diamond(val)) => {
+                self.diamond.push(val)
+            }
             GenericResource::ComplexResources(ComplexResource::Water(val)) => self.water.push(val),
             GenericResource::ComplexResources(ComplexResource::Life(val)) => self.life.push(val),
             GenericResource::ComplexResources(ComplexResource::Robot(val)) => self.robot.push(val),
-            GenericResource::ComplexResources(ComplexResource::Dolphin(val)) => self.dolphin.push(val),
-            GenericResource::ComplexResources(ComplexResource::AIPartner(val)) => self.ai_partner.push(val),
+            GenericResource::ComplexResources(ComplexResource::Dolphin(val)) => {
+                self.dolphin.push(val)
+            }
+            GenericResource::ComplexResources(ComplexResource::AIPartner(val)) => {
+                self.ai_partner.push(val)
+            }
         }
     }
 
@@ -56,17 +68,47 @@ impl Bag {
     pub fn take_resource(&mut self, ty: ResourceType) -> Option<GenericResource> {
         match ty {
             // Basic Resources
-            ResourceType::Basic(BasicResourceType::Oxygen) =>self.oxygen.pop().map(|v| GenericResource::BasicResources(BasicResource::Oxygen(v))),
-            ResourceType::Basic(BasicResourceType::Hydrogen) =>self.hydrogen.pop().map(|v| GenericResource::BasicResources(BasicResource::Hydrogen(v))),
-            ResourceType::Basic(BasicResourceType::Carbon) =>self.carbon.pop().map(|v| GenericResource::BasicResources(BasicResource::Carbon(v))),
-            ResourceType::Basic(BasicResourceType::Silicon) =>self.silicon.pop().map(|v| GenericResource::BasicResources(BasicResource::Silicon(v))),
+            ResourceType::Basic(BasicResourceType::Oxygen) => self
+                .oxygen
+                .pop()
+                .map(|v| GenericResource::BasicResources(BasicResource::Oxygen(v))),
+            ResourceType::Basic(BasicResourceType::Hydrogen) => self
+                .hydrogen
+                .pop()
+                .map(|v| GenericResource::BasicResources(BasicResource::Hydrogen(v))),
+            ResourceType::Basic(BasicResourceType::Carbon) => self
+                .carbon
+                .pop()
+                .map(|v| GenericResource::BasicResources(BasicResource::Carbon(v))),
+            ResourceType::Basic(BasicResourceType::Silicon) => self
+                .silicon
+                .pop()
+                .map(|v| GenericResource::BasicResources(BasicResource::Silicon(v))),
             // Complex Resources
-            ResourceType::Complex(ComplexResourceType::Diamond) =>self.diamond.pop().map(|v| GenericResource::ComplexResources(ComplexResource::Diamond(v))),
-            ResourceType::Complex(ComplexResourceType::Water) =>self.water.pop().map(|v| GenericResource::ComplexResources(ComplexResource::Water(v))),
-            ResourceType::Complex(ComplexResourceType::Life) =>self.life.pop().map(|v| GenericResource::ComplexResources(ComplexResource::Life(v))),
-            ResourceType::Complex(ComplexResourceType::Robot) =>self.robot.pop().map(|v| GenericResource::ComplexResources(ComplexResource::Robot(v))),
-            ResourceType::Complex(ComplexResourceType::Dolphin) =>self.dolphin.pop().map(|v| GenericResource::ComplexResources(ComplexResource::Dolphin(v))),
-            ResourceType::Complex(ComplexResourceType::AIPartner) =>self.ai_partner.pop().map(|v| GenericResource::ComplexResources(ComplexResource::AIPartner(v))),
+            ResourceType::Complex(ComplexResourceType::Diamond) => self
+                .diamond
+                .pop()
+                .map(|v| GenericResource::ComplexResources(ComplexResource::Diamond(v))),
+            ResourceType::Complex(ComplexResourceType::Water) => self
+                .water
+                .pop()
+                .map(|v| GenericResource::ComplexResources(ComplexResource::Water(v))),
+            ResourceType::Complex(ComplexResourceType::Life) => self
+                .life
+                .pop()
+                .map(|v| GenericResource::ComplexResources(ComplexResource::Life(v))),
+            ResourceType::Complex(ComplexResourceType::Robot) => self
+                .robot
+                .pop()
+                .map(|v| GenericResource::ComplexResources(ComplexResource::Robot(v))),
+            ResourceType::Complex(ComplexResourceType::Dolphin) => self
+                .dolphin
+                .pop()
+                .map(|v| GenericResource::ComplexResources(ComplexResource::Dolphin(v))),
+            ResourceType::Complex(ComplexResourceType::AIPartner) => self
+                .ai_partner
+                .pop()
+                .map(|v| GenericResource::ComplexResources(ComplexResource::AIPartner(v))),
         }
     }
 
@@ -90,7 +132,7 @@ impl Bag {
     }
 
     //tells the number of resource of a certain type
-    pub fn count(&self, ty:ResourceType) -> usize {
+    pub fn count(&self, ty: ResourceType) -> usize {
         match ty {
             //basic
             ResourceType::Basic(BasicResourceType::Oxygen) => self.oxygen.len(),
@@ -106,56 +148,118 @@ impl Bag {
             ResourceType::Complex(ComplexResourceType::AIPartner) => self.ai_partner.len(),
         }
     }
-    pub fn can_craft(&self, complex_type: ComplexResourceType) -> (bool, ResourceType, bool, ResourceType, bool) {
+    pub fn can_craft(
+        &self,
+        complex_type: ComplexResourceType,
+    ) -> (bool, ResourceType, bool, ResourceType, bool) {
         match complex_type {
             ComplexResourceType::Diamond => {
                 let res = ResourceType::Basic(BasicResourceType::Carbon);
                 let n = self.count(res);
-                (n>=2,res, n >= 1, res, n >= 2)
+                (n >= 2, res, n >= 1, res, n >= 2)
             }
             ComplexResourceType::Water => {
                 let r1 = ResourceType::Basic(BasicResourceType::Hydrogen);
                 let r2 = ResourceType::Basic(BasicResourceType::Oxygen);
-                (self.contains(r1) && self.contains(r2),r1, self.contains(r1), r2, self.contains(r2))
+                (
+                    self.contains(r1) && self.contains(r2),
+                    r1,
+                    self.contains(r1),
+                    r2,
+                    self.contains(r2),
+                )
             }
             ComplexResourceType::Life => {
                 let r1 = ResourceType::Complex(ComplexResourceType::Water);
                 let r2 = ResourceType::Basic(BasicResourceType::Carbon);
-                (self.contains(r1) && self.contains(r2), r1, self.contains(r1), r2, self.contains(r2))
+                (
+                    self.contains(r1) && self.contains(r2),
+                    r1,
+                    self.contains(r1),
+                    r2,
+                    self.contains(r2),
+                )
             }
             ComplexResourceType::Robot => {
                 let r1 = ResourceType::Basic(BasicResourceType::Silicon);
                 let r2 = ResourceType::Complex(ComplexResourceType::Life);
-                (self.contains(r1) && self.contains(r2), r1, self.contains(r1), r2, self.contains(r2))
+                (
+                    self.contains(r1) && self.contains(r2),
+                    r1,
+                    self.contains(r1),
+                    r2,
+                    self.contains(r2),
+                )
             }
             ComplexResourceType::Dolphin => {
                 let r1 = ResourceType::Complex(ComplexResourceType::Water);
                 let r2 = ResourceType::Complex(ComplexResourceType::Life);
-                (self.contains(r1) && self.contains(r2),r1, self.contains(r1), r2, self.contains(r2))
+                (
+                    self.contains(r1) && self.contains(r2),
+                    r1,
+                    self.contains(r1),
+                    r2,
+                    self.contains(r2),
+                )
             }
             ComplexResourceType::AIPartner => {
                 let r1 = ResourceType::Complex(ComplexResourceType::Robot);
                 let r2 = ResourceType::Complex(ComplexResourceType::Diamond);
-                (self.contains(r1) && self.contains(r2), r1, self.contains(r1), r2, self.contains(r2))
+                (
+                    self.contains(r1) && self.contains(r2),
+                    r1,
+                    self.contains(r1),
+                    r2,
+                    self.contains(r2),
+                )
             }
         }
     }
 
     // this is needed because the bag cannot give his ownership to the orchestrator and cannot be passed as a reference
     pub fn to_resource_types(&self) -> Vec<ResourceType> {
-        let total_size = self.oxygen.len() + self.hydrogen.len() + self.carbon.len() + self.silicon.len() + self.diamond.len() + self.water.len() + self.life.len() + self.robot.len() + self.dolphin.len() + self.ai_partner.len();
+        let total_size = self.oxygen.len()
+            + self.hydrogen.len()
+            + self.carbon.len()
+            + self.silicon.len()
+            + self.diamond.len()
+            + self.water.len()
+            + self.life.len()
+            + self.robot.len()
+            + self.dolphin.len()
+            + self.ai_partner.len();
         let mut types = Vec::with_capacity(total_size); //this way the vec is already of the right size
-        for _ in 0..self.oxygen.len() { types.push(ResourceType::Basic(BasicResourceType::Oxygen)); }
-        for _ in 0..self.hydrogen.len() { types.push(ResourceType::Basic(BasicResourceType::Hydrogen)); }
-        for _ in 0..self.carbon.len() { types.push(ResourceType::Basic(BasicResourceType::Carbon)); }
-        for _ in 0..self.silicon.len() { types.push(ResourceType::Basic(BasicResourceType::Silicon)); }
+        for _ in 0..self.oxygen.len() {
+            types.push(ResourceType::Basic(BasicResourceType::Oxygen));
+        }
+        for _ in 0..self.hydrogen.len() {
+            types.push(ResourceType::Basic(BasicResourceType::Hydrogen));
+        }
+        for _ in 0..self.carbon.len() {
+            types.push(ResourceType::Basic(BasicResourceType::Carbon));
+        }
+        for _ in 0..self.silicon.len() {
+            types.push(ResourceType::Basic(BasicResourceType::Silicon));
+        }
         // complex
-        for _ in 0..self.diamond.len() { types.push(ResourceType::Complex(ComplexResourceType::Diamond)); }
-        for _ in 0..self.water.len() { types.push(ResourceType::Complex(ComplexResourceType::Water)); }
-        for _ in 0..self.life.len() { types.push(ResourceType::Complex(ComplexResourceType::Life)); }
-        for _ in 0..self.robot.len() { types.push(ResourceType::Complex(ComplexResourceType::Robot)); }
-        for _ in 0..self.dolphin.len() { types.push(ResourceType::Complex(ComplexResourceType::Dolphin)); }
-        for _ in 0..self.ai_partner.len() { types.push(ResourceType::Complex(ComplexResourceType::AIPartner)); }
+        for _ in 0..self.diamond.len() {
+            types.push(ResourceType::Complex(ComplexResourceType::Diamond));
+        }
+        for _ in 0..self.water.len() {
+            types.push(ResourceType::Complex(ComplexResourceType::Water));
+        }
+        for _ in 0..self.life.len() {
+            types.push(ResourceType::Complex(ComplexResourceType::Life));
+        }
+        for _ in 0..self.robot.len() {
+            types.push(ResourceType::Complex(ComplexResourceType::Robot));
+        }
+        for _ in 0..self.dolphin.len() {
+            types.push(ResourceType::Complex(ComplexResourceType::Dolphin));
+        }
+        for _ in 0..self.ai_partner.len() {
+            types.push(ResourceType::Complex(ComplexResourceType::AIPartner));
+        }
         log_internal_op!(dir
             ActorType::Explorer,
             0u32,
@@ -171,10 +275,14 @@ impl Bag {
             return Err("Missing resources for Diamond".to_string());
         }
 
-        let c1 = self.take_resource(ResourceType::Basic(BasicResourceType::Carbon))
-            .unwrap().to_carbon()?;
-        let c2 = self.take_resource(ResourceType::Basic(BasicResourceType::Carbon))
-            .unwrap().to_carbon()?;
+        let c1 = self
+            .take_resource(ResourceType::Basic(BasicResourceType::Carbon))
+            .unwrap()
+            .to_carbon()?;
+        let c2 = self
+            .take_resource(ResourceType::Basic(BasicResourceType::Carbon))
+            .unwrap()
+            .to_carbon()?;
 
         Ok(ComplexResourceRequest::Diamond(c1, c2))
     }
@@ -184,10 +292,14 @@ impl Bag {
             return Err("Missing resources for Water".to_string());
         }
 
-        let h = self.take_resource(ResourceType::Basic(BasicResourceType::Hydrogen))
-            .unwrap().to_hydrogen()?;
-        let o = self.take_resource(ResourceType::Basic(BasicResourceType::Oxygen))
-            .unwrap().to_oxygen()?;
+        let h = self
+            .take_resource(ResourceType::Basic(BasicResourceType::Hydrogen))
+            .unwrap()
+            .to_hydrogen()?;
+        let o = self
+            .take_resource(ResourceType::Basic(BasicResourceType::Oxygen))
+            .unwrap()
+            .to_oxygen()?;
 
         Ok(ComplexResourceRequest::Water(h, o))
     }
@@ -197,10 +309,14 @@ impl Bag {
             return Err("Missing resources for Life".to_string());
         }
 
-        let w = self.take_resource(ResourceType::Complex(ComplexResourceType::Water))
-            .unwrap().to_water()?;
-        let c = self.take_resource(ResourceType::Basic(BasicResourceType::Carbon))
-            .unwrap().to_carbon()?;
+        let w = self
+            .take_resource(ResourceType::Complex(ComplexResourceType::Water))
+            .unwrap()
+            .to_water()?;
+        let c = self
+            .take_resource(ResourceType::Basic(BasicResourceType::Carbon))
+            .unwrap()
+            .to_carbon()?;
 
         Ok(ComplexResourceRequest::Life(w, c))
     }
@@ -210,10 +326,14 @@ impl Bag {
             return Err("Missing resources for Robot".to_string());
         }
 
-        let s = self.take_resource(ResourceType::Basic(BasicResourceType::Silicon))
-            .unwrap().to_silicon()?;
-        let l = self.take_resource(ResourceType::Complex(ComplexResourceType::Life))
-            .unwrap().to_life()?;
+        let s = self
+            .take_resource(ResourceType::Basic(BasicResourceType::Silicon))
+            .unwrap()
+            .to_silicon()?;
+        let l = self
+            .take_resource(ResourceType::Complex(ComplexResourceType::Life))
+            .unwrap()
+            .to_life()?;
 
         Ok(ComplexResourceRequest::Robot(s, l))
     }
@@ -223,10 +343,14 @@ impl Bag {
             return Err("Missing resources for Dolphin".to_string());
         }
 
-        let w = self.take_resource(ResourceType::Complex(ComplexResourceType::Water))
-            .unwrap().to_water()?;
-        let l = self.take_resource(ResourceType::Complex(ComplexResourceType::Life))
-            .unwrap().to_life()?;
+        let w = self
+            .take_resource(ResourceType::Complex(ComplexResourceType::Water))
+            .unwrap()
+            .to_water()?;
+        let l = self
+            .take_resource(ResourceType::Complex(ComplexResourceType::Life))
+            .unwrap()
+            .to_life()?;
 
         Ok(ComplexResourceRequest::Dolphin(w, l))
     }
@@ -236,10 +360,14 @@ impl Bag {
             return Err("Missing resources for AIPartner".to_string());
         }
 
-        let r = self.take_resource(ResourceType::Complex(ComplexResourceType::Robot))
-            .unwrap().to_robot()?;
-        let d = self.take_resource(ResourceType::Complex(ComplexResourceType::Diamond))
-            .unwrap().to_diamond()?;
+        let r = self
+            .take_resource(ResourceType::Complex(ComplexResourceType::Robot))
+            .unwrap()
+            .to_robot()?;
+        let d = self
+            .take_resource(ResourceType::Complex(ComplexResourceType::Diamond))
+            .unwrap()
+            .to_diamond()?;
 
         Ok(ComplexResourceRequest::AIPartner(r, d))
     }
@@ -262,7 +390,6 @@ pub fn put_complex_resource_in_the_bag(
         explorer.bag.insert(new_resource);
     }
 }
-
 
 // this function puts a basic resource in the explorer bag
 pub fn put_basic_resource_in_the_bag(explorer: &mut Explorer, resource: Option<BasicResource>) {

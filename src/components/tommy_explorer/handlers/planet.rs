@@ -1,7 +1,7 @@
+use crate::components::tommy_explorer::{Explorer, ExplorerState};
 use common_game::components::resource::{BasicResource, ComplexResource, GenericResource};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::PlanetToExplorer;
-use crate::components::tommy_explorer::{Explorer, ExplorerState};
 
 /// Handles all messages from the planet.
 pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<(), String> {
@@ -17,8 +17,8 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
         PlanetToExplorer::GenerateResourceResponse { resource } => {
             put_basic_resource_in_bag(explorer, resource);
             // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
-            //     ExplorerToOrchestrator::BagContentResponse { 
-            //         explorer_id: explorer.explorer_id, 
+            //     ExplorerToOrchestrator::BagContentResponse {
+            //         explorer_id: explorer.explorer_id,
             //         bag_content: explorer.bag.to_resource_types() })
             //     .unwrap();
             Ok(())
@@ -26,8 +26,8 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
         PlanetToExplorer::CombineResourceResponse { complex_response } => {
             put_complex_resource_in_bag(explorer, complex_response);
             // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
-            //     ExplorerToOrchestrator::BagContentResponse { 
-            //         explorer_id: explorer.explorer_id, 
+            //     ExplorerToOrchestrator::BagContentResponse {
+            //         explorer_id: explorer.explorer_id,
             //         bag_content: explorer.bag.to_resource_types() })
             //     .unwrap();
             Ok(())
@@ -58,7 +58,9 @@ fn update_basic_resources(
 /// Updates the complex resources information in the topology.
 fn update_complex_resources(
     explorer: &mut Explorer,
-    combination_list: std::collections::HashSet<common_game::components::resource::ComplexResourceType>,
+    combination_list: std::collections::HashSet<
+        common_game::components::resource::ComplexResourceType,
+    >,
 ) {
     if let Some(planet_info) = explorer.get_planet_info_mut(explorer.planet_id()) {
         planet_info.set_complex_resources(combination_list);
@@ -98,7 +100,10 @@ pub fn put_complex_resource_in_bag(
             explorer.insert_in_bag(new_resource);
         }
         Err((err_msg, res1, res2)) => {
-            println!("[EXPLORER DEBUG] Error receiving CombineResourceResponse: {}", err_msg);
+            println!(
+                "[EXPLORER DEBUG] Error receiving CombineResourceResponse: {}",
+                err_msg
+            );
             // Put the resources back in the bag
             explorer.insert_in_bag(res1);
             explorer.insert_in_bag(res2);

@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::utils::ID;
+use std::collections::{HashMap, HashSet};
 
 /// Struct that contains information about a planet.
 #[derive(Debug, Clone)]
@@ -95,7 +95,9 @@ impl TopologyManager {
 
     /// Gets information about a planet, creating an entry if it doesn't exist.
     pub fn get_or_create(&mut self, planet_id: ID) -> &mut PlanetInfo {
-        self.planets.entry(planet_id).or_insert_with(PlanetInfo::new)
+        self.planets
+            .entry(planet_id)
+            .or_insert_with(PlanetInfo::new)
     }
 
     /// Gets information about a planet (read-only).
@@ -111,7 +113,9 @@ impl TopologyManager {
     /// Adds multiple planets to the topology.
     pub fn add_planets(&mut self, planet_ids: &[ID]) {
         for &planet_id in planet_ids {
-            self.planets.entry(planet_id).or_insert_with(PlanetInfo::new);
+            self.planets
+                .entry(planet_id)
+                .or_insert_with(PlanetInfo::new);
         }
     }
 
@@ -125,7 +129,7 @@ impl TopologyManager {
             info.set_neighbours(neighbours.into_iter().collect());
         }
     }
-    
+
     /// Clears all topology information.
     pub fn clear(&mut self) {
         self.planets.clear();
@@ -143,12 +147,12 @@ impl TopologyManager {
 
     /// Checks if all the known planets' information are complete.
     pub fn is_fully_discovered(&self) -> bool {
-        self.known_planets().iter().all(|id|
+        self.known_planets().iter().all(|id| {
             if let Some(planet_info) = self.planets.get(id) {
                 planet_info.is_complete()
             } else {
                 false
             }
-        )
+        })
     }
 }

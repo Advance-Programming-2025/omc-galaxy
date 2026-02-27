@@ -2,23 +2,19 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::components::tommy_explorer::*;
-    use crate::components::tommy_explorer::bag::*;
-    use crate::components::tommy_explorer::topology::*;
-    use crate::components::tommy_explorer::state::*;
     use crate::components::tommy_explorer::actions::*;
+    use crate::components::tommy_explorer::bag::*;
+    use crate::components::tommy_explorer::state::*;
+    use crate::components::tommy_explorer::topology::*;
+    use crate::components::tommy_explorer::*;
 
-    use crossbeam_channel::{unbounded, Receiver, Sender};
-    use std::collections::{HashSet, VecDeque};
-    use common_game::components::resource::{
-        BasicResourceType, ComplexResourceType, ResourceType,
-    };
+    use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
     };
-    use common_game::protocols::planet_explorer::{
-        ExplorerToPlanet, PlanetToExplorer,
-    };
+    use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
+    use crossbeam_channel::{Receiver, Sender, unbounded};
+    use std::collections::{HashSet, VecDeque};
 
     // ==================== Helper Functions ====================
 
@@ -43,7 +39,13 @@ mod tests {
             5,
         );
 
-        (explorer, explorer_recv, orch_send, planet_recv, planet_explorer_send)
+        (
+            explorer,
+            explorer_recv,
+            orch_send,
+            planet_recv,
+            planet_explorer_send,
+        )
     }
 
     // ==================== Bag Tests ====================
@@ -438,9 +440,7 @@ mod tests {
         fn test_explorer_send_to_planet() {
             let (explorer, _, _, planet_recv, _) = create_test_explorer();
 
-            let msg = ExplorerToPlanet::SupportedResourceRequest {
-                explorer_id: 1,
-            };
+            let msg = ExplorerToPlanet::SupportedResourceRequest { explorer_id: 1 };
 
             let result = explorer.send_to_planet(msg);
             assert!(result.is_ok());
@@ -626,10 +626,9 @@ mod tests {
             info_300.set_neighbours(HashSet::new());
 
             // Find path to carbon
-            let path = explorer.topology.find_path_to_resource(
-                100,
-                ResourceType::Basic(BasicResourceType::Carbon)
-            );
+            let path = explorer
+                .topology
+                .find_path_to_resource(100, ResourceType::Basic(BasicResourceType::Carbon));
 
             assert!(path.is_some());
             let path = path.unwrap();
@@ -688,10 +687,9 @@ mod tests {
             info_500.set_neighbours(HashSet::new());
 
             // Find path from 100 to silicon
-            let path = explorer.topology.find_path_to_resource(
-                100,
-                ResourceType::Basic(BasicResourceType::Silicon)
-            );
+            let path = explorer
+                .topology
+                .find_path_to_resource(100, ResourceType::Basic(BasicResourceType::Silicon));
 
             assert!(path.is_some());
             let path = path.unwrap();

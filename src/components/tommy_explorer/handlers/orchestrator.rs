@@ -1,16 +1,21 @@
 use crossbeam_channel::Sender;
 use std::collections::HashSet;
 
-use common_game::components::resource::{BasicResourceType, ComplexResourceType};
-use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
-use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
-use crate::components::tommy_explorer::{Explorer, ExplorerState};
-use crate::components::tommy_explorer::actions::ActionQueue;
 use super::planet;
+use crate::components::tommy_explorer::actions::ActionQueue;
+use crate::components::tommy_explorer::{Explorer, ExplorerState};
+use common_game::components::resource::{BasicResourceType, ComplexResourceType};
+use common_game::protocols::orchestrator_explorer::{
+    ExplorerToOrchestrator, OrchestratorToExplorer,
+};
+use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 
 /// Handles all messages from the orchestrator,
 /// returns Ok(true) if the explorer should terminate, Ok(false) otherwise.
-pub fn handle_message(explorer: &mut Explorer, msg: OrchestratorToExplorer) -> Result<bool, String> {
+pub fn handle_message(
+    explorer: &mut Explorer,
+    msg: OrchestratorToExplorer,
+) -> Result<bool, String> {
     match msg {
         OrchestratorToExplorer::StartExplorerAI => {
             start_explorer_ai(explorer)?;
@@ -28,7 +33,10 @@ pub fn handle_message(explorer: &mut Explorer, msg: OrchestratorToExplorer) -> R
             kill_explorer(explorer)?;
             Ok(true)
         }
-        OrchestratorToExplorer::MoveToPlanet { sender_to_new_planet, planet_id } => {
+        OrchestratorToExplorer::MoveToPlanet {
+            sender_to_new_planet,
+            planet_id,
+        } => {
             move_to_planet(explorer, sender_to_new_planet, planet_id);
             Ok(false)
         }
@@ -65,7 +73,8 @@ pub fn handle_message(explorer: &mut Explorer, msg: OrchestratorToExplorer) -> R
 
 /// Puts the explorer in the condition to receive messages (idle state).
 fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
-    explorer.send_to_orchestrator(ExplorerToOrchestrator::StartExplorerAIResult {
+    explorer
+        .send_to_orchestrator(ExplorerToOrchestrator::StartExplorerAIResult {
             explorer_id: explorer.id(),
         })
         .map_err(|e| format!("Error sending start explorer AI result: {:?}", e))?;
@@ -88,7 +97,10 @@ fn reset_explorer_ai(explorer: &mut Explorer) {
             println!("[EXPLORER DEBUG] Reset explorer AI result sent correctly.");
         }
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error sending reset explorer AI result: {:?}", err);
+            println!(
+                "[EXPLORER DEBUG] Error sending reset explorer AI result: {:?}",
+                err
+            );
         }
     }
 }
@@ -104,7 +116,10 @@ fn stop_explorer_ai(explorer: &mut Explorer) {
             println!("[EXPLORER DEBUG] Stop explorer AI result sent correctly.");
         }
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error sending stop explorer AI result: {:?}", err);
+            println!(
+                "[EXPLORER DEBUG] Error sending stop explorer AI result: {:?}",
+                err
+            );
         }
     }
 }
@@ -131,7 +146,6 @@ fn move_to_planet(
     explorer.set_state(ExplorerState::Idle);
     match sender_to_new_planet {
         Some(sender) => {
-
             explorer.action_queue.clear();
             explorer.action_queue.reset();
 
@@ -156,7 +170,10 @@ fn current_planet_request(explorer: &mut Explorer) {
             println!("[EXPLORER DEBUG] Current planet result sent correctly.");
         }
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error sending current planet result: {:?}", err);
+            println!(
+                "[EXPLORER DEBUG] Error sending current planet result: {:?}",
+                err
+            );
         }
     }
 }
@@ -166,22 +183,28 @@ fn supported_resource_request(explorer: &mut Explorer) {
     let mut supported_resources = HashSet::new();
 
     // check if we already have this information in the topology
-    if let Some(planet_info) = explorer.get_planet_info(explorer.planet_id()) 
-        && let Some(basic_resources) = &planet_info.basic_resources {
+    if let Some(planet_info) = explorer.get_planet_info(explorer.planet_id())
+        && let Some(basic_resources) = &planet_info.basic_resources
+    {
         supported_resources = basic_resources.clone();
     } else {
         // supported resource request sent to the planet
         match explorer.send_to_planet(ExplorerToPlanet::SupportedResourceRequest {
             explorer_id: explorer.id(),
         }) {
-            Ok(_) => println!("[EXPLORER DEBUG] Supported resource request sent correctly from explorer."),
+            Ok(_) => println!(
+                "[EXPLORER DEBUG] Supported resource request sent correctly from explorer."
+            ),
             Err(err) => {
-                println!("[EXPLORER DEBUG] Error sending supported resource request from explorer: {:?}", err);
+                println!(
+                    "[EXPLORER DEBUG] Error sending supported resource request from explorer: {:?}",
+                    err
+                );
                 return;
             }
         }
-        
-        // waits for the response 
+
+        // waits for the response
         match explorer.receive_from_planet() {
             Ok(PlanetToExplorer::SupportedResourceResponse { resource_list }) => {
                 supported_resources = resource_list;
@@ -192,7 +215,10 @@ fn supported_resource_request(explorer: &mut Explorer) {
                 return;
             }
             Err(err) => {
-                println!("[EXPLORER DEBUG] Error receiving supported resources from planet: {:?}", err);
+                println!(
+                    "[EXPLORER DEBUG] Error receiving supported resources from planet: {:?}",
+                    err
+                );
                 return;
             }
         }
@@ -205,10 +231,15 @@ fn supported_resource_request(explorer: &mut Explorer) {
     }) {
         Ok(_) => {
             explorer.set_state(ExplorerState::Idle);
-            println!("[EXPLORER DEBUG] Supported resource result sent correctly from explorer to orchestrator.");
+            println!(
+                "[EXPLORER DEBUG] Supported resource result sent correctly from explorer to orchestrator."
+            );
         }
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error sending supported resource result from explorer to orchestrator: {:?}", err);
+            println!(
+                "[EXPLORER DEBUG] Error sending supported resource result from explorer to orchestrator: {:?}",
+                err
+            );
         }
     }
 }
@@ -218,17 +249,23 @@ fn supported_combination_request(explorer: &mut Explorer) {
     let mut supported_combinations = HashSet::new();
 
     // check if we already have this information in the topology
-    if let Some(planet_info) = explorer.get_planet_info(explorer.planet_id()) 
-        && let Some(complex_resources) = &planet_info.complex_resources{
+    if let Some(planet_info) = explorer.get_planet_info(explorer.planet_id())
+        && let Some(complex_resources) = &planet_info.complex_resources
+    {
         supported_combinations = complex_resources.clone();
     } else {
         // supported combination request sent to the planet
         match explorer.send_to_planet(ExplorerToPlanet::SupportedCombinationRequest {
             explorer_id: explorer.id(),
         }) {
-            Ok(_) => println!("[EXPLORER DEBUG] Supported combination request sent correctly from explorer."),
+            Ok(_) => println!(
+                "[EXPLORER DEBUG] Supported combination request sent correctly from explorer."
+            ),
             Err(err) => {
-                println!("[EXPLORER DEBUG] Error sending supported combination request from explorer: {:?}", err);
+                println!(
+                    "[EXPLORER DEBUG] Error sending supported combination request from explorer: {:?}",
+                    err
+                );
                 return;
             }
         }
@@ -244,7 +281,10 @@ fn supported_combination_request(explorer: &mut Explorer) {
                 return;
             }
             Err(err) => {
-                println!("[EXPLORER DEBUG] Error receiving supported combinations from planet: {:?}", err);
+                println!(
+                    "[EXPLORER DEBUG] Error receiving supported combinations from planet: {:?}",
+                    err
+                );
                 return;
             }
         }
@@ -257,10 +297,15 @@ fn supported_combination_request(explorer: &mut Explorer) {
     }) {
         Ok(_) => {
             explorer.set_state(ExplorerState::Idle);
-            println!("[EXPLORER DEBUG] Supported combination result sent correctly from explorer to orchestrator.");
+            println!(
+                "[EXPLORER DEBUG] Supported combination result sent correctly from explorer to orchestrator."
+            );
         }
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error sending supported combination result from explorer to orchestrator: {:?}", err);
+            println!(
+                "[EXPLORER DEBUG] Error sending supported combination result from explorer to orchestrator: {:?}",
+                err
+            );
         }
     }
 }
@@ -273,7 +318,10 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
     }) {
         Ok(_) => println!("[EXPLORER DEBUG] Generate resource request sent correctly"),
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error sending generate resource request {}", err);
+            println!(
+                "[EXPLORER DEBUG] Error sending generate resource request {}",
+                err
+            );
             return;
         }
     }
@@ -284,7 +332,10 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
         }
         Ok(_) => println!("[EXPLORER DEBUG] Unexpected response to generate resource request"),
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error receiving generate resource response {}", err);
+            println!(
+                "[EXPLORER DEBUG] Error receiving generate resource response {}",
+                err
+            );
         }
     }
 }
@@ -301,7 +352,10 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
             }) {
                 Ok(_) => println!("[EXPLORER DEBUG] Combine resource request sent correctly"),
                 Err(err) => {
-                    println!("[EXPLORER DEBUG] Error sending combine resource request {}", err);
+                    println!(
+                        "[EXPLORER DEBUG] Error sending combine resource request {}",
+                        err
+                    );
                     return;
                 }
             }
@@ -310,14 +364,22 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                 Ok(PlanetToExplorer::CombineResourceResponse { complex_response }) => {
                     planet::put_complex_resource_in_bag(explorer, complex_response);
                 }
-                Ok(_) => println!("[EXPLORER DEBUG] Unexpected response to combine resource request"),
+                Ok(_) => {
+                    println!("[EXPLORER DEBUG] Unexpected response to combine resource request")
+                }
                 Err(err) => {
-                    println!("[EXPLORER DEBUG] Error receiving combine resource response {}", err);
+                    println!(
+                        "[EXPLORER DEBUG] Error receiving combine resource response {}",
+                        err
+                    );
                 }
             }
         }
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error generating complex resource request {}", err);
+            println!(
+                "[EXPLORER DEBUG] Error generating complex resource request {}",
+                err
+            );
         }
     }
 }
@@ -332,7 +394,10 @@ fn bag_content_request(explorer: &mut Explorer) {
             println!("[EXPLORER DEBUG] BagContent response sent correctly");
         }
         Err(err) => {
-            println!("[EXPLORER DEBUG] Error sending bag content response: {}", err);
+            println!(
+                "[EXPLORER DEBUG] Error sending bag content response: {}",
+                err
+            );
         }
     }
 }

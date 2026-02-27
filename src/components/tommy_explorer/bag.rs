@@ -1,6 +1,5 @@
 use common_game::components::resource::{
-    BasicResourceType, ComplexResourceRequest,
-    ComplexResourceType, GenericResource, ResourceType,
+    BasicResourceType, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType,
 };
 
 /// The type that is returned to the orchestrator when he asks for the explorer's bag,
@@ -27,27 +26,20 @@ impl Bag {
 
     /// Takes a resource from the bag if it exists.
     pub fn take_resource(&mut self, ty: ResourceType) -> Option<GenericResource> {
-        let idx = self.resources
-            .iter()
-            .position(|r| r.get_type() == ty)?;
+        let idx = self.resources.iter().position(|r| r.get_type() == ty)?;
         Some(self.resources.remove(idx))
     }
 
     /// Tells if a resource is contained in the bag.
     pub fn contains(&self, ty: ResourceType) -> bool {
-        self.resources
-            .iter()
-            .any(|r| r.get_type() == ty)
+        self.resources.iter().any(|r| r.get_type() == ty)
     }
 
     /// Returns a BagType containing all the ResourceType in the bag.
     // this is needed because the bag cannot give its ownership to the orchestrator
     // and cannot be passed as a reference
     pub fn to_resource_types(&self) -> Vec<ResourceType> {
-        self.resources
-            .iter()
-            .map(|r| r.get_type())
-            .collect()
+        self.resources.iter().map(|r| r.get_type()).collect()
     }
 
     /// Creates a ComplexResourceRequest based on the desired resource type.
@@ -64,12 +56,12 @@ impl Bag {
             ComplexResourceType::AIPartner => self.make_ai_partner_request(),
         }
     }
-    
 
     // The following methods are the ones to combine resources.
     pub(crate) fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
         // checks that the explorer has 2 carbons before taking any
-        let carbon_count = self.resources
+        let carbon_count = self
+            .resources
             .iter()
             .filter(|r| r.get_type() == ResourceType::Basic(BasicResourceType::Carbon))
             .count();
