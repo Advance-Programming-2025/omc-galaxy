@@ -1,4 +1,4 @@
-use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
+use logging_utils::{get_receiver_id, get_sender_id, LoggableActor};
 use std::{
     fs,
     sync::{Arc, RwLock},
@@ -13,7 +13,7 @@ use common_game::{
         planet_explorer::{ExplorerToPlanet, PlanetToExplorer},
     },
 };
-use crossbeam_channel::{Receiver, Sender, unbounded};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use rustc_hash::FxHashMap;
 
 use super::Orchestrator;
@@ -22,13 +22,13 @@ use crate::utils::registry::PlanetType::{
     RustyCrab, TheCompilerStrikesBack,
 };
 use crate::{
-    GalaxyTopology,
     components::mattia_explorer::Explorer as MattiaExplorer,
     components::tommy_explorer::Explorer as TommyExplorer,
     utils::{
+        registry::{PlanetType, PLANET_REGISTRY},
         Status,
-        registry::{PLANET_REGISTRY, PlanetType},
     },
+    GalaxyTopology,
 };
 
 use crate::utils::{ExplorerInfo, PlanetInfo};
@@ -345,7 +345,7 @@ impl Orchestrator {
         &mut self,
         explorer_id: u32,
         planet_id: u32,
-    )->Result<(), String> {
+    ) -> Result<(), String> {
         log_fn_call!(
             self,
             "add_tommy_explorer()",
@@ -414,7 +414,7 @@ impl Orchestrator {
                     Ok(_) => {}
                     Err(err) => {
                         //todo logs
-                        return Err(err.to_string())
+                        return Err(err.to_string());
                     }
                 }
             }
@@ -449,7 +449,7 @@ impl Orchestrator {
         &mut self,
         explorer_id: u32,
         planet_id: u32,
-    )->Result<(), String>{
+    ) -> Result<(), String> {
         log_fn_call!(
             self,
             "add_mattia_explorer()",
@@ -508,7 +508,7 @@ impl Orchestrator {
                     Ok(_) => {}
                     Err(err) => {
                         //todo logs
-                        return Err(err.to_string())
+                        return Err(err.to_string());
                     }
                 }
             }
@@ -567,12 +567,25 @@ impl Orchestrator {
             }
         };
 
-        log_internal_op!(self,  "input"=>input);
+        self.initialize_galaxy_by_content(&input)
+    }
+
+    /// Initialize the galaxy using the content of a topology string.
+    ///
+    /// This function performs parsing operations on a string content and passes
+    /// it on to [`initialize_galaxy_by_adj_list`](Self::initialize_galaxy_by_adj_list).
+    ///
+    /// Returns Err if the content is formatted incorrectly.
+    ///
+    /// * `input` - string content of the galaxy initialization
+    pub fn initialize_galaxy_by_content(&mut self, input: &str) -> Result<(), String> {
+        log_fn_call!(self, "initialize_galaxy_by_content()", input);
+        log_internal_op!(self, "action" => "parsing galaxy content", "content" => input);
 
         let mut adj_list_for_topology = Vec::new();
-
         let mut new_lookup: FxHashMap<u32, (u32, PlanetType)> = FxHashMap::default();
 
+        let mut planet_idx = 0u32;
         for (line_num, line) in input.lines().enumerate() {
             let line = line.trim();
             if line.is_empty() {
@@ -597,11 +610,11 @@ impl Orchestrator {
             let node_type = values[1];
             let neighbors = &values[2..];
 
-            //saving id-index to lookup table
+            // saving id-index to lookup table using a counter that ignores empty lines
             new_lookup.insert(
                 node_id,
                 (
-                    line_num as u32,
+                    planet_idx,
                     match node_type {
                         0 => BlackAdidasShoe,
                         1 => Ciuc,
@@ -618,9 +631,12 @@ impl Orchestrator {
 
             let mut adj_row = vec![];
             adj_row.extend_from_slice(neighbors);
-
             adj_list_for_topology.push(adj_row);
+
+            planet_idx += 1;
         }
+
+        // Remap neighbors to their internal indices
         for row in &mut adj_list_for_topology {
             for node in row {
                 if let Some(&(new_idx, _)) = new_lookup.get(node) {
@@ -628,13 +644,10 @@ impl Orchestrator {
                 }
             }
         }
+
         self.galaxy_lookup = new_lookup;
         //Initialize the orchestrator galaxy topology
         self.initialize_galaxy_by_adj_list(adj_list_for_topology)?;
-
-        ////////////// EXPLORERS INITIALIZATION /////////////////////
-        //self.add_tommy_explorer(0, 0);  //todo i commented this because it was breaking every test i was doing :)
-        //self.add_mattia_explorer(1,0);
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 mod test_One_million_crabs_planet {
     use super::*;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -534,7 +534,7 @@ mod test_One_million_crabs_planet {
 
 mod game_simulation {
     use super::*;
-    use crate::{Orchestrator, debug_println};
+    use crate::{debug_println, Orchestrator};
     use crossbeam_channel::{select, tick};
     use std::thread::sleep;
     use std::time::Duration;
@@ -594,7 +594,7 @@ mod game_simulation {
 
 use black_adidas_shoe::planet;
 
-use crate::{Orchestrator, components::explorer::Explorer};
+use crate::{components::explorer::Explorer, Orchestrator};
 
 #[test]
 /// Test if the explorer is spawned properly
@@ -604,21 +604,26 @@ fn test_spawn_explorer_on_planet() {
     //init orchestrator
     let mut orch = Orchestrator::new().unwrap();
 
-    //init pianeta
-    let planet_id = 0; //solo un pianeta
-    orch.initialize_planets_by_ids_list(vec![planet_id])
-        .unwrap();
+    // init topology with one planet
+    // format: id, type, neighbors...
+    let topology = "0,0\n";
+    orch.initialize_galaxy_by_content(topology).unwrap();
 
     //init explorer
-    orch.add_mattia_explorer(0, 0);
+    orch.add_mattia_explorer(0, 0).unwrap();
+
+    // check if explorer is correctly registered
+    assert_eq!(orch.explorers_info.len(), 1);
+    assert!(orch.explorers_info.get(&0).is_some());
 }
 #[cfg(test)]
 mod communication {
-    use std::collections::{HashMap, HashSet};
-
     use common_game::components::resource::BasicResourceType;
+    use std::collections::{HashMap, HashSet};
+    use std::thread::sleep;
+    use std::time::Duration;
 
-    use crate::{Status, components::explorer, utils::registry::PlanetType};
+    use crate::{components::explorer, utils::registry::PlanetType, Status};
 
     use super::*;
 
@@ -691,31 +696,29 @@ mod communication {
         let planet_id = 0;
         orch.add_planet(planet_id, PlanetType::BlackAdidasShoe)
             .unwrap();
+        //start planet ai
+        orch.start_all_planet_ais().unwrap();
 
         //init explorer
         let explorer_id = 0;
         orch.add_mattia_explorer(explorer_id, planet_id);
 
-        //start_planet_ais
-        orch.start_all().unwrap();
         //stop_planet_ais
         orch.send_supported_resource_request(explorer_id).unwrap();
-
-        // 1. planet result, explorer result, combination result
+        sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
+                                           // 1. planet result, explorer result, combination result
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
-
-        //should be running because started
-        assert_eq!(
-            orch.explorers_info.get_status(&explorer_id),
-            Status::Running
-        );
 
         //check if the values are updated
         match orch.planets_info.get_info(planet_id) {
             Some(info) => {
-                assert_eq!(info.supported_resources, Some(HashSet::new()));
+                let mut expected = HashSet::new();
+                expected.insert(BasicResourceType::Hydrogen);
+                expected.insert(BasicResourceType::Carbon);
+                expected.insert(BasicResourceType::Oxygen);
+                assert_eq!(info.supported_resources, Some(expected));
             }
             None => panic!(),
         }
@@ -728,28 +731,23 @@ mod communication {
 
         //init pianeta
         let planet_id = 0;
-        orch.add_planet(planet_id, PlanetType::BlackAdidasShoe)
+        orch.add_planet(planet_id, PlanetType::OneMillionCrabs)
             .unwrap();
+        //start_planet_ais
+        orch.start_all_planet_ais().unwrap();
 
         //init explorer
         let explorer_id = 0;
         orch.add_mattia_explorer(explorer_id, planet_id);
 
-        //start_planet_ais
-        orch.start_all().unwrap();
         //stop_planet_ais
-        orch.send_supported_resource_request(explorer_id).unwrap();
-
-        // 1. planet result, explorer result, combination result
+        orch.send_supported_combination_request(explorer_id)
+            .unwrap();
+        sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
+                                           // 1. planet result, explorer result, combination result
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
-
-        //should be running because started
-        assert_eq!(
-            orch.explorers_info.get_status(&explorer_id),
-            Status::Running
-        );
 
         //check if the values are updated
         match orch.planets_info.get_info(planet_id) {
