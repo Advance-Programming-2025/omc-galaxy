@@ -367,6 +367,12 @@ impl Orchestrator {
                     explorer_id
                 );
                 //LOG
+                //the ai is started if it was in manual mode
+                self.explorers_info
+                    .insert_status(explorer_id, Status::Running);
+                if self.explorers_info.get(&explorer_id).is_none() {
+                    self.send_current_planet_request(explorer_id)?;
+                }
 
                 //LOG
                 log_internal_op!(
@@ -505,8 +511,9 @@ impl Orchestrator {
                     "success" => generated.is_ok()
                 );
                 //LOG
-
-                self.send_bag_content_request(explorer_id)?;
+                if generated.is_ok(){
+                    self.send_bag_content_request(explorer_id)?;
+                }
             }
             ExplorerToOrchestrator::CombineResourceResponse {
                 explorer_id,

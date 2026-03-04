@@ -3,7 +3,7 @@ use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::ExplorerState;
 use crate::components::mattia_explorer::{Explorer, PlanetInfo};
-use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, GenericResource, ResourceType};
+use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
@@ -183,7 +183,8 @@ pub fn move_to_planet(
                 "planet_id"=>planet_id.to_string()
             );
     //LOG
-    match sender_to_new_planet {
+    let mut ris;
+    match sender_to_new_planet {//TODO add send of MovedToPlanetResult
         //in case the planet dies there are 2 cases:
         // the orchestrator refuses the move operation
         // the orchestrator kills also the explorer if it has already accepted the move
@@ -199,6 +200,15 @@ pub fn move_to_planet(
                         orch_resource:false,
                         orch_combination:false,
                     };
+                    match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::MovedToPlanetResult {
+                        explorer_id:explorer.explorer_id,
+                        planet_id:planet_id,
+                    }){
+                        Ok(_)=>ris= Ok(()),
+                        Err(err)=>{
+                            ris= Err(err.to_string())
+                        }
+                    }
                 }
                 None => {
                     explorer.current_planet_neighbors_update=true;
@@ -210,11 +220,21 @@ pub fn move_to_planet(
                         orch_resource:false,
                         orch_combination:false,
                     };
+                    match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::MovedToPlanetResult {
+                        explorer_id: explorer.explorer_id,
+                        planet_id: explorer.planet_id,
+                    }){
+                        Ok(_)=> ris=Ok(()),
+                        Err(err)=>{
+                            //todo logs
+                            ris=Err(err.to_string())
+                        }
+                    }
                 }
             }
             //todo logs
             gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
-            Ok(())
+            ris
         }
         None => { //the explorer cannot move but it is not a problem
             //absolute priority
@@ -554,39 +574,57 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
         ComplexResourceType::AIPartner => explorer.bag.make_ai_partner_request(),
     };
     let ris=match complex_resource_req {
-        Ok(_) => {
+        Ok(request) => {
             explorer.state = ExplorerState::CombiningResources {orchestrator_response:to_orchestrator};
-            Ok(())
+            match explorer.planet_channels.1.send(ExplorerToPlanet::CombineResourceRequest { explorer_id: explorer.explorer_id, msg: request}){
+                Ok(_) => {Ok(())}
+                Err(err) => {
+                    //TODO log
+                    Err(err.to_string())
+                }
+            }
         }
-        Err(err)=>{
+        Err(err)=>{ //TODO finish this log
+            LogEvent::self_directed(
+                Participant::new(ActorType::Explorer, explorer.explorer_id),
+                EventType::InternalExplorerAction,
+                Channel::Debug,
+                payload!(
+                    "fn"=>"combine_resource_request()",
+                    "result" => format!("Cannot create complex resource request for {:?}", to_generate),
+                )
+            ).emit();
             explorer.state=ExplorerState::Idle;
+            explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::CombineResourceResponse { explorer_id: 0, generated: Err("Not enough basic resource".to_string()) });
             Err(err)
         }
     };
-    match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::CombineResourceResponse {
-        explorer_id:explorer.explorer_id,
-        generated:ris ,
-    }){
-        Ok(_) => {Ok(())}
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-                EventType::MessageExplorerToPlanet,
-                Channel::Error,
-                warning_payload!(
-                    "CombineResourceRequest not sent",
-                    err,
-                    "combine_resource_request()";
-                    "to_generate" => to_generate.to_string_2(),
-                    "to_orchestrator" => to_orchestrator,
-                    "explorer data"=>format!("{:?}", explorer)
-                )
-            ).emit();
+    ris
 
-            Err(err.to_string())
-        }
-    }
+    // match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::CombineResourceResponse {
+    //     explorer_id:explorer.explorer_id,
+    //     generated:ris ,
+    // }){
+    //     Ok(_) => {Ok(())}
+    //     Err(err) => {
+    //         LogEvent::new(
+    //             Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+    //             Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+    //             EventType::MessageExplorerToPlanet,
+    //             Channel::Error,
+    //             warning_payload!(
+    //                 "CombineResourceRequest not sent",
+    //                 err,
+    //                 "combine_resource_request()";
+    //                 "to_generate" => to_generate.to_string_2(),
+    //                 "to_orchestrator" => to_orchestrator,
+    //                 "explorer data"=>format!("{:?}", explorer)
+    //             )
+    //         ).emit();
+    //
+    //         Err(err.to_string())
+    //     }
+    // }
 
 }
 
