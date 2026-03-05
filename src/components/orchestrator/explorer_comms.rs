@@ -330,7 +330,7 @@ impl Orchestrator {
 
         // the neighbors are obtained from the galaxy_topology adjacent matrix
         let neighbors: Vec<u32> = {
-            let guard = self.galaxy_topology.read().unwrap();
+            let guard = &self.galaxy_topology;
 
             guard
                 .get(planet_id as usize)

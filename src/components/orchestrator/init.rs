@@ -1,4 +1,4 @@
-use logging_utils::{get_receiver_id, get_sender_id, LoggableActor};
+use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
 use std::{
     fs,
     sync::{Arc, RwLock},
@@ -13,7 +13,7 @@ use common_game::{
         planet_explorer::{ExplorerToPlanet, PlanetToExplorer},
     },
 };
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use rustc_hash::FxHashMap;
 
 use super::Orchestrator;
@@ -22,13 +22,13 @@ use crate::utils::registry::PlanetType::{
     RustyCrab, TheCompilerStrikesBack,
 };
 use crate::{
+    GalaxyTopology,
     components::mattia_explorer::Explorer as MattiaExplorer,
     components::tommy_explorer::Explorer as TommyExplorer,
     utils::{
-        registry::{PlanetType, PLANET_REGISTRY},
         Status,
+        registry::{PLANET_REGISTRY, PlanetType},
     },
-    GalaxyTopology,
 };
 
 use crate::utils::{ExplorerInfo, PlanetInfo};
@@ -44,7 +44,7 @@ impl Orchestrator {
         //Log
         log_fn_call!(dir ActorType::Orchestrator, 0u32, "new_gtop()",);
         //LOG
-        Arc::new(RwLock::new(Vec::new()))
+        Vec::new()
     }
 
     /// Reset the orchestrator.
@@ -359,10 +359,15 @@ impl Orchestrator {
 
         // get the sender from explorer to planet
         let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
-            Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
+            Some((orchestrator_sender, explorer_sender)) => (
+                Some(orchestrator_sender.clone()),
+                Some(explorer_sender.clone()),
+            ),
             None => {
-                return Err("sender orchestrator to planet and explorer to planet don't exists".to_string());
-            }, // sender does not exist
+                return Err(
+                    "sender orchestrator to planet and explorer to planet don't exists".to_string(),
+                );
+            } // sender does not exist
         };
 
         let mut free_cells = 0;
@@ -463,10 +468,15 @@ impl Orchestrator {
 
         // get the sender from explorer to planet
         let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
-            Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
+            Some((orchestrator_sender, explorer_sender)) => (
+                Some(orchestrator_sender.clone()),
+                Some(explorer_sender.clone()),
+            ),
             None => {
-                return Err("sender orchestrator to planet and explorer to planet don't exists".to_string());
-            }, // sender does not exist
+                return Err(
+                    "sender orchestrator to planet and explorer to planet don't exists".to_string(),
+                );
+            } // sender does not exist
         };
 
         //Construct Explorer
@@ -713,48 +723,16 @@ impl Orchestrator {
             .for_each(|_row| debug_println!("{:?}", _row));
 
         //Update orchestrator topology
+        self.galaxy_topology = new_topology;
 
-        let lock_try = match self.galaxy_topology.write() {
-            Ok(mut gtop) => {
-                *gtop = new_topology;
+        //LOG
+        log_internal_op!(self, "update galaxy_topology");
+        //LOG
 
-                //LOG
-                log_internal_op!(self, "update galaxy_topology");
-                //LOG
-
-                //drops the lock just in case
-                drop(gtop);
-
-                Ok(())
-            }
-            Err(_e) => {
-                //LOG
-                let event = LogEvent::self_directed(
-                    Participant::new(ActorType::Orchestrator, 0u32),
-                    EventType::InternalOrchestratorAction,
-                    Channel::Warning,
-                    warning_payload!(
-                        "ERROR galaxy topology lock failed.",
-                        _e,
-                        "initialize_galaxy_by_adj_list()",
-                        adj_list
-                    ),
-                );
-                event.emit();
-                //LOG
-                debug_println!("ERROR galaxy topology lock failed.");
-                Err(())
-            }
-        };
-
-        if lock_try.is_ok() {
-            //Initialize all the planets give the list of ids
-            let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
-            self.initialize_planets_by_ids_list(ids_list.clone())?;
-            Ok(())
-        } else {
-            Err("ERROR galaxy topology lock failed.".to_string())
-        }
+        //Initialize all the planets give the list of ids
+        let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
+        self.initialize_planets_by_ids_list(ids_list.clone())?;
+        Ok(())
     }
 
     /// Initialize the galaxy using a list of planet IDs.

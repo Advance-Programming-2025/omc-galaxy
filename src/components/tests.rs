@@ -72,10 +72,9 @@ mod tests_topology_logic {
 
         orch.initialize_galaxy_by_adj_list(adj_list).unwrap();
 
-        let gtop = orch.galaxy_topology.read().unwrap();
-        assert_eq!(gtop[0][1], true);
-        assert_eq!(gtop[1][0], true);
-        assert_eq!(gtop[0][0], false);
+        assert_eq!(orch.galaxy_topology[0][1], true);
+        assert_eq!(orch.galaxy_topology[1][0], true);
+        assert_eq!(orch.galaxy_topology[0][0], false);
     }
 
     #[test]
@@ -86,8 +85,7 @@ mod tests_topology_logic {
 
         orch.destroy_topology_link(0).unwrap();
 
-        let gtop = orch.galaxy_topology.read().unwrap();
-        assert_eq!(gtop[0][1], false);
+        assert_eq!(orch.galaxy_topology[0][1], false);
     }
 
     #[test]
@@ -113,8 +111,7 @@ mod tests_messaging_protocol {
         let adj_list = vec![vec![1], vec![0]];
         orch.initialize_galaxy_by_adj_list(adj_list).unwrap();
 
-        let a = orch.galaxy_topology.as_ref().read().unwrap()[1][0];
-        assert!(a); // we want the link to exist
+        assert!(orch.galaxy_topology[1][0]); // we want the link to exist
 
         // Setup a planet
         orch.add_planet(planet_id, PlanetType::Ciuc).unwrap();
@@ -125,9 +122,8 @@ mod tests_messaging_protocol {
             rocket: None,
         };
         orch.handle_planet_message(msg).unwrap();
-        let b = orch.galaxy_topology.as_ref().read().unwrap()[1][0];
         assert!(orch.planets_info.is_dead(&planet_id));
-        assert!(!b); // not b, we don't want the planet to have a link
+        assert!(!orch.galaxy_topology[1][0]); // not b, we don't want the planet to have a link
     }
 
     #[test]

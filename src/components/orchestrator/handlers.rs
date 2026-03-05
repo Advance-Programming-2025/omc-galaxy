@@ -230,11 +230,16 @@ impl Orchestrator {
                                 }
                             };
                         //this is safe because we already checked it before
-                        let move_to_planet_id=self.explorers_info.get(&explorer_id).unwrap().move_to_planet_id;
-                        if move_to_planet_id >=0 {
-                            match orch_current_planet_sender.0.send(OrchestratorToPlanet::OutgoingExplorerRequest {
-                                explorer_id,
-                            }) {
+                        let move_to_planet_id = self
+                            .explorers_info
+                            .get(&explorer_id)
+                            .unwrap()
+                            .move_to_planet_id;
+                        if move_to_planet_id >= 0 {
+                            match orch_current_planet_sender
+                                .0
+                                .send(OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id })
+                            {
                                 Ok(_) => {
                                     log_internal_op!(
                                         self,
@@ -256,7 +261,10 @@ impl Orchestrator {
                                         )
                                     ).emit();
 
-                                    return Err(format!("Failed to send explorer request: {}", err));
+                                    return Err(format!(
+                                        "Failed to send explorer request: {}",
+                                        err
+                                    ));
                                 }
                             }
                         }
@@ -511,7 +519,7 @@ impl Orchestrator {
                     "success" => generated.is_ok()
                 );
                 //LOG
-                if generated.is_ok(){
+                if generated.is_ok() {
                     self.send_bag_content_request(explorer_id)?;
                 }
             }
@@ -594,7 +602,7 @@ impl Orchestrator {
 
                 // verify that the planet exists and that the destination planet is a neighbour
                 let is_neighbour = {
-                    let guard = self.galaxy_topology.read().unwrap();
+                    let guard = &self.galaxy_topology;
 
                     guard
                         .get(current_planet_id as usize)
