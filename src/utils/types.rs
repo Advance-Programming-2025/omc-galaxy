@@ -30,8 +30,7 @@ pub type GalaxyTopologyNotLock = Vec<Vec<bool>>;
 pub type PlanetStatusNotLock = BTreeMap<u32, Status>;
 pub type ExplorerStatusNotLock = BTreeMap<u32, Status>;
 
-pub type GalaxyTopology = Arc<RwLock<Vec<Vec<bool>>>>;
-pub type PlanetStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
+pub type GalaxyTopology = Vec<Vec<bool>>;
 
 pub type GalaxySnapshot = Vec<(u32, u32)>;
 
