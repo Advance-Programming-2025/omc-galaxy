@@ -105,7 +105,7 @@ impl Orchestrator {
                             Ok(_) => {}
                             Err(err) => {
                                 //todo logs
-                                debug_println!("planet status not updated: {}", err)
+                                debug_println!("planet status not updated: {}", err);
                                 return Err(err.to_string())
                             }
                         }
@@ -118,7 +118,7 @@ impl Orchestrator {
                         );
                         //LOG
                         //sending explorer kill
-                        let mut ris;
+                        let mut ris="".to_string();
                         for i in self.explorers_info.iter().filter(|x| x.1.current_planet_id==planet_id){
                             match self.explorer_channels.get(i.0).unwrap().0.send(OrchestratorToExplorer::KillExplorer) {
                                 Ok(_) => { ris="".to_string();}
