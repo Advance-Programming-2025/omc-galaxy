@@ -577,7 +577,8 @@ impl Orchestrator {
             }
         };
 
-        self.initialize_galaxy_by_content(&input)
+        self.initialize_galaxy_by_content(&input)?;
+        Ok(())
     }
 
     /// Initialize the galaxy using the content of a topology string.

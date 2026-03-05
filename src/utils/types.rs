@@ -327,8 +327,4 @@ impl ExplorerInfo {
             move_to_planet_id: -1, //at this time is not relevant
         }
     }
-
-    pub(crate) fn get_explorer_state(self) -> Status {
-        self.status.clone()
-    }
 }
