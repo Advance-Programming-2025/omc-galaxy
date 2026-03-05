@@ -106,6 +106,7 @@ impl Orchestrator {
                             Err(err) => {
                                 //todo logs
                                 debug_println!("planet status not updated: {}", err)
+                                return Err(err.to_string())
                             }
                         }
                         //LOG
@@ -116,7 +117,22 @@ impl Orchestrator {
                             "planet status"=> format!("{:?}",self.planets_info.get_status(&planet_id))
                         );
                         //LOG
-                        //TODO we need to do a check if some explorer is on that planet
+                        //sending explorer kill
+                        let mut ris;
+                        for i in self.explorers_info.iter().filter(|x| x.1.current_planet_id==planet_id){
+                            match self.explorer_channels.get(i.0).unwrap().0.send(OrchestratorToExplorer::KillExplorer) {
+                                Ok(_) => { ris="".to_string();}
+                                Err(err) => {
+                                    //todo logs
+                                    ris.push_str(&err.to_string());
+                                }
+                            }
+                        }
+                        return if ris.is_empty() {
+                            Ok(())
+                        } else {
+                            Err(ris)
+                        }
                     }
                 }
             }
