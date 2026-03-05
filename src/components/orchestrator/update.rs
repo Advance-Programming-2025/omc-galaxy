@@ -31,8 +31,6 @@ pub const RANDOM_ACTION_CHANCE: f64 = 0.8;
 pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.2;
 
 impl Orchestrator {
-
-
     /// Removes the link between two planets if one of them explodes.
     ///
     /// Returns Err if the given indexes are out of bounds, Ok otherwise;
@@ -41,74 +39,43 @@ impl Orchestrator {
     /// using the galaxy lookup hashmap.
     ///
     /// * `dead_planet_pos` - Position of the dead planet in the matrix. Must be a valid index
-    pub fn destroy_topology_link(
-        &mut self,
-        dead_planet_pos: usize,
-    ) -> Result<(), String> {
+    pub fn destroy_topology_link(&mut self, dead_planet_pos: usize) -> Result<(), String> {
         //LOG
-        log_fn_call!(
-            self,
-            "destroy_topology_link()",
-            dead_planet_pos,
-        );
+        log_fn_call!(self, "destroy_topology_link()", dead_planet_pos,);
         //LOG
 
-        match self.galaxy_topology.write() {
-            Ok(mut gtop) => {
-                let gtop_len = gtop.len();
-                if dead_planet_pos < gtop_len {
-                    for i in 0..gtop_len {
-                        gtop[dead_planet_pos][i] = false;
-                        gtop[i][dead_planet_pos] = false;
-                    }
-                    //LOG
-                    log_internal_op!(
-                        self,
-                        "action"=>"adj link destroyed",
-                        "updated topology"=>format!("{:?}",gtop),
-                    );
-                    //LOG
-                    drop(gtop);
-                    Ok(())
-                } else {
-                    //LOG
-                    let event = LogEvent::self_directed(
-                        Participant::new(ActorType::Orchestrator, 0u32),
-                        EventType::InternalOrchestratorAction,
-                        Channel::Warning,
-                        warning_payload!(
-                            format!(
-                                "One of the indexes is out of bounds. upper bound: {}",
-                                gtop_len.saturating_sub(1)
-                            ),
-                            "_",
-                            "destroy_topology_link()",
-                            dead_planet_pos
-                        ),
-                    );
-                    event.emit();
-                    //LOG
-                    Err("index out of bounds (too large)".to_string())
-                }
+        let gtop_len = self.galaxy_topology.len();
+        if dead_planet_pos < gtop_len {
+            for i in 0..gtop_len {
+                self.galaxy_topology[dead_planet_pos][i] = false;
+                self.galaxy_topology[i][dead_planet_pos] = false;
             }
-            Err(e) => {
-                //LOG
-                let event = LogEvent::self_directed(
-                    Participant::new(ActorType::Orchestrator, 0u32),
-                    EventType::InternalOrchestratorAction,
-                    Channel::Warning,
-                    warning_payload!(
-                        "ERROR galaxy topology lock failed.",
-                        e,
-                        "destroy_topology_link()",
-                        dead_planet_pos
+            //LOG
+            log_internal_op!(
+                self,
+                "action"=>"adj link destroyed",
+                "updated topology"=>format!("{:?}",self.galaxy_topology),
+            );
+            Ok(())
+        } else {
+            //LOG
+            let event = LogEvent::self_directed(
+                Participant::new(ActorType::Orchestrator, 0u32),
+                EventType::InternalOrchestratorAction,
+                Channel::Warning,
+                warning_payload!(
+                    format!(
+                        "One of the indexes is out of bounds. upper bound: {}",
+                        gtop_len.saturating_sub(1)
                     ),
-                );
-                event.emit();
-                //LOG
-                debug_println!("RwLock failed for destroy_topology_link");
-                Err(e.to_string())
-            }
+                    "_",
+                    "destroy_topology_link()",
+                    dead_planet_pos
+                ),
+            );
+            event.emit();
+            //LOG
+            Err("index out of bounds (too large)".to_string())
         }
     }
 

@@ -1,26 +1,35 @@
 mod bag;
-mod resource_management;
-mod states;
 mod buffers;
+mod explorer_ai;
 mod handlers;
 mod helpers;
-mod explorer_ai;
 mod planet_info;
+mod resource_management;
+mod states;
 mod tests;
 
-use std::any::Any;
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
 use crate::components::mattia_explorer::explorer_ai::{ai_core_function, ai_data};
-use crate::components::mattia_explorer::handlers::{combine_resource_request, current_planet_request, generate_resource_request, kill_explorer, manage_combine_response, manage_generate_response, manage_supported_combination_response, manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai, start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request};
+use crate::components::mattia_explorer::handlers::{
+    combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
+    manage_combine_response, manage_generate_response, manage_supported_combination_response,
+    manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai,
+    start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request,
+};
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
-use crate::components::mattia_explorer::states::{orch_msg_match_state, planet_msg_match_state, ExplorerState};
+use crate::components::mattia_explorer::states::{
+    ExplorerState, orch_msg_match_state, planet_msg_match_state,
+};
 use common_game::components::resource::ResourceType;
-use common_game::protocols::orchestrator_explorer::{ExplorerToOrchestrator, OrchestratorToExplorer};
+use common_game::protocols::orchestrator_explorer::{
+    ExplorerToOrchestrator, OrchestratorToExplorer,
+};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
-use crossbeam_channel::{select, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, select};
+use std::any::Any;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, VecDeque};
 
@@ -40,7 +49,7 @@ pub struct Explorer {
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
     time: u64,
     ai_data: ai_data,
-    current_planet_neighbors_update:bool,
+    current_planet_neighbors_update: bool,
     manual_mode: bool,
 }
 
@@ -65,10 +74,7 @@ impl Explorer {
             "explorer_to_planet_channels"=>format!("({}, {})", get_receiver_id(&explorer_to_planet_channels.0), get_sender_id(&explorer_to_planet_channels.1)),
         );
         let mut starting_topology_info = HashMap::new();
-        starting_topology_info.insert(
-            planet_id,
-            PlanetInfo::new(0),
-        );
+        starting_topology_info.insert(planet_id, PlanetInfo::new(0));
         Self {
             explorer_id,
             planet_id,
@@ -100,19 +106,15 @@ impl Explorer {
     }
     //current planet getter
     pub fn get_current_planet_info(&self) -> Result<&PlanetInfo, &'static str> {
-        match self.get_planet_info(self.planet_id){
+        match self.get_planet_info(self.planet_id) {
             Some(info) => Ok(info),
-            None => {
-                Err("Planet not found")
-            }
+            None => Err("Planet not found"),
         }
     }
     pub fn get_current_planet_info_mut(&mut self) -> Result<&mut PlanetInfo, &'static str> {
-        match self.get_planet_info_mut(self.planet_id){
+        match self.get_planet_info_mut(self.planet_id) {
             Some(info) => Ok(info),
-            None => {
-                Err("Planet not found")
-            }
+            None => Err("Planet not found"),
         }
     }
 
@@ -312,37 +314,51 @@ impl Explorer {
     }
 }
 
+use crate::debug_println;
+use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
+use logging_utils::{
+    LoggableActor, get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload,
+};
 use std::fmt;
 use std::fmt::format;
 use std::thread::sleep;
 use std::time::Duration;
-use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
-use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload, LoggableActor};
-use crate::debug_println;
 
 impl fmt::Debug for Explorer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Explorer")
             .field("explorer_id", &self.explorer_id)
             .field("planet_id", &self.planet_id)
-            .field("orchestrator_channels", &format!(
-                "(RX: {:x}, TX: {:x})",
-                get_receiver_id(&self.orchestrator_channels.0),
-                get_sender_id(&self.orchestrator_channels.1)
-            ))
-            .field("planet_channels", &format!(
-                "(RX: {:x}, TX: {:x})",
-                get_receiver_id(&self.planet_channels.0),
-                get_sender_id(&self.planet_channels.1)
-            ))
+            .field(
+                "orchestrator_channels",
+                &format!(
+                    "(RX: {:x}, TX: {:x})",
+                    get_receiver_id(&self.orchestrator_channels.0),
+                    get_sender_id(&self.orchestrator_channels.1)
+                ),
+            )
+            .field(
+                "planet_channels",
+                &format!(
+                    "(RX: {:x}, TX: {:x})",
+                    get_receiver_id(&self.planet_channels.0),
+                    get_sender_id(&self.planet_channels.1)
+                ),
+            )
             .field("topology_info", &self.topology_info)
             .field("state", &self.state)
             .field("bag", &self.bag)
             .field("time", &self.time)
-            .field("current_planet_neighbors_update", &self.current_planet_neighbors_update)
+            .field(
+                "current_planet_neighbors_update",
+                &self.current_planet_neighbors_update,
+            )
             .field("manual_mode", &self.manual_mode)
             // Possiamo omettere i buffer se sono troppo lunghi o includerli normalmente
-            .field("buffer_orchestrator_len", &self.buffer_orchestrator_msg.len())
+            .field(
+                "buffer_orchestrator_len",
+                &self.buffer_orchestrator_msg.len(),
+            )
             .field("buffer_planet_len", &self.buffer_planet_msg.len())
             .finish()
     }
