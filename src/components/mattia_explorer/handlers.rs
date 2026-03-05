@@ -211,13 +211,15 @@ pub fn move_to_planet(
             explorer.planet_id = planet_id;
             match explorer.topology_info.get(&planet_id) {
                 Some(planet_info) => {
-                    explorer.state = ExplorerState::Surveying {
-                        resources: planet_info.basic_resources.is_none(),
-                        combinations: planet_info.complex_resources.is_none(),
-                        energy_cells: true,
-                        orch_resource: false,
-                        orch_combination: false,
-                    };
+                    if !explorer.manual_mode {
+                        explorer.state = ExplorerState::Surveying {
+                            resources: planet_info.basic_resources.is_none(),
+                            combinations: planet_info.complex_resources.is_none(),
+                            energy_cells: true,
+                            orch_resource: false,
+                            orch_combination: false,
+                        };
+                    }
                     match explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::MovedToPlanetResult {
                             explorer_id: explorer.explorer_id,
@@ -229,15 +231,17 @@ pub fn move_to_planet(
                     }
                 }
                 None => {
-                    explorer.current_planet_neighbors_update = true;
                     explorer.topology_info.insert(planet_id, PlanetInfo::new(0));
-                    explorer.state = ExplorerState::Surveying {
-                        resources: true,
-                        combinations: true,
-                        energy_cells: true,
-                        orch_resource: false,
-                        orch_combination: false,
-                    };
+                    if !explorer.manual_mode {
+                        explorer.current_planet_neighbors_update = true;
+                        explorer.state = ExplorerState::Surveying {
+                            resources: true,
+                            combinations: true,
+                            energy_cells: true,
+                            orch_resource: false,
+                            orch_combination: false,
+                        };
+                    }
                     match explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::MovedToPlanetResult {
                             explorer_id: explorer.explorer_id,
@@ -253,7 +257,9 @@ pub fn move_to_planet(
                 }
             }
             //todo logs
-            gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
+            if !explorer.manual_mode {
+                gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
+            }
             ris
         }
         None => {
