@@ -2391,7 +2391,10 @@ mod explorer_full_tests {
                 // wait for the kill planet response
                 let deadline = std::time::Instant::now() + Duration::from_secs(2);
                 loop {
-                    orch.handle_game_messages().unwrap();
+                    match orch.handle_game_messages() {
+                        Ok(_) => {},
+                        Err(e) => break,
+                    }
                     if orch.planets_info.get_status(&0) == Status::Dead {
                         break;
                     }

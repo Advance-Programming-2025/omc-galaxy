@@ -423,7 +423,7 @@ impl Orchestrator {
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(move || -> Result<(), String> {
-            let handle = new_explorer.run()?; //TODO implement a run function for explorer to interact with orchestrator
+            let _ = new_explorer.run().map_err(|_| "Error run"); //TODO implement a run function for explorer to interact with orchestrator
             Ok(())
         });
         log_internal_op!(

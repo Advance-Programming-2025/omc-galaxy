@@ -213,7 +213,8 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("[EXPLORER TOMMY DEBUG] Error in receiving the orchestrator message: {}", err);
+                            println!("{}", err);
+                            return Err(err.to_string());
                         }
                     }
                 },
@@ -231,7 +232,8 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("[EXPLORER TOMMY DEBUG] Error in receiving the planet message: {}", err);
+                            println!("{}", err);
+                            return Err(err.to_string());
                         }
                     }
                 }
