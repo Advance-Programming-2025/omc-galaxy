@@ -100,7 +100,7 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                             orch_resource,
                             orch_combination,
                         } => {
-                            match explorer.topology_info.get_mut(&explorer.explorer_id) {
+                            match explorer.topology_info.get_mut(&explorer.planet_id) {
                                 Some(planet_info) => {
                                     planet_info.update_charge_rate(available_cells, explorer.time);
                                 }

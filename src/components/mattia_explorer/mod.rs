@@ -263,13 +263,11 @@ impl Explorer {
                                                         "explorer state"=>format!("{:?}", self.state)
                                                     )
                                                 ).emit()
-                                                //todo logs this should not happen
                                             }
                                         }
 
                                     }
                                     PlanetToExplorer::Stopped => {
-                                        // TODO gestire in base all'ai dell'explorer
                                         self.state = ExplorerState::Idle;
                                     }
                                 }

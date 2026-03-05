@@ -1,13 +1,13 @@
-use crate::components::mattia_explorer::ActorType;
-use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::planet_info::{PlanetClassType, PlanetInfo};
 use crate::components::mattia_explorer::states::ExplorerState;
+use crate::components::mattia_explorer::ActorType;
+use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
-use logging_utils::{LoggableActor, log_fn_call, log_internal_op};
+use logging_utils::{log_fn_call, log_internal_op, LoggableActor};
 use rand::Rng;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -25,7 +25,7 @@ const SAFETY_CRITICAL: f32 = 0.3; //todo update this as the medium of the safene
 const SAFETY_WARNING: f32 = 0.6; //todo update this as the medium of the safeness of medium 1/3 of the planet
 /// Comfortable safety level
 const SAFETY_COMFORTABLE: f32 = 0.85; //todo update this as the medium of the safeness of highest 1/3 of the planet
-// --- DEFENSE PROBABILITY THRESHOLDS ---
+                                      // --- DEFENSE PROBABILITY THRESHOLDS ---
 /// Energy cells threshold to assume planet has rockets
 const ENERGY_CELLS_DEFENSE_THRESHOLD: u32 = 2;
 /// Probability threshold to consider a planet "likely defended"
@@ -44,6 +44,8 @@ const EXPLORATION_BASE_UTILITY: f32 = 0.7;
 const STALENESS_PENALTY_FACTOR: f32 = 0.01;
 /// Minimum utility to consider moving (prevents thrashing)
 const MIN_MOVEMENT_UTILITY: f32 = 0.4; //todo
+/// Minimum advantage required to switch actions
+const ACTION_HYSTERESIS_MARGIN: f32 = 0.07;
 // --- CHARGE RATE BASED PREDICTIONS ---
 /// Minimum charge rate to consider planet "actively charging" (1 energy every 5 ticks)
 const MIN_ACTIVE_CHARGE_RATE: f32 = 0.05;
@@ -51,8 +53,9 @@ const MIN_ACTIVE_CHARGE_RATE: f32 = 0.05;
 const MAX_PREDICTION_HORIZON: u64 = 100;
 /// maximum ticks for considering a value perfectly unchanged
 const PERFECT_INFO_MAX_TIME: u64 = 10;
+const SAFETY_MIN_DIFF: f32 = 0.07;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
@@ -235,6 +238,8 @@ pub struct ai_data {
     pub global_asteroid_rate: f32,
     pub resource_needs: ResourceNeeds,
     pub ai_action: AIAction,
+    pub last_action: Option<AIActionType>,
+    pub last_action_planet_id: Option<ID>,
 }
 impl ai_data {
     pub fn new() -> Self {
@@ -243,6 +248,8 @@ impl ai_data {
             global_sunray_rate: 0.0,
             resource_needs: ResourceNeeds::new(),
             ai_action: AIAction::new(),
+            last_action: None,
+            last_action_planet_id: None,
         }
     }
 }
@@ -725,15 +732,69 @@ fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str
     }
 }
 
-fn find_best_action(actions: &AIAction) -> Option<AIActionType> {
-    let mut max_val = -1.0;
-    let mut best = None;
-
-    // runaway
-    if actions.run_away > max_val {
-        max_val = actions.run_away;
-        best = Some(AIActionType::RunAway);
+fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
+    if actions.run_away <= 0.0 {
+        return false;
     }
+    let current_info = match explorer.get_current_planet_info() {
+        Ok(info) => info,
+        Err(_) => return false,
+    };
+    let current_safety = current_info.safety_score.unwrap_or(SAFETY_WARNING);
+    let neighbors = match &current_info.neighbors {
+        Some(neighbors) => neighbors,
+        None => return false,
+    };
+    for neighbor_id in neighbors {
+        let planet_info = match explorer.topology_info.get(neighbor_id) {
+            Some(info) => info,
+            None => continue,
+        };
+        let planet_safety = planet_info.safety_score.unwrap_or(SAFETY_WARNING);
+        if planet_safety > current_safety + SAFETY_MIN_DIFF
+            || planet_info.inferred_planet_type.is_none()
+        {
+            return true;
+        }
+    }
+    false
+}
+//this function uses the previus action taken in order to check the utility value now
+//to see if it is still useful
+fn action_utility(
+    actions: &AIAction,
+    action: &AIActionType,
+    explorer: &Explorer,
+    last_action_planet_id: Option<ID>,
+) -> Option<f32> {
+    if last_action_planet_id != Some(explorer.planet_id) {
+        return None;
+    }
+    match action {
+        AIActionType::Produce(resource) => actions.produce_resource.get(resource).cloned(),
+        AIActionType::Combine(resource) => actions.combine_resource.get(resource).cloned(),
+        AIActionType::MoveTo(id) => actions.move_to.get(id).cloned(),
+        AIActionType::SurveyNeighbors => Some(actions.survey_neighbors),
+        AIActionType::SurveyEnergy => Some(actions.survey_energy_cells),
+        AIActionType::Wait => Some(actions.wait),
+        AIActionType::RunAway => {
+            if can_run_away(actions, explorer) {
+                Some(actions.run_away)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+fn find_best_action(
+    actions: &AIAction,
+    explorer: &Explorer,
+    last_action: Option<&AIActionType>,
+    last_action_planet_id: Option<ID>,
+) -> Option<AIActionType> {
+    let mut max_val = -1.0;
+    let mut best: Option<AIActionType> = None;
 
     // MoveTo
     for (id, val) in &actions.move_to {
@@ -771,7 +832,27 @@ fn find_best_action(actions: &AIAction) -> Option<AIActionType> {
 
     // Wait
     if actions.wait > max_val {
+        max_val = actions.wait;
         best = Some(AIActionType::Wait);
+    }
+
+    // runaway
+    if can_run_away(actions, explorer) && actions.run_away > max_val {
+        max_val = actions.run_away;
+        best = Some(AIActionType::RunAway);
+    }
+    //if it is still useful we can take the same action of before reducing hysteresis
+    if let Some(previous) = last_action {
+        if let Some(previous_val) =
+            action_utility(actions, previous, explorer, last_action_planet_id)
+        {
+            if best.is_none() {
+                return Some(previous.clone());
+            }
+            if previous_val + ACTION_HYSTERESIS_MARGIN >= max_val {
+                return Some(previous.clone());
+            }
+        }
     }
 
     best
@@ -819,13 +900,20 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
             "utility scores" => format!("{:?}",explorer.ai_data.ai_action),
             "explorer state" =>format!("{:?}", explorer),
         );
-        let best_action = find_best_action(&explorer.ai_data.ai_action);
+        let best_action = find_best_action(
+            &explorer.ai_data.ai_action,
+            &explorer,
+            explorer.ai_data.last_action.as_ref(),
+            explorer.ai_data.last_action_planet_id,
+        );
         log_internal_op!(
             explorer,
             "action to be taken" => format!("{:?}", best_action)
         );
         match best_action {
             Some(ai_action) => {
+                explorer.ai_data.last_action = Some(ai_action.clone());
+                explorer.ai_data.last_action_planet_id = Some(explorer.planet_id);
                 match ai_action {
                     AIActionType::RunAway => {
                         let mut max: (&ID, &f32) = (&0, &0.0);
