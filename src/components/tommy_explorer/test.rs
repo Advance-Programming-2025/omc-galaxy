@@ -708,20 +708,20 @@ mod explorer_full_tests {
     use crate::components::tommy_explorer::topology::*;
     use crate::components::tommy_explorer::*;
 
+    use crate::utils::registry::PlanetType;
+    use crate::{Orchestrator, Status};
     use common_game::components::resource::{
         BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, ResourceType,
     };
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
     };
+    use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
     use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
     use crossbeam_channel::{Receiver, Sender, unbounded};
     use std::collections::{HashSet, VecDeque};
     use std::thread;
     use std::time::Duration;
-    use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
-    use crate::{Orchestrator, Status};
-    use crate::utils::registry::PlanetType;
     // ==================== Test Helpers ====================
 
     struct TestStruct {
@@ -744,8 +744,7 @@ mod explorer_full_tests {
             let (explorer_orch_send, explorer_orch_recv) =
                 unbounded::<ExplorerToOrchestrator<BagType>>();
             let (planet_send, planet_recv) = unbounded::<PlanetToExplorer>();
-            let (explorer_planet_send, explorer_planet_recv) =
-                unbounded::<ExplorerToPlanet>();
+            let (explorer_planet_send, explorer_planet_recv) = unbounded::<ExplorerToPlanet>();
 
             let explorer = Explorer::new(
                 explorer_id,
@@ -765,11 +764,15 @@ mod explorer_full_tests {
         }
 
         fn send_to_explorer_from_orch(&self, msg: OrchestratorToExplorer) {
-            self.orch_sender.send(msg).expect("Failed to send to explorer from orchestrator");
+            self.orch_sender
+                .send(msg)
+                .expect("Failed to send to explorer from orchestrator");
         }
 
         fn send_to_explorer_from_planet(&self, msg: PlanetToExplorer) {
-            self.planet_sender.send(msg).expect("Failed to send to explorer from planet");
+            self.planet_sender
+                .send(msg)
+                .expect("Failed to send to explorer from planet");
         }
 
         fn recv_from_explorer_to_orch(&self) -> ExplorerToOrchestrator<BagType> {
@@ -810,17 +813,22 @@ mod explorer_full_tests {
 
             // Manually call handler as if orchestrator sent the message
             let msg = OrchestratorToExplorer::CurrentPlanetRequest;
-            h.explorer.send_to_orchestrator(
-                // simulate the response the handler would produce
-                ExplorerToOrchestrator::CurrentPlanetResult {
-                    explorer_id: h.explorer.id(),
-                    planet_id: h.explorer.planet_id(),
-                },
-            ).unwrap();
+            h.explorer
+                .send_to_orchestrator(
+                    // simulate the response the handler would produce
+                    ExplorerToOrchestrator::CurrentPlanetResult {
+                        explorer_id: h.explorer.id(),
+                        planet_id: h.explorer.planet_id(),
+                    },
+                )
+                .unwrap();
 
             let response = h.recv_from_explorer_to_orch();
             match response {
-                ExplorerToOrchestrator::CurrentPlanetResult { explorer_id, planet_id } => {
+                ExplorerToOrchestrator::CurrentPlanetResult {
+                    explorer_id,
+                    planet_id,
+                } => {
                     assert_eq!(explorer_id, 1);
                     assert_eq!(planet_id, 42);
                 }
@@ -839,7 +847,8 @@ mod explorer_full_tests {
 
             // Simulate neighbors_response handler
             h.explorer.set_state(ExplorerState::Idle);
-            h.explorer.update_neighbors(h.explorer.planet_id(), neighbors.clone());
+            h.explorer
+                .update_neighbors(h.explorer.planet_id(), neighbors.clone());
 
             assert_eq!(*h.explorer.state(), ExplorerState::Idle);
             assert!(h.explorer.topology.contains(200));
@@ -923,7 +932,10 @@ mod explorer_full_tests {
 
             let msg = h.recv_from_explorer_to_orch();
             match msg {
-                ExplorerToOrchestrator::BagContentResponse { explorer_id, bag_content } => {
+                ExplorerToOrchestrator::BagContentResponse {
+                    explorer_id,
+                    bag_content,
+                } => {
                     assert_eq!(explorer_id, 1);
                     assert!(bag_content.is_empty());
                 }
@@ -1057,7 +1069,10 @@ mod explorer_full_tests {
 
             let planet_msg = h.recv_from_explorer_to_planet();
             match planet_msg {
-                ExplorerToPlanet::GenerateResourceRequest { explorer_id, resource } => {
+                ExplorerToPlanet::GenerateResourceRequest {
+                    explorer_id,
+                    resource,
+                } => {
                     assert_eq!(explorer_id, 1);
                     assert_eq!(resource, BasicResourceType::Oxygen);
                 }
@@ -1080,7 +1095,10 @@ mod explorer_full_tests {
 
             let orch_msg = h.recv_from_explorer_to_orch();
             match orch_msg {
-                ExplorerToOrchestrator::NeighborsRequest { explorer_id, current_planet_id } => {
+                ExplorerToOrchestrator::NeighborsRequest {
+                    explorer_id,
+                    current_planet_id,
+                } => {
                     assert_eq!(explorer_id, 1);
                     assert_eq!(current_planet_id, 100);
                 }
@@ -1210,12 +1228,10 @@ mod explorer_full_tests {
             let mut h = TestStruct::new();
 
             // Simulate handler for PlanetToExplorer::Stopped
-            h.explorer.set_state(ExplorerState::WaitingToStartExplorerAI);
+            h.explorer
+                .set_state(ExplorerState::WaitingToStartExplorerAI);
 
-            assert_eq!(
-                *h.explorer.state(),
-                ExplorerState::WaitingToStartExplorerAI
-            );
+            assert_eq!(*h.explorer.state(), ExplorerState::WaitingToStartExplorerAI);
         }
 
         /// PlanetToExplorer::SupportedResourceResponse sent over channel and received
@@ -1288,9 +1304,7 @@ mod explorer_full_tests {
         fn test_send_kill_explorer_result() {
             let h = TestStruct::new();
             h.explorer
-                .send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult {
-                    explorer_id: 1,
-                })
+                .send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult { explorer_id: 1 })
                 .unwrap();
 
             let msg = h.recv_from_explorer_to_orch();
@@ -1345,7 +1359,10 @@ mod explorer_full_tests {
 
             let msg = h.recv_from_explorer_to_orch();
             match msg {
-                ExplorerToOrchestrator::BagContentResponse { explorer_id, bag_content } => {
+                ExplorerToOrchestrator::BagContentResponse {
+                    explorer_id,
+                    bag_content,
+                } => {
                     assert_eq!(explorer_id, 1);
                     assert!(bag_content.is_empty());
                 }
@@ -1485,7 +1502,10 @@ mod explorer_full_tests {
 
             let msg = h.recv_from_explorer_to_planet();
             match msg {
-                ExplorerToPlanet::GenerateResourceRequest { explorer_id, resource } => {
+                ExplorerToPlanet::GenerateResourceRequest {
+                    explorer_id,
+                    resource,
+                } => {
                     assert_eq!(explorer_id, 1);
                     assert_eq!(resource, BasicResourceType::Oxygen);
                 }
@@ -1505,7 +1525,10 @@ mod explorer_full_tests {
 
             let msg = h.recv_from_explorer_to_planet();
             match msg {
-                ExplorerToPlanet::GenerateResourceRequest { explorer_id, resource } => {
+                ExplorerToPlanet::GenerateResourceRequest {
+                    explorer_id,
+                    resource,
+                } => {
                     assert_eq!(resource, BasicResourceType::Hydrogen);
                 }
                 _ => panic!("Expected Hydrogen"),
@@ -1559,9 +1582,10 @@ mod explorer_full_tests {
         #[test]
         fn test_state_matches_orchestrator_all_variants() {
             // CurrentPlanetRequest -> allowed in Idle
-            assert!(ExplorerState::Idle.matches_orchestrator_msg(
-                &OrchestratorToExplorer::CurrentPlanetRequest
-            ));
+            assert!(
+                ExplorerState::Idle
+                    .matches_orchestrator_msg(&OrchestratorToExplorer::CurrentPlanetRequest)
+            );
 
             // KillExplorer -> allowed in any state
             for state in [
@@ -1580,9 +1604,10 @@ mod explorer_full_tests {
             }
 
             // StartExplorerAI -> only in WaitingToStartExplorerAI
-            assert!(ExplorerState::WaitingToStartExplorerAI.matches_orchestrator_msg(
-                &OrchestratorToExplorer::StartExplorerAI
-            ));
+            assert!(
+                ExplorerState::WaitingToStartExplorerAI
+                    .matches_orchestrator_msg(&OrchestratorToExplorer::StartExplorerAI)
+            );
         }
 
         #[test]
@@ -1652,7 +1677,10 @@ mod explorer_full_tests {
                 .unwrap();
 
             let orch_msg = h.recv_from_explorer_to_orch();
-            assert!(matches!(orch_msg, ExplorerToOrchestrator::NeighborsRequest { .. }));
+            assert!(matches!(
+                orch_msg,
+                ExplorerToOrchestrator::NeighborsRequest { .. }
+            ));
 
             // Step 2: Orchestrator responds with neighbors
             h.explorer.set_state(ExplorerState::Idle);
@@ -1721,7 +1749,10 @@ mod explorer_full_tests {
             let travel_msg = h.recv_from_explorer_to_orch();
             assert!(matches!(
                 travel_msg,
-                ExplorerToOrchestrator::TravelToPlanetRequest { dst_planet_id: 200, .. }
+                ExplorerToOrchestrator::TravelToPlanetRequest {
+                    dst_planet_id: 200,
+                    ..
+                }
             ));
 
             h.explorer.set_state(ExplorerState::Traveling);
@@ -1803,8 +1834,10 @@ mod explorer_full_tests {
             // (This tests get_production_priority indirectly through decide_resource_action)
             let resource_needed = h.explorer.resources_needed();
             // With empty bag, should need H2O ingredients
-            assert!(resource_needed.contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
-                || resource_needed.contains(&ResourceType::Basic(BasicResourceType::Oxygen)));
+            assert!(
+                resource_needed.contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
+                    || resource_needed.contains(&ResourceType::Basic(BasicResourceType::Oxygen))
+            );
         }
 
         /// Simulates being killed mid-exploration
@@ -1816,15 +1849,15 @@ mod explorer_full_tests {
             h.explorer.set_state(ExplorerState::WaitingForNeighbours);
 
             // Orchestrator sends KillExplorer (matches any state)
-            assert!(h.explorer.state().matches_orchestrator_msg(
-                &OrchestratorToExplorer::KillExplorer
-            ));
+            assert!(
+                h.explorer
+                    .state()
+                    .matches_orchestrator_msg(&OrchestratorToExplorer::KillExplorer)
+            );
 
             // Simulate kill handler
             h.explorer
-                .send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult {
-                    explorer_id: 1,
-                })
+                .send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult { explorer_id: 1 })
                 .unwrap();
             h.explorer.set_state(ExplorerState::Killed);
 
@@ -1867,10 +1900,10 @@ mod explorer_full_tests {
             }
 
             // Pathfinding: from 100 to Carbon
-            let path = h.explorer.topology.find_path_to_resource(
-                100,
-                ResourceType::Basic(BasicResourceType::Carbon),
-            );
+            let path = h
+                .explorer
+                .topology
+                .find_path_to_resource(100, ResourceType::Basic(BasicResourceType::Carbon));
 
             assert!(path.is_some());
             let path = path.unwrap();
@@ -1888,7 +1921,10 @@ mod explorer_full_tests {
             let msg = h.recv_from_explorer_to_orch();
             assert!(matches!(
                 msg,
-                ExplorerToOrchestrator::TravelToPlanetRequest { dst_planet_id: 200, .. }
+                ExplorerToOrchestrator::TravelToPlanetRequest {
+                    dst_planet_id: 200,
+                    ..
+                }
             ));
 
             // Orchestrator sends MoveToPlanet with new sender
@@ -1913,7 +1949,10 @@ mod explorer_full_tests {
             let msg2 = h.recv_from_explorer_to_orch();
             assert!(matches!(
                 msg2,
-                ExplorerToOrchestrator::TravelToPlanetRequest { dst_planet_id: 300, .. }
+                ExplorerToOrchestrator::TravelToPlanetRequest {
+                    dst_planet_id: 300,
+                    ..
+                }
             ));
         }
 
@@ -1932,7 +1971,10 @@ mod explorer_full_tests {
             h.explorer.manual_mode_off();
 
             let start_msg = h.recv_from_explorer_to_orch();
-            assert!(matches!(start_msg, ExplorerToOrchestrator::StartExplorerAIResult { .. }));
+            assert!(matches!(
+                start_msg,
+                ExplorerToOrchestrator::StartExplorerAIResult { .. }
+            ));
 
             // === Phase 2: Discover neighbors ===
             h.explorer
@@ -1978,7 +2020,10 @@ mod explorer_full_tests {
                 })
                 .unwrap();
             let msg = h.recv_from_explorer_to_planet();
-            assert!(matches!(msg, ExplorerToPlanet::GenerateResourceRequest { .. }));
+            assert!(matches!(
+                msg,
+                ExplorerToPlanet::GenerateResourceRequest { .. }
+            ));
 
             // === Phase 5: Move to undiscovered planet ===
             h.explorer
@@ -1991,7 +2036,10 @@ mod explorer_full_tests {
             let travel = h.recv_from_explorer_to_orch();
             assert!(matches!(
                 travel,
-                ExplorerToOrchestrator::TravelToPlanetRequest { dst_planet_id: 200, .. }
+                ExplorerToOrchestrator::TravelToPlanetRequest {
+                    dst_planet_id: 200,
+                    ..
+                }
             ));
             h.explorer.set_state(ExplorerState::Traveling);
 
@@ -2005,18 +2053,21 @@ mod explorer_full_tests {
             assert_eq!(h.explorer.planet_id(), 200);
 
             // === Phase 7: Kill explorer ===
-            assert!(h.explorer.state().matches_orchestrator_msg(
-                &OrchestratorToExplorer::KillExplorer
-            ));
+            assert!(
+                h.explorer
+                    .state()
+                    .matches_orchestrator_msg(&OrchestratorToExplorer::KillExplorer)
+            );
             h.explorer
-                .send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult {
-                    explorer_id: 1,
-                })
+                .send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult { explorer_id: 1 })
                 .unwrap();
             h.explorer.set_state(ExplorerState::Killed);
 
             let kill_msg = h.recv_from_explorer_to_orch();
-            assert!(matches!(kill_msg, ExplorerToOrchestrator::KillExplorerResult { .. }));
+            assert!(matches!(
+                kill_msg,
+                ExplorerToOrchestrator::KillExplorerResult { .. }
+            ));
             assert!(h.explorer.state().should_terminate());
         }
 
@@ -2074,7 +2125,10 @@ mod explorer_full_tests {
             let first = h.explorer.buffer_orchestrator_msg.pop_front().unwrap();
             let second = h.explorer.buffer_orchestrator_msg.pop_front().unwrap();
 
-            assert!(matches!(first, OrchestratorToExplorer::CurrentPlanetRequest));
+            assert!(matches!(
+                first,
+                OrchestratorToExplorer::CurrentPlanetRequest
+            ));
             assert!(matches!(second, OrchestratorToExplorer::BagContentRequest));
         }
     }
@@ -2112,8 +2166,10 @@ mod explorer_full_tests {
             let needed = h.explorer.resources_needed();
 
             // With empty bag, should need H and O for Water
-            assert!(needed.contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
-                || needed.contains(&ResourceType::Basic(BasicResourceType::Oxygen)));
+            assert!(
+                needed.contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
+                    || needed.contains(&ResourceType::Basic(BasicResourceType::Oxygen))
+            );
         }
 
         /// decide_resource_action: planet has O, H available -> should suggest generating them
@@ -2139,7 +2195,10 @@ mod explorer_full_tests {
             let mut h = TestStruct::new_with_params(1, 999, 5); // planet 999 not in topology
 
             let action = h.explorer.decide_resource_action();
-            assert!(action.is_none(), "Should return None when planet info not available");
+            assert!(
+                action.is_none(),
+                "Should return None when planet info not available"
+            );
         }
 
         /// resources_needed: consistent with decision priority
@@ -2147,7 +2206,10 @@ mod explorer_full_tests {
         fn test_resources_needed_nonempty_coverage() {
             let h = TestStruct::new();
             let needed = h.explorer.resources_needed();
-            assert!(!needed.is_empty(), "Newly created explorer always needs resources");
+            assert!(
+                !needed.is_empty(),
+                "Newly created explorer always needs resources"
+            );
         }
     }
 
@@ -2224,8 +2286,7 @@ mod explorer_full_tests {
             let (explorer_orch_send, explorer_orch_recv) =
                 unbounded::<ExplorerToOrchestrator<BagType>>();
             let (planet_send, planet_recv) = unbounded::<PlanetToExplorer>();
-            let (explorer_planet_send, explorer_planet_recv) =
-                unbounded::<ExplorerToPlanet>();
+            let (explorer_planet_send, explorer_planet_recv) = unbounded::<ExplorerToPlanet>();
 
             let explorer = Explorer::new(
                 1,
@@ -2238,10 +2299,11 @@ mod explorer_full_tests {
             // Drop the receiver
             drop(explorer_orch_recv);
 
-            let result = explorer.send_to_orchestrator(ExplorerToOrchestrator::CurrentPlanetResult {
-                explorer_id: 1,
-                planet_id: 100,
-            });
+            let result =
+                explorer.send_to_orchestrator(ExplorerToOrchestrator::CurrentPlanetResult {
+                    explorer_id: 1,
+                    planet_id: 100,
+                });
             assert!(result.is_err(), "Send to dropped receiver should fail");
         }
 
@@ -2324,7 +2386,10 @@ mod explorer_full_tests {
                     }
                     if std::time::Instant::now() > deadline {
                         println!("[TEST] planets_info dump: {:?}", orch.planets_info);
-                        println!("[TEST] explorer_channels keys: {:?}", orch.explorer_channels.keys().collect::<Vec<_>>());
+                        println!(
+                            "[TEST] explorer_channels keys: {:?}",
+                            orch.explorer_channels.keys().collect::<Vec<_>>()
+                        );
                         panic!("Timeout: planet not running yet");
                     }
                     thread::sleep(Duration::from_millis(10));

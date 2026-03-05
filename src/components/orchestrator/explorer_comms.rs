@@ -294,7 +294,7 @@ impl Orchestrator {
     }
 
     /// sends the BagContentRequest message
-    pub fn send_bag_content_request(&mut self, explorer_id: u32) -> Result<(), String> {
+    pub fn send_bag_content_request(&self, explorer_id: u32) -> Result<(), String> {
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -330,7 +330,7 @@ impl Orchestrator {
 
         // the neighbors are obtained from the galaxy_topology adjacent matrix
         let neighbors: Vec<u32> = {
-            let guard = self.galaxy_topology.read().unwrap();
+            let guard = &self.galaxy_topology;
 
             guard
                 .get(planet_id as usize)

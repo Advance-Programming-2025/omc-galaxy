@@ -320,7 +320,7 @@ impl Explorer {
                             // if the sending is successful change the state to WaitingForNeighbours
                             // and push back the action
                             self.set_state(ExplorerState::WaitingForNeighbours);
-                            println!("[EXPLORER TOMY DEBUG] AskNeighbours"); 
+                            println!("[EXPLORER TOMY DEBUG] AskNeighbours");
                         }
                         Err(err) => {
                             println!(
@@ -489,10 +489,10 @@ impl Explorer {
                                     self.set_state(ExplorerState::Traveling); // TODO should be Idle, in the case in which the planet is dead and can't respond
                                     println!("[EXPLORER TOMY DEBUG] Traveling");
                                 }
-                                Err(_) => { 
-                                    self.move_queue.clear(); 
+                                Err(_) => {
+                                    self.move_queue.clear();
                                     println!("[EXPLORER TOMY DEBUG] Not traveling");
-                                },
+                                }
                             }
                         } else {
                             self.move_queue.clear();

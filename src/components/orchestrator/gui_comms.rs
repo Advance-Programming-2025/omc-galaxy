@@ -6,7 +6,7 @@ use rustc_hash::FxHashMap;
 
 use crate::utils::ExplorerInfoMap;
 use crate::{
-    GalaxyTopology, PlanetStatus,
+    GalaxyTopology,
     components::orchestrator::{Orchestrator, OrchestratorEvent},
     utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
 };
@@ -24,7 +24,7 @@ impl Orchestrator {
         //LOG
         log_fn_call!(self, "get_topology()");
         //LOG
-        let topology = self.galaxy_topology.read().unwrap();
+        let topology = &self.galaxy_topology;
 
         let mut edges = Vec::new();
         let planet_num = topology.len();
@@ -36,8 +36,6 @@ impl Orchestrator {
                 }
             }
         }
-
-        drop(topology);
 
         (edges, planet_num)
     }
@@ -53,12 +51,17 @@ impl Orchestrator {
     pub fn get_explorer_states(&self) -> ExplorerInfoMap {
         //LOG
         log_fn_call!(self, "explorer_states()");
-        //LOG
-        let explorer_status = self.explorers_info.clone();
-        explorer_status
+
+        let it = self.explorers_info.iter();
+        for (explorer_id, _) in it {
+            // we ask the explorers for their bag content to update the info about them, this is needed to update the info about the resources they are carrying
+            let _ = self.send_bag_content_request(*explorer_id);
+        }
+
+        self.explorers_info.clone()
     }
     pub fn get_galaxy_topology(&self) -> Vec<Vec<bool>> {
-        self.galaxy_topology.read().unwrap().clone()
+        self.galaxy_topology.clone()
     }
 
     // Bevy stuff

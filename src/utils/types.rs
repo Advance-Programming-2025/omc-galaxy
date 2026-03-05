@@ -30,8 +30,7 @@ pub type GalaxyTopologyNotLock = Vec<Vec<bool>>;
 pub type PlanetStatusNotLock = BTreeMap<u32, Status>;
 pub type ExplorerStatusNotLock = BTreeMap<u32, Status>;
 
-pub type GalaxyTopology = Arc<RwLock<Vec<Vec<bool>>>>;
-pub type PlanetStatus = Arc<RwLock<BTreeMap<u32, Status>>>;
+pub type GalaxyTopology = Vec<Vec<bool>>;
 
 pub type GalaxySnapshot = Vec<(u32, u32)>;
 
@@ -327,9 +326,5 @@ impl ExplorerInfo {
             current_planet_id,
             move_to_planet_id: -1, //at this time is not relevant
         }
-    }
-
-    pub(crate) fn get_explorer_state(self) -> Status {
-        self.status.clone()
     }
 }

@@ -44,7 +44,7 @@ impl Orchestrator {
         //Log
         log_fn_call!(dir ActorType::Orchestrator, 0u32, "new_gtop()",);
         //LOG
-        Arc::new(RwLock::new(Vec::new()))
+        Vec::new()
     }
 
     /// Reset the orchestrator.
@@ -345,7 +345,7 @@ impl Orchestrator {
         &mut self,
         explorer_id: u32,
         planet_id: u32,
-    )->Result<(), String> {
+    ) -> Result<(), String> {
         log_fn_call!(
             self,
             "add_tommy_explorer()",
@@ -359,10 +359,15 @@ impl Orchestrator {
 
         // get the sender from explorer to planet
         let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
-            Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
+            Some((orchestrator_sender, explorer_sender)) => (
+                Some(orchestrator_sender.clone()),
+                Some(explorer_sender.clone()),
+            ),
             None => {
-                return Err("sender orchestrator to planet and explorer to planet don't exists".to_string());
-            }, // sender does not exist
+                return Err(
+                    "sender orchestrator to planet and explorer to planet don't exists".to_string(),
+                );
+            } // sender does not exist
         };
 
         let mut free_cells = 0;
@@ -414,7 +419,7 @@ impl Orchestrator {
                     Ok(_) => {}
                     Err(err) => {
                         //todo logs
-                        return Err(err.to_string())
+                        return Err(err.to_string());
                     }
                 }
             }
@@ -449,7 +454,7 @@ impl Orchestrator {
         &mut self,
         explorer_id: u32,
         planet_id: u32,
-    )->Result<(), String>{
+    ) -> Result<(), String> {
         log_fn_call!(
             self,
             "add_mattia_explorer()",
@@ -463,10 +468,15 @@ impl Orchestrator {
 
         // get the sender from explorer to planet
         let (orch_to_planet, expl_to_planet) = match self.planet_channels.get(&planet_id) {
-            Some((orchestrator_sender, explorer_sender)) => (Some(orchestrator_sender.clone()),Some(explorer_sender.clone())),
+            Some((orchestrator_sender, explorer_sender)) => (
+                Some(orchestrator_sender.clone()),
+                Some(explorer_sender.clone()),
+            ),
             None => {
-                return Err("sender orchestrator to planet and explorer to planet don't exists".to_string());
-            }, // sender does not exist
+                return Err(
+                    "sender orchestrator to planet and explorer to planet don't exists".to_string(),
+                );
+            } // sender does not exist
         };
 
         //Construct Explorer
@@ -508,7 +518,7 @@ impl Orchestrator {
                     Ok(_) => {}
                     Err(err) => {
                         //todo logs
-                        return Err(err.to_string())
+                        return Err(err.to_string());
                     }
                 }
             }
@@ -567,12 +577,26 @@ impl Orchestrator {
             }
         };
 
-        log_internal_op!(self,  "input"=>input);
+        self.initialize_galaxy_by_content(&input)?;
+        Ok(())
+    }
+
+    /// Initialize the galaxy using the content of a topology string.
+    ///
+    /// This function performs parsing operations on a string content and passes
+    /// it on to [`initialize_galaxy_by_adj_list`](Self::initialize_galaxy_by_adj_list).
+    ///
+    /// Returns Err if the content is formatted incorrectly.
+    ///
+    /// * `input` - string content of the galaxy initialization
+    pub fn initialize_galaxy_by_content(&mut self, input: &str) -> Result<(), String> {
+        log_fn_call!(self, "initialize_galaxy_by_content()", input);
+        log_internal_op!(self, "action" => "parsing galaxy content", "content" => input);
 
         let mut adj_list_for_topology = Vec::new();
-
         let mut new_lookup: FxHashMap<u32, (u32, PlanetType)> = FxHashMap::default();
 
+        let mut planet_idx = 0u32;
         for (line_num, line) in input.lines().enumerate() {
             let line = line.trim();
             if line.is_empty() {
@@ -597,11 +621,11 @@ impl Orchestrator {
             let node_type = values[1];
             let neighbors = &values[2..];
 
-            //saving id-index to lookup table
+            // saving id-index to lookup table using a counter that ignores empty lines
             new_lookup.insert(
                 node_id,
                 (
-                    line_num as u32,
+                    planet_idx,
                     match node_type {
                         0 => BlackAdidasShoe,
                         1 => Ciuc,
@@ -618,9 +642,12 @@ impl Orchestrator {
 
             let mut adj_row = vec![];
             adj_row.extend_from_slice(neighbors);
-
             adj_list_for_topology.push(adj_row);
+
+            planet_idx += 1;
         }
+
+        // Remap neighbors to their internal indices
         for row in &mut adj_list_for_topology {
             for node in row {
                 if let Some(&(new_idx, _)) = new_lookup.get(node) {
@@ -628,13 +655,10 @@ impl Orchestrator {
                 }
             }
         }
+
         self.galaxy_lookup = new_lookup;
         //Initialize the orchestrator galaxy topology
         self.initialize_galaxy_by_adj_list(adj_list_for_topology)?;
-
-        ////////////// EXPLORERS INITIALIZATION /////////////////////
-        //self.add_tommy_explorer(0, 0);  //todo i commented this because it was breaking every test i was doing :)
-        //self.add_mattia_explorer(1,0);
 
         Ok(())
     }
@@ -700,48 +724,16 @@ impl Orchestrator {
             .for_each(|_row| debug_println!("{:?}", _row));
 
         //Update orchestrator topology
+        self.galaxy_topology = new_topology;
 
-        let lock_try = match self.galaxy_topology.write() {
-            Ok(mut gtop) => {
-                *gtop = new_topology;
+        //LOG
+        log_internal_op!(self, "update galaxy_topology");
+        //LOG
 
-                //LOG
-                log_internal_op!(self, "update galaxy_topology");
-                //LOG
-
-                //drops the lock just in case
-                drop(gtop);
-
-                Ok(())
-            }
-            Err(_e) => {
-                //LOG
-                let event = LogEvent::self_directed(
-                    Participant::new(ActorType::Orchestrator, 0u32),
-                    EventType::InternalOrchestratorAction,
-                    Channel::Warning,
-                    warning_payload!(
-                        "ERROR galaxy topology lock failed.",
-                        _e,
-                        "initialize_galaxy_by_adj_list()",
-                        adj_list
-                    ),
-                );
-                event.emit();
-                //LOG
-                debug_println!("ERROR galaxy topology lock failed.");
-                Err(())
-            }
-        };
-
-        if lock_try.is_ok() {
-            //Initialize all the planets give the list of ids
-            let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
-            self.initialize_planets_by_ids_list(ids_list.clone())?;
-            Ok(())
-        } else {
-            Err("ERROR galaxy topology lock failed.".to_string())
-        }
+        //Initialize all the planets give the list of ids
+        let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
+        self.initialize_planets_by_ids_list(ids_list.clone())?;
+        Ok(())
     }
 
     /// Initialize the galaxy using a list of planet IDs.

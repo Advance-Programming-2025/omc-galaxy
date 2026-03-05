@@ -105,7 +105,8 @@ impl Orchestrator {
                             Ok(_) => {}
                             Err(err) => {
                                 //todo logs
-                                debug_println!("planet status not updated: {}", err)
+                                debug_println!("planet status not updated: {}", err);
+                                return Err(err.to_string());
                             }
                         }
                         //LOG
@@ -116,7 +117,30 @@ impl Orchestrator {
                             "planet status"=> format!("{:?}",self.planets_info.get_status(&planet_id))
                         );
                         //LOG
-                        //TODO we need to do a check if some explorer is on that planet
+                        //sending explorer kill
+                        let mut ris = "".to_string();
+                        for i in self
+                            .explorers_info
+                            .iter()
+                            .filter(|x| x.1.current_planet_id == planet_id)
+                        {
+                            match self
+                                .explorer_channels
+                                .get(i.0)
+                                .unwrap()
+                                .0
+                                .send(OrchestratorToExplorer::KillExplorer)
+                            {
+                                Ok(_) => {
+                                    ris = "".to_string();
+                                }
+                                Err(err) => {
+                                    //todo logs
+                                    ris.push_str(&err.to_string());
+                                }
+                            }
+                        }
+                        return if ris.is_empty() { Ok(()) } else { Err(ris) };
                     }
                 }
             }
@@ -230,11 +254,16 @@ impl Orchestrator {
                                 }
                             };
                         //this is safe because we already checked it before
-                        let move_to_planet_id=self.explorers_info.get(&explorer_id).unwrap().move_to_planet_id;
-                        if move_to_planet_id >=0 {
-                            match orch_current_planet_sender.0.send(OrchestratorToPlanet::OutgoingExplorerRequest {
-                                explorer_id,
-                            }) {
+                        let move_to_planet_id = self
+                            .explorers_info
+                            .get(&explorer_id)
+                            .unwrap()
+                            .move_to_planet_id;
+                        if move_to_planet_id >= 0 {
+                            match orch_current_planet_sender
+                                .0
+                                .send(OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id })
+                            {
                                 Ok(_) => {
                                     log_internal_op!(
                                         self,
@@ -256,7 +285,10 @@ impl Orchestrator {
                                         )
                                     ).emit();
 
-                                    return Err(format!("Failed to send explorer request: {}", err));
+                                    return Err(format!(
+                                        "Failed to send explorer request: {}",
+                                        err
+                                    ));
                                 }
                             }
                         }
@@ -367,6 +399,12 @@ impl Orchestrator {
                     explorer_id
                 );
                 //LOG
+                //the ai is started if it was in manual mode
+                self.explorers_info
+                    .insert_status(explorer_id, Status::Running);
+                if self.explorers_info.get(&explorer_id).is_none() {
+                    self.send_current_planet_request(explorer_id)?;
+                }
 
                 //LOG
                 log_internal_op!(
@@ -505,8 +543,9 @@ impl Orchestrator {
                     "success" => generated.is_ok()
                 );
                 //LOG
-
-                self.send_bag_content_request(explorer_id)?;
+                if generated.is_ok() {
+                    self.send_bag_content_request(explorer_id)?;
+                }
             }
             ExplorerToOrchestrator::CombineResourceResponse {
                 explorer_id,
@@ -587,7 +626,7 @@ impl Orchestrator {
 
                 // verify that the planet exists and that the destination planet is a neighbour
                 let is_neighbour = {
-                    let guard = self.galaxy_topology.read().unwrap();
+                    let guard = &self.galaxy_topology;
 
                     guard
                         .get(current_planet_id as usize)

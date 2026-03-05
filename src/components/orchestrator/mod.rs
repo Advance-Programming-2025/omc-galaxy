@@ -26,13 +26,30 @@ use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 pub enum OrchestratorEvent {
-    PlanetDestroyed { planet_id: u32 },
-    SunraySent { planet_id: u32 },
-    SunrayReceived { planet_id: u32 },
-    AsteroidSent { planet_id: u32 },
-    ExplorerMoved { destination: u32 },
-    BasicResourceGenerated { resource: BasicResourceType },
-    ComplexResourceGenerated { resource: ComplexResourceType },
+    PlanetDestroyed {
+        planet_id: u32,
+    },
+    SunraySent {
+        planet_id: u32,
+    },
+    SunrayReceived {
+        planet_id: u32,
+    },
+    AsteroidSent {
+        planet_id: u32,
+    },
+    ExplorerMoved {
+        explorer_id: u32,
+        destination: u32,
+    },
+    BasicResourceGenerated {
+        explorer_id: u32,
+        resource: BasicResourceType,
+    },
+    ComplexResourceGenerated {
+        explorer_id: u32,
+        resource: ComplexResourceType,
+    },
 }
 
 ///The core of the game.
