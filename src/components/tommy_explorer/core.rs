@@ -213,7 +213,8 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("[EXPLORER TOMMY DEBUG] Error in receiving the orchestrator message: {}", err);
+                            println!("From orchestrator: {}", err);
+                            return Err(err.to_string());
                         }
                     }
                 },
@@ -231,7 +232,8 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("[EXPLORER TOMMY DEBUG] Error in receiving the planet message: {}", err);
+                            println!("Failed to receive from planet.");
+                            // TODO log
                         }
                     }
                 }
@@ -240,6 +242,7 @@ impl Explorer {
                 default => {
                     // priority to the buffered messages
                     if self.manual_mode {
+                        std::thread::sleep(std::time::Duration::from_millis(20));
                         continue;
                     }
 
@@ -251,7 +254,10 @@ impl Explorer {
                             }
                         }
                         // if we are not in idle state we need to manage some other message
-                        _ => continue,
+                        _ => {
+                            std::thread::sleep(std::time::Duration::from_millis(20));
+                            continue;
+                        },
                     }
 
                     // if the state is still idle after processing buffers, execute AI actions
@@ -260,6 +266,7 @@ impl Explorer {
                     }
                 }
             }
+            std::thread::sleep(std::time::Duration::from_millis(20));
         }
     }
 
