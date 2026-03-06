@@ -53,8 +53,7 @@ const MAX_PREDICTION_HORIZON: u64 = 100;
 const PERFECT_INFO_MAX_TIME: u64 = 10;
 const SAFETY_MIN_DIFF: f32 = 0.07;
 
-#[derive(Debug, Clone)]
-#[derive(PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
@@ -233,8 +232,6 @@ impl ResourceNeeds {
 }
 #[derive(Debug)]
 pub struct ai_data {
-    pub global_sunray_rate: f32, //todo i don't think these 2 values are useful
-    pub global_asteroid_rate: f32,
     pub resource_needs: ResourceNeeds,
     pub ai_action: AIAction,
     pub last_action: Option<AIActionType>,
@@ -243,8 +240,6 @@ pub struct ai_data {
 impl ai_data {
     pub fn new() -> Self {
         Self {
-            global_asteroid_rate: 0.0,
-            global_sunray_rate: 0.0,
             resource_needs: ResourceNeeds::new(),
             ai_action: AIAction::new(),
             last_action: None,
@@ -330,27 +325,21 @@ fn estimate_current_energy(planet_info: &PlanetInfo, current_time: u64) -> (u32,
     (predicted_energy, confidence)
 }
 
-pub fn calc_utility(explorer: &mut Explorer) -> Result<(), &'static str> {
-    // updating planet safety score
+pub fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
+    // updating planet safety score for every known ids
     let known_ids: Vec<ID> = explorer.topology_info.keys().cloned().collect();
     for id in known_ids {
-        match calculate_safety_score(explorer, Some(id)) {
-            Ok(_) => {}
-            Err(err) => {
-                //todo logs
-            }
-        }
+        let _ = calculate_safety_score(explorer, Some(id));
     }
-    //temporary variables
+    //temporary variables to contain results
     let mut temp_produce = HashMap::new();
     let mut temp_combine = HashMap::new();
     let mut temp_move = HashMap::new();
     let charge_rate;
     //clearing move_to utility values
     explorer.ai_data.ai_action.move_to.clear();
-
     {
-        // current planet info
+        // getting current planet info
         let planet_info = explorer.get_current_planet_info()?;
         charge_rate = planet_info.charge_rate;
         // base resource production
@@ -418,13 +407,19 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), &'static str> {
     explorer.ai_data.ai_action.produce_resource = temp_produce;
     explorer.ai_data.ai_action.combine_resource = temp_combine;
 
-    //Survey utilities
+    //Survey energy and neighbors
     explorer.ai_data.ai_action.survey_energy_cells = score_survey_energy(explorer)?;
     explorer.ai_data.ai_action.survey_neighbors = score_survey_neighbors(explorer)?;
 
-    // wait with bonus for positive planet charge rate
+    // wait with bonus for safe planet: high charge rate and safety
     let wait_base = 0.08f32;
-    let wait_bonus = if charge_rate.is_some_and(|x| x > 0.0)&&explorer.get_current_planet_info()?.inferred_planet_type.as_ref().is_some_and(|x| x.can_have_rocket()) {
+    let wait_bonus = if charge_rate.is_some_and(|x| x > 0.0)
+        && explorer
+            .get_current_planet_info()?
+            .inferred_planet_type
+            .as_ref()
+            .is_some_and(|x| x.can_have_rocket())
+    {
         0.1
     } else {
         0.0
@@ -447,28 +442,31 @@ fn score_basic_resource_production(
     explorer: &Explorer,
     resource_type: BasicResourceType,
 ) -> Result<f32, &'static str> {
+    //get current planet info
     let planet_info = explorer.get_current_planet_info()?;
 
     let energy_cells = planet_info.energy_cells.unwrap_or(1).max(1);
+    //total resource in the bag
     let resource_count = explorer
         .bag
         .count(ResourceType::Basic(resource_type))
         .max(1);
+    //calculating reliability of the energy data
     let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time);
 
     let base = explorer
         .ai_data
         .resource_needs
         .get_effective_need(ResourceType::Basic(resource_type))
-        * (1.0 / resource_count as f32)
-        * (1.0 - (1.0 / energy_cells as f32))
-        * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 {
+        * (1.0 / resource_count as f32) //less resource -> more needs
+        * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
+        * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
             1.0
         } else {
             0.8
         })
         * (reliability * 0.2 + 0.8); //in this case the reliability on the information about the energy cells it isn't very important
-
+                                     //adding some randomness
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
 
@@ -479,29 +477,32 @@ fn score_complex_resource_production(
     explorer: &Explorer,
     resource_type: ComplexResourceType,
 ) -> Result<f32, &'static str> {
+    //getting info
     let planet_info = explorer.get_current_planet_info()?;
 
     let energy_cells = planet_info.energy_cells.unwrap_or(1).max(1);
+    //calculating number of complex resources
     let resource_count = explorer
         .bag
         .count(ResourceType::Complex(resource_type))
         .max(1);
+    //reliability of energy data
     let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time);
 
     let mut base = explorer
         .ai_data
         .resource_needs
-        .get_effective_need(ResourceType::Complex(resource_type))
-        * (1.0 / resource_count as f32)
-        * (1.0 - (1.0 / energy_cells as f32))
-        * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 {
+        .get_effective_need(ResourceType::Complex(resource_type)) //getting needs of resources
+        * (1.0 / resource_count as f32)  //less resource -> more needs
+        * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
+        * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
             1.0
         } else {
             0.8
         })
         * (reliability * 0.2 + 0.8); //in this case the reliability on the information about the energy cells it isn't very important
 
-    let (_, _, has_a, _, has_b) = explorer.bag.can_craft(resource_type);
+    let (_, _, has_a, _, has_b) = explorer.bag.can_craft(resource_type); //considering if the explorer has the necessary resource
     let readiness_factor = match (has_a, has_b) {
         (true, true) => 1.0,
         (true, false) | (false, true) => 0.666,
@@ -509,19 +510,20 @@ fn score_complex_resource_production(
     };
 
     base *= readiness_factor;
-
+    //adding some randomness
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
 
     Ok((base * noise_factor).clamp(0.0, 1.0))
 }
-
+//very important
 fn calculate_safety_score(
     explorer: &mut Explorer,
     planet_id: Option<ID>,
 ) -> Result<f32, &'static str> {
-    let explorer_time = explorer.time.clone();
+    let explorer_time = explorer.time.clone(); //getting explorer ai tick
     let planet_info = match planet_id {
+        //getting planet info
         Some(id) => explorer
             .get_planet_info_mut(id)
             .ok_or("Planet info not found in topology")?,
@@ -570,21 +572,24 @@ fn calculate_safety_score(
         },
     };
     let pessimistic_minimum = 0.15;
-    let adjusted_escape_factor = (escape_factor * neighbors_reliability)
+    let adjusted_escape_factor = (escape_factor * neighbors_reliability) //adjusting escape factor with reliability
         + (pessimistic_minimum * (1.0 - neighbors_reliability));
-    let rocket = if planet_info
+    let rocket = if planet_info //checking if the planet can have a rocket
         .inferred_planet_type
         .as_ref()
         .is_some_and(|x| x.can_have_rocket())
     {
         1.0
     } else {
-        0.5 // penalty because the planet does not have a rocket todo forse questi valori sono troppo radicali
+        0.5 // penalty because the planet does not have a rocket
     };
+    //adding some randomness
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
+    //calculating safety score as sum of weighted factors
     let safety_score =
-        ((sustainability*0.15 + physical_safety*rocket*0.7 + adjusted_escape_factor *0.15) * noise_factor)
+        ((sustainability * 0.15 + physical_safety * rocket * 0.7 + adjusted_escape_factor * 0.15)
+            * noise_factor)
             .clamp(0.0, 1.0);
     planet_info.safety_score = Some(safety_score);
     Ok(safety_score)
@@ -592,9 +597,9 @@ fn calculate_safety_score(
 
 //calculating the utility of updating neighbors
 fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
-    //todo tenere in conto il tempo anche
+    //getting planet info
     let planet_info = explorer.get_current_planet_info()?;
-
+    //getting reliability of neighbors data
     let reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer.time);
 
     // Base utility from staleness
@@ -619,7 +624,7 @@ fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
     };
 
     let base = 0.1 + staleness_component + safety_bonus + unknown_bonus;
-
+    //adding some randomness
     let noise = add_noise(1.0);
 
     Ok((base * noise).clamp(0.0, 1.0))
@@ -627,17 +632,17 @@ fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
 
 // calculating the utility of updating energy cells
 fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
+    //getting planet info
     let planet_info = explorer.get_current_planet_info()?;
 
     // data reliability
     let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time);
     let energy_age = explorer.time.saturating_sub(planet_info.timestamp_energy);
-    // NEW: If charge_rate is high, old data is VERY unreliable
+    //if charge_rate is high, old data is VERY unreliable
     let charge_rate_uncertainty =
         if planet_info.charge_rate.unwrap_or(0.0) >= MIN_ACTIVE_CHARGE_RATE {
             // Fast charging planet: energy could have changed a lot
             let max_cells = calculate_max_number_cells(planet_info);
-            //todo questa formula non mi convince
             let potential_change =
                 (planet_info.charge_rate.unwrap_or(0.0) * energy_age as f32) / max_cells as f32;
             potential_change.min(0.5) // Cap at 0.5 additional uncertainty
@@ -656,15 +661,20 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
     };
 
     //if current safety is low, knowing energy is critical
-    let threat_multiplier = if planet_info.safety_score.unwrap_or(SAFETY_WARNING) < SAFETY_WARNING {
-        1.5
+    let threat_multiplier = if planet_info.safety_score.unwrap_or(SAFETY_WARNING) < SAFETY_WARNING
+        && planet_info
+            .inferred_planet_type
+            .as_ref()
+            .is_some_and(|x| x.can_have_rocket())
+    {
+        1.3
     } else {
         1.0
     };
 
     let base =
         (0.15 + staleness_component + charge_rate_uncertainty + no_info_boost) * threat_multiplier;
-
+    //adding some noise
     let noise = add_noise(1.0);
 
     Ok((base * noise).clamp(0.0, 1.0))
@@ -673,11 +683,13 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
 // calculating the utility to move to near planet
 // this need the run away factor to be already computed
 fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str> {
+    //getting target planet info
     let target_info = explorer
         .get_planet_info(target_id)
         .ok_or("Target planet info missing")?;
+    //getting current planet info
     let current_info = explorer.get_current_planet_info()?;
-
+    //getting safety score
     let current_safety = current_info.safety_score.unwrap_or(SAFETY_WARNING);
     // Predict target energy
     let (predicted_target_energy, target_energy_confidence) =
@@ -714,11 +726,15 @@ fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str
         let safety_factor = if target_info.safety_score.unwrap_or(SAFETY_WARNING) < SAFETY_CRITICAL
         {
             0.3 // Penalize very dangerous planets
-        }
-        else if target_info.safety_score.unwrap_or(SAFETY_WARNING) <explorer.get_current_planet_info()?.safety_score.unwrap_or(SAFETY_WARNING){
+        } else if target_info.safety_score.unwrap_or(SAFETY_WARNING)
+            < explorer
+                .get_current_planet_info()?
+                .safety_score
+                .unwrap_or(SAFETY_WARNING)
+        {
+            //some penalization for less safe planets
             0.6
-        }
-        else {
+        } else {
             0.8
         };
 
@@ -728,7 +744,7 @@ fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str
         Ok((base_score * noise).clamp(0.0, 1.0))
     }
 }
-
+//used to check if the explorer can safely escape, or if it is even useful
 fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
     if actions.run_away <= 0.0 {
         return false;
@@ -739,6 +755,7 @@ fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
     };
     let current_safety = current_info.safety_score.unwrap_or(SAFETY_WARNING);
     let neighbors = match &current_info.neighbors {
+        // checking if it has some neighbors
         Some(neighbors) => neighbors,
         None => return false,
     };
@@ -748,7 +765,11 @@ fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
             None => continue,
         };
         let planet_safety = planet_info.safety_score.unwrap_or(SAFETY_WARNING);
-        if planet_safety > current_safety + SAFETY_MIN_DIFF|| planet_info.inferred_planet_type.is_none()||current_safety<=SAFETY_CRITICAL{
+        if planet_safety > current_safety + SAFETY_MIN_DIFF
+            || planet_info.inferred_planet_type.is_none()
+            || current_safety <= SAFETY_CRITICAL
+        {
+            //if the destination planet is more safe or in some optimistic scenario or with panic
             return true;
         }
     }
@@ -782,6 +803,7 @@ fn action_utility(
     }
 }
 
+//function used to take the best action
 fn find_best_action(
     actions: &AIAction,
     explorer: &Explorer,
@@ -794,7 +816,12 @@ fn find_best_action(
     // MoveTo
     for (id, val) in &actions.move_to {
         //in order to reduce ping pong between 2 planets
-        if *val > max_val && explorer.ai_data.last_action_planet_id.is_some_and(|x| x !=*id) {
+        if *val > max_val
+            && explorer
+                .ai_data
+                .last_action_planet_id
+                .is_some_and(|x| x != *id)
+        {
             max_val = *val;
             best = Some(AIActionType::MoveTo(*id));
         }
@@ -837,7 +864,7 @@ fn find_best_action(
         max_val = actions.run_away;
         best = Some(AIActionType::RunAway);
     }
-    //if it is still useful we can take the same action of before reducing hysteresis
+    //if it is still useful we can take the same action of before reducing hysteresis and ping pong
     if let Some(previous) = last_action {
         if let Some(previous_val) =
             action_utility(actions, previous, explorer, last_action_planet_id)
@@ -854,6 +881,7 @@ fn find_best_action(
     best
 }
 
+// ai core function that is called at every explorer cycle
 pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     //LOG
     log_fn_call!(explorer, "ai_core_function", explorer,);
@@ -866,19 +894,28 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
         .get_current_planet_info()?
         .complex_resources
         .is_none();
+    //used the first time the explorer get on a new planet to bypass the ai and survey directly the neighbors or resources
     if explorer.current_planet_neighbors_update
         || explorer.get_current_planet_info()?.neighbors.is_none()
     {
         log_internal_op!(explorer, "updating neighbors");
         explorer.current_planet_neighbors_update = false;
         explorer.state = ExplorerState::WaitingForNeighbours;
-        explorer
+        match explorer
             .orchestrator_channels
             .1
             .send(ExplorerToOrchestrator::NeighborsRequest {
                 explorer_id: explorer.explorer_id,
                 current_planet_id: explorer.planet_id,
-            })?;
+            }) {
+            Ok(_) => {
+                return Ok(());
+            }
+            Err(err) => {
+                explorer.state = ExplorerState::Idle;
+                return Err(Box::new(err));
+            }
+        }
     } else if base_resource || comp_resource {
         log_internal_op!(explorer, "surveying resources");
         explorer.state = ExplorerState::Surveying {
@@ -890,12 +927,14 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
         };
         gather_info_from_planet(explorer)?;
     } else {
+        //calculating utility of every action
         calc_utility(explorer)?;
         log_internal_op!(
             explorer,
             "utility scores" => format!("{:?}",explorer.ai_data.ai_action),
             "explorer state" =>format!("{:?}", explorer),
         );
+        //getting the predicted best action
         let best_action = find_best_action(
             &explorer.ai_data.ai_action,
             &explorer,
@@ -912,6 +951,7 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                 explorer.ai_data.last_action_planet_id = Some(explorer.planet_id);
                 match ai_action {
                     AIActionType::RunAway => {
+                        //if the best action to escape from this planet we choose the best planet to go to
                         let mut max: (&ID, &f32) = (&0, &0.0);
                         for planet in &explorer.ai_data.ai_action.move_to {
                             if planet.1 > max.1 {
@@ -921,33 +961,55 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                         if *max.0 != 0 {
                             //making sure that there is a planet to move to
                             explorer.state = ExplorerState::Traveling;
-                            explorer.orchestrator_channels.1.send(
+                            match explorer.orchestrator_channels.1.send(
                                 ExplorerToOrchestrator::TravelToPlanetRequest {
                                     explorer_id: explorer.explorer_id,
                                     current_planet_id: explorer.planet_id,
                                     dst_planet_id: *max.0,
                                 },
-                            )?;
+                            ) {
+                                Ok(_) => return Ok(()),
+                                Err(err) => {
+                                    explorer.state = ExplorerState::Idle;
+                                    return Err(Box::new(err));
+                                }
+                            }
                         }
                     }
                     AIActionType::MoveTo(id) => {
                         explorer.state = ExplorerState::Traveling;
-                        explorer.orchestrator_channels.1.send(
+                        match explorer.orchestrator_channels.1.send(
                             ExplorerToOrchestrator::TravelToPlanetRequest {
                                 explorer_id: explorer.explorer_id,
                                 current_planet_id: explorer.planet_id,
                                 dst_planet_id: id,
                             },
-                        )?;
+                        ) {
+                            Ok(_) => {
+                                return Ok(());
+                            }
+                            Err(err) => {
+                                explorer.state = ExplorerState::Idle;
+                                return Err(Box::new(err));
+                            }
+                        }
                     }
                     AIActionType::SurveyNeighbors => {
                         explorer.state = ExplorerState::WaitingForNeighbours;
-                        explorer.orchestrator_channels.1.send(
+                        match explorer.orchestrator_channels.1.send(
                             ExplorerToOrchestrator::NeighborsRequest {
                                 explorer_id: explorer.explorer_id,
                                 current_planet_id: explorer.planet_id,
                             },
-                        )?;
+                        ) {
+                            Ok(_) => {
+                                return Ok(());
+                            }
+                            Err(err) => {
+                                explorer.state = ExplorerState::Idle;
+                                return Err(Box::new(err));
+                            }
+                        }
                     }
                     AIActionType::SurveyEnergy => {
                         explorer.state = ExplorerState::Surveying {
@@ -957,18 +1019,34 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                             orch_resource: false,
                             orch_combination: false,
                         };
-                        gather_info_from_planet(explorer)?;
+                        match gather_info_from_planet(explorer) {
+                            Ok(_) => {
+                                return Ok(());
+                            }
+                            Err(err) => {
+                                explorer.state = ExplorerState::Idle;
+                                return Err(err);
+                            }
+                        }
                     }
                     AIActionType::Produce(res) => {
                         explorer.state = ExplorerState::GeneratingResource {
                             orchestrator_response: false,
                         };
-                        explorer.planet_channels.1.send(
+                        match explorer.planet_channels.1.send(
                             ExplorerToPlanet::GenerateResourceRequest {
                                 explorer_id: 0,
                                 resource: res,
                             },
-                        )?;
+                        ) {
+                            Ok(_) => {
+                                return Ok(());
+                            }
+                            Err(err) => {
+                                explorer.state = ExplorerState::Idle;
+                                return Err(Box::new(err));
+                            }
+                        }
                     }
                     AIActionType::Combine(res) => {
                         explorer.state = ExplorerState::GeneratingResource {
@@ -987,15 +1065,24 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                         };
                         match complex_resource_req {
                             Ok(complex_resource_req) => {
-                                explorer.planet_channels.1.send(
+                                match explorer.planet_channels.1.send(
                                     ExplorerToPlanet::CombineResourceRequest {
                                         explorer_id: explorer.explorer_id,
                                         msg: complex_resource_req,
                                     },
-                                )?;
+                                ) {
+                                    Ok(_) => {
+                                        return Ok(());
+                                    }
+                                    Err(err) => {
+                                        explorer.state = ExplorerState::Idle;
+                                        return Err(Box::new(err));
+                                    }
+                                }
                             }
                             Err(err) => {
-                                //todo logs
+                                explorer.state = ExplorerState::Idle;
+                                return Err(err.into());
                             }
                         }
                     }

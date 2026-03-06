@@ -43,7 +43,6 @@ pub fn gather_info_from_planet(explorer: &mut Explorer) -> Result<(), Box<dyn st
             }
         }
         _ => {
-            //todo log warning, it shouldn't be possible to have a different state, but it is not a critical error
             LogEvent::self_directed(
                 Participant::new(ActorType::Explorer, explorer.explorer_id),
                 EventType::InternalExplorerAction,
