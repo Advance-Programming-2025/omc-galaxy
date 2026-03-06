@@ -1,4 +1,4 @@
-use crate::components::mattia_explorer::explorer_ai::ai_data;
+use crate::components::mattia_explorer::explorer_ai::AiData;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::ExplorerState;
@@ -61,7 +61,7 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     }
 }
 
-// this function resets the topology known by the explorer and its ai_data,
+// this function resets the topology known by the explorer and its AiData,
 // it is called when the explorer receives the ResetExplorerAI message
 pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
@@ -71,7 +71,7 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         .insert(explorer.planet_id, PlanetInfo::new(0));
     explorer.current_planet_neighbors_update = false;
     explorer.manual_mode = false;
-    explorer.ai_data = ai_data::new();
+    explorer.ai_data = AiData::new();
     log_message!(
         ActorType::Orchestrator,
         0u32,

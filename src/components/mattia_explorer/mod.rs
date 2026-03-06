@@ -10,7 +10,7 @@ mod tests;
 
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
-use crate::components::mattia_explorer::explorer_ai::{ai_core_function, ai_data};
+use crate::components::mattia_explorer::explorer_ai::{ai_core_function, AiData};
 use crate::components::mattia_explorer::handlers::{
     combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
     manage_combine_response, manage_generate_response, manage_supported_combination_response,
@@ -48,7 +48,7 @@ pub struct Explorer {
     buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
     time: u64,
-    ai_data: ai_data,
+    ai_data: AiData,
     current_planet_neighbors_update: bool,
     manual_mode: bool,
 }
@@ -86,7 +86,7 @@ impl Explorer {
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
             time: 1,
-            ai_data: ai_data::new(),
+            ai_data: AiData::new(),
             current_planet_neighbors_update: false,
             manual_mode: true,
         }
