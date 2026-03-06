@@ -1,5 +1,5 @@
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
-use crate::components::mattia_explorer::planet_info::{PlanetClassType, PlanetInfo};
+use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::ExplorerState;
 use crate::components::mattia_explorer::ActorType;
 use crate::components::mattia_explorer::Explorer;
@@ -10,7 +10,6 @@ use common_game::utils::ID;
 use logging_utils::{log_fn_call, log_internal_op, LoggableActor};
 use rand::Rng;
 use std::collections::HashMap;
-use std::hash::Hash;
 
 /// Noise level for utility calculations
 const RANDOMNESS_RANGE: f64 = 0.1;
@@ -20,12 +19,11 @@ const LAMBDA: f32 = 0.005;
 const PROPAGATION_FACTOR: f32 = 0.8;
 // --- SAFETY THRESHOLDS ---
 /// Critical danger threshold - immediate evacuation
-const SAFETY_CRITICAL: f32 = 0.3; //todo update this as the medium of the safeness of lowest 1/3 of the planet
+const SAFETY_CRITICAL: f32 = 0.3;
 /// Warning threshold - start looking for safer planets
-const SAFETY_WARNING: f32 = 0.6; //todo update this as the medium of the safeness of medium 1/3 of the planet
+const SAFETY_WARNING: f32 = 0.6;
 /// Comfortable safety level
-const SAFETY_COMFORTABLE: f32 = 0.85; //todo update this as the medium of the safeness of highest 1/3 of the planet
-                                      // --- DEFENSE PROBABILITY THRESHOLDS ---
+const SAFETY_COMFORTABLE: f32 = 0.8;
 /// Energy cells threshold to assume planet has rockets
 const ENERGY_CELLS_DEFENSE_THRESHOLD: u32 = 2;
 /// Probability threshold to consider a planet "likely defended"
@@ -43,7 +41,7 @@ const EXPLORATION_BASE_UTILITY: f32 = 0.7;
 /// Penalty multiplier for information staleness
 const STALENESS_PENALTY_FACTOR: f32 = 0.01;
 /// Minimum utility to consider moving (prevents thrashing)
-const MIN_MOVEMENT_UTILITY: f32 = 0.4; //todo
+const MIN_MOVEMENT_UTILITY: f32 = 0.4;
 /// Minimum advantage required to switch actions
 const ACTION_HYSTERESIS_MARGIN: f32 = 0.07;
 // --- CHARGE RATE BASED PREDICTIONS ---
@@ -56,6 +54,7 @@ const PERFECT_INFO_MAX_TIME: u64 = 10;
 const SAFETY_MIN_DIFF: f32 = 0.07;
 
 #[derive(Debug, Clone)]
+#[derive(PartialEq)]
 enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
@@ -425,7 +424,7 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), &'static str> {
 
     // wait with bonus for positive planet charge rate
     let wait_base = 0.08f32;
-    let wait_bonus = if charge_rate.is_some_and(|x| x > 0.0) {
+    let wait_bonus = if charge_rate.is_some_and(|x| x > 0.0)&&explorer.get_current_planet_info()?.inferred_planet_type.as_ref().is_some_and(|x| x.can_have_rocket()) {
         0.1
     } else {
         0.0
@@ -585,7 +584,7 @@ fn calculate_safety_score(
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
     let safety_score =
-        (sustainability * physical_safety * adjusted_escape_factor * rocket * noise_factor)
+        ((sustainability*0.15 + physical_safety*rocket*0.7 + adjusted_escape_factor *0.15) * noise_factor)
             .clamp(0.0, 1.0);
     planet_info.safety_score = Some(safety_score);
     Ok(safety_score)
@@ -623,12 +622,6 @@ fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
 
     let noise = add_noise(1.0);
 
-    // // critic information for navigation
-    // // safety score is calculated on data eta, number of escape routes and defense capability
-    // let base = ((1.0 - planet_info.safety_score.unwrap_or(SAFETY_WARNING)) * 0.9); //todo troppo influente, meglio dare priorità all'età dei dati
-    //
-    // let mut rng = rand::rng();
-    // let noise: f32 = rng.random_range(0.95..=1.05);
     Ok((base * noise).clamp(0.0, 1.0))
 }
 
@@ -720,9 +713,13 @@ fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str
         // But still consider safety
         let safety_factor = if target_info.safety_score.unwrap_or(SAFETY_WARNING) < SAFETY_CRITICAL
         {
-            0.5 // Penalize very dangerous planets
-        } else {
-            1.0
+            0.3 // Penalize very dangerous planets
+        }
+        else if target_info.safety_score.unwrap_or(SAFETY_WARNING) <explorer.get_current_planet_info()?.safety_score.unwrap_or(SAFETY_WARNING){
+            0.6
+        }
+        else {
+            0.8
         };
 
         let base_score = exploration_value * safety_factor;
@@ -751,9 +748,7 @@ fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
             None => continue,
         };
         let planet_safety = planet_info.safety_score.unwrap_or(SAFETY_WARNING);
-        if planet_safety > current_safety + SAFETY_MIN_DIFF
-            || planet_info.inferred_planet_type.is_none()
-        {
+        if planet_safety > current_safety + SAFETY_MIN_DIFF|| planet_info.inferred_planet_type.is_none()||current_safety<=SAFETY_CRITICAL{
             return true;
         }
     }
@@ -798,7 +793,8 @@ fn find_best_action(
 
     // MoveTo
     for (id, val) in &actions.move_to {
-        if *val > max_val {
+        //in order to reduce ping pong between 2 planets
+        if *val > max_val && explorer.ai_data.last_action_planet_id.is_some_and(|x| x !=*id) {
             max_val = *val;
             best = Some(AIActionType::MoveTo(*id));
         }
