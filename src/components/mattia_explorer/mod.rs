@@ -10,7 +10,7 @@ mod tests;
 
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
-use crate::components::mattia_explorer::explorer_ai::{ai_core_function, ai_data};
+use crate::components::mattia_explorer::explorer_ai::{ai_core_function, AiData};
 use crate::components::mattia_explorer::handlers::{
     combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
     manage_combine_response, manage_generate_response, manage_supported_combination_response,
@@ -20,7 +20,7 @@ use crate::components::mattia_explorer::handlers::{
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::{
-    ExplorerState, orch_msg_match_state, planet_msg_match_state,
+    orch_msg_match_state, planet_msg_match_state, ExplorerState,
 };
 use common_game::components::resource::ResourceType;
 use common_game::protocols::orchestrator_explorer::{
@@ -28,7 +28,7 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
-use crossbeam_channel::{Receiver, Sender, select};
+use crossbeam_channel::{select, Receiver, Sender};
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, VecDeque};
@@ -36,7 +36,7 @@ use std::collections::{HashMap, VecDeque};
 // this is the struct of the explorer
 pub struct Explorer {
     explorer_id: ID,
-    planet_id: ID, //I assume that the travel isn't instant, so I put an Option we should manage the case the planet explodes
+    planet_id: ID, 
     orchestrator_channels: (
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
@@ -48,7 +48,7 @@ pub struct Explorer {
     buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
     time: u64,
-    ai_data: ai_data,
+    ai_data: AiData,
     current_planet_neighbors_update: bool,
     manual_mode: bool,
 }
@@ -86,7 +86,7 @@ impl Explorer {
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
             time: 1,
-            ai_data: ai_data::new(),
+            ai_data: AiData::new(),
             current_planet_neighbors_update: false,
             manual_mode: true,
         }
@@ -97,14 +97,14 @@ impl Explorer {
         self.explorer_id
     }
 
-    //generic getter for planet_info
+    //generic getters for planet_info
     pub fn get_planet_info(&self, planet_id: ID) -> Option<&PlanetInfo> {
         self.topology_info.get(&planet_id)
     }
     pub fn get_planet_info_mut(&mut self, planet_id: ID) -> Option<&mut PlanetInfo> {
         self.topology_info.get_mut(&planet_id)
     }
-    //current planet getter
+    //current planet getters
     pub fn get_current_planet_info(&self) -> Result<&PlanetInfo, &'static str> {
         match self.get_planet_info(self.planet_id) {
             Some(info) => Ok(info),
@@ -118,9 +118,8 @@ impl Explorer {
         }
     }
 
-    // the explorer loop
+    // the explorer main loop
     pub fn run(&mut self) -> Result<(), String> {
-        //sleep(Duration::from_secs(1));
         // every iteration the explorer receives messages from both planet and orchestrator channels,
         // then it behaves based on the message received, if the message received and the explorer state
         // do not match together the message is pushed into the corresponding buffer, and it will be read
@@ -144,56 +143,87 @@ impl Explorer {
                                 "explorer data"=>format!("{:?}", self)
                             );
                             if orch_msg_match_state(&self.state, &msg) {
-                                match msg {
+                                let ris = match msg {
                                     OrchestratorToExplorer::StartExplorerAI => {
-                                        start_explorer_ai(self)?;
+                                        start_explorer_ai(self)
                                     }
                                     OrchestratorToExplorer::ResetExplorerAI => {
-                                        reset_explorer_ai(self)?;
+                                        reset_explorer_ai(self)
                                     }
                                     OrchestratorToExplorer::StopExplorerAI => {
-                                        stop_explorer_ai(self)?;
+                                        stop_explorer_ai(self)
                                     }
                                     OrchestratorToExplorer::KillExplorer => {
-                                        // TODO this action should be preemptive
-                                        kill_explorer(self)?;
+                                        if let Err(err)=kill_explorer(self){
+                                            LogEvent::new(
+                                                Some(Participant::new(ActorType::Explorer,self.explorer_id)),
+                                                Some(Participant::new(ActorType::Orchestrator,0u32)),
+                                                EventType::MessageExplorerToOrchestrator,
+                                                Channel::Warning,
+                                                warning_payload!(
+                                                    "kill_explorer() generated an error",
+                                                    err,
+                                                    "mattia_explorer::run()"
+                                                )
+                                            ).emit();
+                                        }
                                         return Ok(())
                                     }
                                     OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet, planet_id } => {
-                                        // TODO use the planet_id variable (common crate v3)
-                                        move_to_planet(self, sender_to_new_planet, planet_id)?;
+                                        move_to_planet(self, sender_to_new_planet, planet_id)
                                     }
                                     OrchestratorToExplorer::CurrentPlanetRequest => {
-                                        current_planet_request(self)?;
+                                        current_planet_request(self)
                                     }
                                     OrchestratorToExplorer::SupportedResourceRequest => {
-                                        supported_resource_request(self)?;
+                                        supported_resource_request(self)
                                     }
                                     OrchestratorToExplorer::SupportedCombinationRequest => {
-                                        supported_combination_request(self)?;
+                                        supported_combination_request(self)
                                     }
                                     OrchestratorToExplorer::GenerateResourceRequest{ to_generate } => {
-                                        generate_resource_request(self, to_generate, true)?;
+                                        generate_resource_request(self, to_generate, true)
                                     }
                                     OrchestratorToExplorer::CombineResourceRequest{ to_generate } => {
-                                        combine_resource_request(self, to_generate, true)?;
+                                        combine_resource_request(self, to_generate, true)
                                     }
                                     OrchestratorToExplorer::BagContentRequest => {
                                         // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se
-                                        self.orchestrator_channels.1.send(ExplorerToOrchestrator::BagContentResponse {explorer_id: self.explorer_id, bag_content: self.bag.to_resource_types()}).map_err(|e| e.to_string())?;
+                                        self.orchestrator_channels.1.send(ExplorerToOrchestrator::BagContentResponse {explorer_id: self.explorer_id, bag_content: self.bag.to_resource_types()}).map_err(|e| e.to_string())
                                     }
                                     OrchestratorToExplorer::NeighborsResponse{ neighbors } => {
                                         neighbours_response(self, neighbors);
+                                        Ok(())
                                     }
+                                };
+                                if let Err(err)=ris{
+                                    LogEvent::self_directed(
+                                        Participant::new(ActorType::Explorer,self.explorer_id),
+                                        EventType::InternalExplorerAction,
+                                        Channel::Warning,
+                                        warning_payload!(
+                                            "a handler of a OrchestratorToExplorer message returned an error",
+                                            err,
+                                            "mattia_explorer::run()"
+                                        )
+                                    ).emit();
                                 }
                             } else {
                                 self.buffer_orchestrator_msg.push_back(msg);
                             }
                         }
                         Err(err) => {
-                            println!("{}", err);
+                            LogEvent::self_directed(
+                                Participant::new(ActorType::Explorer,self.explorer_id),
+                                EventType::InternalExplorerAction,
+                                Channel::Error,
+                                warning_payload!(
+                                    "Fatal Error: receiving channel from orchestrator disconnected",
+                                    err,
+                                    "mattia_explorer::run()"
+                                )
+                            ).emit();
                             return Err(err.to_string());
-                            //todo logs
                         }
                     }
                 },
@@ -212,18 +242,18 @@ impl Explorer {
                                 "explorer data"=>format!("{:?}", self)
                             );
                             if planet_msg_match_state(&self.state, &msg) {
-                                match msg {
+                                let ris = match msg {
                                     PlanetToExplorer::SupportedResourceResponse{ resource_list } => {
-                                        manage_supported_resource_response(self, resource_list)?;
+                                        manage_supported_resource_response(self, resource_list)
                                     }
                                     PlanetToExplorer::SupportedCombinationResponse{ combination_list } => {
-                                        manage_supported_combination_response(self, combination_list)?;
+                                        manage_supported_combination_response(self, combination_list)
                                     }
                                     PlanetToExplorer::GenerateResourceResponse{ resource } => {
-                                        manage_generate_response(self, resource)?;
+                                        manage_generate_response(self, resource)
                                     }
                                     PlanetToExplorer::CombineResourceResponse{ complex_response } => {
-                                        manage_combine_response(self, complex_response)?;
+                                        manage_combine_response(self, complex_response)
                                     }
                                     PlanetToExplorer::AvailableEnergyCellResponse{ available_cells } => {
                                         match self.state{
@@ -265,11 +295,25 @@ impl Explorer {
                                                 ).emit()
                                             }
                                         }
+                                        Ok(())
 
                                     }
                                     PlanetToExplorer::Stopped => {
                                         self.state = ExplorerState::Idle;
+                                        Ok(())
                                     }
+                                };
+                                if let Err(err)=ris{
+                                    LogEvent::self_directed(
+                                        Participant::new(ActorType::Explorer, self.explorer_id),
+                                        EventType::InternalExplorerAction,
+                                        Channel::Warning,
+                                        warning_payload!(
+                                            "a handler of a PlanetToExplorer message returned an error",
+                                            err,
+                                            "mattia_explorer::run()"
+                                        )
+                                    ).emit();
                                 }
                             } else {
                                 self.buffer_planet_msg.push_back(msg);
@@ -291,22 +335,35 @@ impl Explorer {
                     }
                 }
                 default => {
-                    debug_println!("{}", format!("no message in the channels {}", self.manual_mode));
-                    debug_println!("explorer state: {:?}", self.state);
+                    log_internal_op!(
+                        self,
+                        "action"=>"no message in the channels",
+                        "explorer_state"=>format!("{:?}", self.state)
+                    );
                     if !self.buffer_planet_msg.is_empty() || !self.buffer_orchestrator_msg.is_empty() {
-                        debug_println!("{}", format!("buffer_planet_msg len: {}, buffer_orchestrator_msg len: {}", self.buffer_planet_msg.len(), self.buffer_orchestrator_msg.len()));
-                        manage_buffer_msg(self).map_err(|e| e.to_string())?;
+                        if let Err(err)=manage_buffer_msg(self){
+                            LogEvent::self_directed(
+                                Participant::new(ActorType::Explorer, self.explorer_id),
+                                EventType::InternalExplorerAction,
+                                Channel::Warning,
+                                warning_payload!(
+                                    "message_buffer_handler returned an error",
+                                    err,
+                                    "mattia_explorer::run()"
+                                )
+                            ).emit();
+                        }
                         //this is because manage_buffer_msg could possibly set the explorer state to killed
                         if self.state==ExplorerState::Killed{
                             return Ok(())
                         }
                     }
                     else if !self.manual_mode && self.state==ExplorerState::Idle{
-                        debug_println!("trying to run explorer ai");
                         ai_core_function(self).map_err(|e| e.to_string())?;
                     }
                 }
             }
+            //in order to reduce busy waiting
             sleep(Duration::from_millis(20));
         }
     }
@@ -314,11 +371,9 @@ impl Explorer {
 
 use crate::debug_println;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
-use logging_utils::{
-    LoggableActor, get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload,
-};
+use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message, warning_payload, LoggableActor};
 use std::fmt;
-use std::fmt::format;
+use std::sync::mpsc::channel;
 use std::thread::sleep;
 use std::time::Duration;
 

@@ -1,3 +1,5 @@
+use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
+use logging_utils::{warning_payload, LoggableActor};
 use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::handlers::{
     combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
@@ -12,10 +14,17 @@ use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
 use common_game::protocols::planet_explorer::PlanetToExplorer;
+use logging_utils::log_fn_call;
 
-// this function manages all the messages that were put in the buffers
-// (in the same way the explorer usually manages them)
-pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+/// this function manages all the messages that were put in the buffers
+/// (in the same way the explorer usually manages them)
+pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
+    //LOG
+    log_fn_call!(
+        explorer,
+        "manage_buffer_msg",
+    );
+    //LOG
     if !explorer.buffer_orchestrator_msg.is_empty() {
         //this should never panic
         if orch_msg_match_state(
@@ -36,7 +45,6 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                 OrchestratorToExplorer::KillExplorer => {
                     // I don't think it is possible to arrive here
                     kill_explorer(explorer)?;
-                    return Ok(()); //todo gestire questo caso nel loop principale
                 }
                 OrchestratorToExplorer::MoveToPlanet {
                     sender_to_new_planet,
@@ -66,7 +74,7 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                             explorer_id: explorer.explorer_id,
                             bag_content: explorer.bag.to_resource_types(),
                         },
-                    )?;
+                    ).map_err(|e| e.to_string())?;
                 }
                 OrchestratorToExplorer::NeighborsResponse { neighbors } => {
                     neighbours_response(explorer, neighbors);
@@ -100,13 +108,8 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                             orch_resource,
                             orch_combination,
                         } => {
-                            match explorer.topology_info.get_mut(&explorer.planet_id) {
-                                Some(planet_info) => {
-                                    planet_info.update_charge_rate(available_cells, explorer.time);
-                                }
-                                None => {
-                                    //this should not happen
-                                }
+                            if let Some(planet_info) =explorer.topology_info.get_mut(&explorer.planet_id){
+                                planet_info.update_charge_rate(available_cells, explorer.time);
                             }
                             if !resources && !combinations {
                                 explorer.state = ExplorerState::Idle;
@@ -121,12 +124,23 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), Box<dyn std::err
                             }
                         }
                         _ => {
-                            //todo logs this should not happen
+                            LogEvent::new(
+                                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+                                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                                EventType::MessagePlanetToExplorer,
+                                Channel::Warning,
+                                warning_payload!(
+                                    "received AvailableEnergyCellResponse while not in Surveying state\
+                                    this should not happen",
+                                    "",
+                                    "Explorer::run()";
+                                    "explorer state"=>format!("{:?}", explorer.state)
+                                )
+                            ).emit()
                         }
                     }
                 }
                 PlanetToExplorer::Stopped => {
-                    // TODO gestire in base all'ai dell'explorer
                     explorer.state = ExplorerState::Idle;
                 }
             }

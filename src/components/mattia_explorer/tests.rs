@@ -15,10 +15,10 @@
 //   - Full simulation with AI
 // ============================================================================
 
-mod test_One_million_crabs_planet {
+mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -52,11 +52,11 @@ mod test_One_million_crabs_planet {
         };
 
         //Construct Explorer
-        let mut new_explorer = crate::components::mattia_explorer::Explorer::new(
+        let new_explorer = crate::components::mattia_explorer::Explorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, orchestrator.sender_explorer_orch.clone()),
-            (receiver_planet, expl_to_planet.unwrap()), // TODO this unwrap is unsafe
+            (receiver_planet, expl_to_planet.unwrap()),
         );
 
         //Update HashMaps
@@ -76,7 +76,7 @@ mod test_One_million_crabs_planet {
                     new_sender: sender_planet.clone(),
                 }) {
                     Ok(_) => {}
-                    Err(err) => {}
+                    Err(_err) => {}
                 }
             }
             None => {}
@@ -260,11 +260,11 @@ mod test_One_million_crabs_planet {
         };
 
         //Construct Explorer
-        let mut new_explorer = crate::components::mattia_explorer::Explorer::new(
+        let new_explorer = crate::components::mattia_explorer::Explorer::new(
             explorer_id,
             planet_id,
             (receiver_orch, orchestrator.sender_explorer_orch.clone()),
-            (receiver_planet, expl_to_planet.unwrap()), // TODO this unwrap is unsafe
+            (receiver_planet, expl_to_planet.unwrap()),
         );
 
         //Update HashMaps
@@ -284,7 +284,7 @@ mod test_One_million_crabs_planet {
                     new_sender: sender_planet.clone(),
                 }) {
                     Ok(_) => {}
-                    Err(err) => {}
+                    Err(_err) => {}
                 }
             }
             None => {}
@@ -299,15 +299,15 @@ mod test_One_million_crabs_planet {
 
         // max charge
         for _ in 0..5 {
-            orchestrator.send_sunray(planet_id, &planet_channel);
+            let _ =orchestrator.send_sunray(planet_id, &planet_channel);
         }
 
         // mixed messages
         for i in 0..200 {
             if i % 3 == 0 {
-                orchestrator.send_sunray(planet_id, &planet_channel);
+                let _ =orchestrator.send_sunray(planet_id, &planet_channel);
             }
-            new_explorer
+            let _ =new_explorer
                 .planet_channels
                 .1
                 .send(GenerateResourceRequest {
@@ -317,10 +317,10 @@ mod test_One_million_crabs_planet {
         }
 
         sleep(Duration::from_secs(1));
-        orchestrator.send_bag_content_request(explorer_id);
-        orchestrator
+        let _ =orchestrator.send_bag_content_request(explorer_id);
+        let _ =orchestrator
             .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
-        new_explorer
+        let _ =new_explorer
             .planet_channels
             .1
             .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id });
@@ -332,7 +332,7 @@ mod test_One_million_crabs_planet {
                 recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                     match planet_msg {
                         Ok(msg) => {
-                            orchestrator.handle_planet_message(msg);
+                            let _ =orchestrator.handle_planet_message(msg);
                         }
                         Err(_) => {}
                     }
@@ -397,11 +397,11 @@ mod test_One_million_crabs_planet {
                 };
 
             //Construct Explorer
-            let mut new_explorer = crate::components::mattia_explorer::Explorer::new(
+            let new_explorer = crate::components::mattia_explorer::Explorer::new(
                 explorer_id,
                 planet_id,
                 (receiver_orch, orchestrator.sender_explorer_orch.clone()),
-                (receiver_planet, expl_to_planet.unwrap()), // TODO this unwrap is unsafe
+                (receiver_planet, expl_to_planet.unwrap()), 
             );
 
             //Update HashMaps
@@ -421,7 +421,7 @@ mod test_One_million_crabs_planet {
                         new_sender: sender_planet.clone(),
                     }) {
                         Ok(_) => {}
-                        Err(err) => {}
+                        Err(_err) => {}
                     }
                 }
                 None => {}
@@ -436,7 +436,7 @@ mod test_One_million_crabs_planet {
 
             // max charge
             for _ in 0..5 {
-                orchestrator.send_sunray(planet_id, &planet_channel);
+                let _ =orchestrator.send_sunray(planet_id, &planet_channel);
             }
 
             // mixed messages
@@ -445,7 +445,7 @@ mod test_One_million_crabs_planet {
             for _ in 0..200 {
                 // 30% di probabilità di inviare un raggio di sole
                 if rng.random_bool(0.5) {
-                    orchestrator.send_sunray(planet_id, &planet_channel);
+                    let _ =orchestrator.send_sunray(planet_id, &planet_channel);
                 }
 
                 // 70% di probabilità di provare a generare una risorsa
@@ -465,7 +465,7 @@ mod test_One_million_crabs_planet {
             }
 
             sleep(Duration::from_secs(1));
-            orchestrator.send_bag_content_request(explorer_id);
+            let _ =orchestrator.send_bag_content_request(explorer_id);
 
             let timeout = tick(Duration::from_millis(3000));
 
@@ -474,7 +474,7 @@ mod test_One_million_crabs_planet {
                     recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                         match planet_msg {
                             Ok(msg) => {
-                                orchestrator.handle_planet_message(msg);
+                                let _ =orchestrator.handle_planet_message(msg);
                             }
                             Err(_) => {}
                         }
@@ -485,11 +485,11 @@ mod test_One_million_crabs_planet {
                 }
             }
             sleep(Duration::from_millis(1000));
-            new_explorer
+            let _ =new_explorer
                 .planet_channels
                 .1
                 .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id });
-            orchestrator.send_internal_state_request(
+            let _ =orchestrator.send_internal_state_request(
                 &orchestrator.planet_channels.get(&planet_id).unwrap().0,
             );
 
@@ -500,7 +500,7 @@ mod test_One_million_crabs_planet {
                     recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                         match planet_msg {
                             Ok(msg) => {
-                                orchestrator.handle_planet_message(msg);
+                                let _ =orchestrator.handle_planet_message(msg);
                             }
                             Err(_) => {}
                         }
@@ -538,8 +538,8 @@ mod test_One_million_crabs_planet {
             );
 
             // killing planet and explorer
-            orchestrator.send_planet_kill_to_all();
-            orchestrator.send_kill_explorer_ai(explorer_id);
+            let _ =orchestrator.send_planet_kill_to_all();
+            let _ =orchestrator.send_kill_explorer_ai(explorer_id);
             orchestrator.planets_info.map.clear();
             orchestrator.planet_channels.clear();
             orchestrator.explorer_channels.clear();
@@ -551,32 +551,26 @@ mod test_One_million_crabs_planet {
 
 mod game_simulation {
     use super::*;
-    use crate::{Orchestrator, debug_println};
+    use crate::{debug_println, Orchestrator};
     use crossbeam_channel::{select, tick};
-    use std::thread::sleep;
     use std::time::Duration;
     #[test]
     fn simulation_25s() {
         let mut orchestrator = Orchestrator::new().unwrap();
-        orchestrator.initialize_galaxy_by_file(
+        let _ =orchestrator.initialize_galaxy_by_file(
             "./src/components/mattia_explorer/test_topology_files/t0.txt",
         );
-        orchestrator.start_all_planet_ais();
-        // println!("galaxy topology: {:?}", orchestrator.get_topology());
-        orchestrator.add_mattia_explorer(10, 0);
-        orchestrator.start_all_explorer_ais();
-        // println!("aaaaaaa");
-        // sleep(Duration::from_secs(1));
-        // orchestrator.send_supported_resource_request(10); //this breaks everything somehow
+        let _ =orchestrator.start_all_planet_ais();
+        let _ =orchestrator.add_mattia_explorer(10, 0);
+        let _ =orchestrator.start_all_explorer_ais();
         let do_something = tick(Duration::from_millis(50));
         let mut counter = 500;
-        println!("aaaaaaa");
         loop {
             select! {
                 recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                     match planet_msg {
                         Ok(msg) => {
-                            orchestrator.handle_planet_message(msg);
+                            let _ =orchestrator.handle_planet_message(msg);
                         }
                         Err(_) => {}
                     }
@@ -585,7 +579,7 @@ mod game_simulation {
                     match explorer_msg {
                         Ok(msg) => {
                             debug_println!("orchestrator received a message from an explorer");
-                            orchestrator.handle_explorer_message(msg);
+                            let _ =orchestrator.handle_explorer_message(msg);
                         }
                         Err(_) => {
                             debug_println!("error receiving messages from explorer");
@@ -595,13 +589,13 @@ mod game_simulation {
                 recv(do_something) -> _ => {
                     counter -= 1;
                     if counter == 0 {
-                        orchestrator.send_planet_kill_to_all();
+                        let _ =orchestrator.send_planet_kill_to_all();
                     }
                     else if counter < 0 {
                         break;
                     }
                     else{
-                        orchestrator.choose_random_action();
+                        let _ =orchestrator.choose_random_action();
                     }
                 }
             }
@@ -609,9 +603,7 @@ mod game_simulation {
     }
 }
 
-use black_adidas_shoe::planet;
-
-use crate::{Orchestrator, components::explorer::Explorer};
+use crate::Orchestrator;
 
 #[test]
 /// Test if the explorer is spawned properly
@@ -636,11 +628,11 @@ fn test_spawn_explorer_on_planet() {
 #[cfg(test)]
 mod communication {
     use common_game::components::resource::BasicResourceType;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{Status, components::explorer, utils::registry::PlanetType};
+    use crate::{utils::registry::PlanetType, Status};
 
     use super::*;
 
@@ -829,12 +821,9 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::Status;
     use crate::utils::registry::PlanetType;
-    use crate::utils::state_enums;
+    use crate::Status;
     use crossbeam_channel::{select, tick};
-    use std::ptr::slice_from_raw_parts;
-    use std::thread::sleep;
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
 
@@ -1081,7 +1070,6 @@ mod current_planet_tests {
     use crate::utils::registry::PlanetType;
     use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
     use crossbeam_channel::{select, tick};
-    use std::thread::sleep;
     use std::time::Duration;
 
     #[test]
@@ -1098,7 +1086,7 @@ mod current_planet_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::CurrentPlanetResult {explorer_id:res_explorer_id, planet_id:res_planet_id}=msg{
+                        if let ExplorerToOrchestrator::CurrentPlanetResult {explorer_id:_res_explorer_id, planet_id:res_planet_id}=msg{
                             response=true;
                             assert_eq!(res_planet_id, planet_id);
                         }
@@ -1125,11 +1113,8 @@ mod current_planet_tests {
 mod resource_tests {
     use super::*;
     use crate::utils::registry::PlanetType;
-    use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
     use crossbeam_channel::{select, tick};
-    use std::collections::HashSet;
-    use std::thread::sleep;
     use std::time::Duration;
 
     #[test]
@@ -1145,7 +1130,7 @@ mod resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:res_explorer_id,ref supported_resources}=msg{
+                        if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:_res_explorer_id,ref supported_resources}=msg{
                             response=true;
                         }
                         let _ = orch.handle_explorer_message(msg);
@@ -1176,7 +1161,7 @@ mod resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:res_explorer_id, ref combination_list}=msg{
+                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:_res_explorer_id, ref combination_list}=msg{
                             response=true;
                         }
                         let _ = orch.handle_explorer_message(msg);
@@ -1209,10 +1194,10 @@ mod resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:res_explorer_id, ref combination_list}=msg{
+                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:_res_explorer_id, ref combination_list}=msg{
                             comb_response=true;
                         }
-                        else if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:res_explorer_id,ref supported_resources}=msg{
+                        else if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:_res_explorer_id,ref supported_resources}=msg{
                             res_response=true;
                         }
                         let _ = orch.handle_explorer_message(msg);
@@ -1242,7 +1227,6 @@ mod generate_resource_tests {
     use common_game::components::resource::{BasicResourceType, ResourceType};
     use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
     use crossbeam_channel::{select, tick};
-    use std::thread::sleep;
     use std::time::Duration;
 
     #[test]
@@ -1321,7 +1305,7 @@ mod generate_resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::GenerateResourceResponse {explorer_id:res_explorer_id,ref generated}=msg{
+                        if let ExplorerToOrchestrator::GenerateResourceResponse {explorer_id:_res_explorer_id,ref generated}=msg{
                             response=true;
                             assert!(generated.is_err());
                         }
@@ -1385,7 +1369,7 @@ mod combine_resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::CombineResourceResponse {explorer_id:res_explorer_id,ref generated}=msg{
+                        if let ExplorerToOrchestrator::CombineResourceResponse {explorer_id:_res_explorer_id,ref generated}=msg{
                             response=true;
                             assert!(generated.is_err());
                         }
@@ -1424,7 +1408,7 @@ mod combine_resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::CombineResourceResponse {explorer_id:res_explorer_id,ref generated}=msg{
+                        if let ExplorerToOrchestrator::CombineResourceResponse {explorer_id:_res_explorer_id,ref generated}=msg{
                             response=true;
                             assert!(generated.is_err());
                         }
@@ -1492,10 +1476,7 @@ mod combine_resource_tests {
 mod bag_content_tests {
     use super::*;
     use crate::utils::registry::PlanetType;
-    use common_game::components::resource::BasicResource::Hydrogen;
     use common_game::components::resource::{BasicResourceType, ResourceType};
-    use std::thread::sleep;
-    use std::time::Duration;
 
     #[test]
     fn bag_content_request_empty_bag() {
@@ -1542,12 +1523,7 @@ mod bag_content_tests {
 #[cfg(test)]
 mod movement_tests {
     use super::*;
-    use crate::utils::registry::PlanetType;
-    use crate::{Status, debug_println};
     use common_game::utils::ID;
-    use crossbeam_channel::{select, tick};
-    use std::thread::sleep;
-    use std::time::Duration;
 
     /// Helper: create a topology with multiple connected planets and an explorer on planet 0
     fn setup_multi_planet_orch(explorer_id: ID) -> Orchestrator {
@@ -1702,11 +1678,8 @@ mod movement_tests {
 #[cfg(test)]
 mod resource_after_movement_tests {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use common_game::components::resource::{BasicResourceType, ResourceType};
     use common_game::utils::ID;
-    use std::thread::sleep;
-    use std::time::Duration;
 
     /// Helper: perform the full travel protocol pipeline
     fn travel_explorer(orch: &mut Orchestrator, explorer_id: ID, dst_planet_id: ID) {
@@ -1766,12 +1739,8 @@ mod resource_after_movement_tests {
 #[cfg(test)]
 mod end_to_end_tests {
     use super::*;
-    use crate::Status;
     use crate::utils::registry::PlanetType;
-    use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
-    use crossbeam_channel::{select, tick};
-    use std::thread::sleep;
-    use std::time::Duration;
+    use common_game::components::resource::{BasicResourceType, ResourceType};
 
     /// Rapid fire: send many messages in quick succession to test buffering
     #[test]
@@ -1833,9 +1802,9 @@ mod end_to_end_tests {
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::Status;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
+    use crate::Status;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
