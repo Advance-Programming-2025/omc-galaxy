@@ -7,6 +7,7 @@ use common_game::components::resource::{
 pub type BagType = Vec<ResourceType>;
 
 /// Struct of the bag for explorer's internal use.
+#[derive(Debug)]
 pub struct Bag {
     resources: Vec<GenericResource>,
 }

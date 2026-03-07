@@ -1,23 +1,22 @@
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
 use common_game::components::resource::{BasicResource, ComplexResource, GenericResource};
+use common_game::logging::{ActorType, EventType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::PlanetToExplorer;
+use crate::log_message;
 
 /// Handles all messages from the planet.
 pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<(), String> {
     match msg {
         PlanetToExplorer::SupportedResourceResponse { resource_list } => {
-            println!("[TEST] Supported resource list: {:?}", resource_list);
             update_basic_resources(explorer, resource_list);
             Ok(())
         }
         PlanetToExplorer::SupportedCombinationResponse { combination_list } => {
-            println!("[TEST] Supported combination list: {:?}", combination_list);
             update_complex_resources(explorer, combination_list);
             Ok(())
         }
         PlanetToExplorer::GenerateResourceResponse { resource } => {
-            println!("[TEST] Generated resource: {:?}", resource);
             put_basic_resource_in_bag(explorer, resource);
             // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
             //     ExplorerToOrchestrator::BagContentResponse {
@@ -27,7 +26,6 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
             Ok(())
         }
         PlanetToExplorer::CombineResourceResponse { complex_response } => {
-            println!("[TEST] Combined resource: {:?}", complex_response);
             put_complex_resource_in_bag(explorer, complex_response);
             // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
             //     ExplorerToOrchestrator::BagContentResponse {
@@ -37,12 +35,10 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
             Ok(())
         }
         PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {
-            println!("[TEST] Available energy cell: {:?}", available_cells);
             explorer.set_energy_cells(available_cells);
             Ok(())
         }
         PlanetToExplorer::Stopped => {
-            println!("[TEST] planet stopped");
             explorer.set_state(ExplorerState::WaitingToStartExplorerAI);
             Ok(())
         }
@@ -56,8 +52,14 @@ fn update_basic_resources(
 ) {
     if let Some(planet_info) = explorer.get_planet_info_mut(explorer.planet_id()) {
         planet_info.set_basic_resources(resource_list);
-    } else {
-        println!("[EXPLORER DEBUG] Planet not in topology when updating basic resources");
+        log_message!(
+            ActorType::Planet,
+            explorer.planet_id,
+            ActorType::Explorer,
+            explorer.explorer_id,
+            EventType::MessagePlanetToExplorer,
+            "supported resource response";
+        );
     }
 }
 
@@ -70,8 +72,14 @@ fn update_complex_resources(
 ) {
     if let Some(planet_info) = explorer.get_planet_info_mut(explorer.planet_id()) {
         planet_info.set_complex_resources(combination_list);
-    } else {
-        println!("[EXPLORER DEBUG] Planet not in topology when updating complex resources");
+        log_message!(
+            ActorType::Planet,
+            explorer.planet_id,
+            ActorType::Explorer,
+            explorer.explorer_id,
+            EventType::MessagePlanetToExplorer,
+            "supported combination response";
+        );
     }
 }
 
@@ -85,6 +93,15 @@ pub fn put_basic_resource_in_bag(explorer: &mut Explorer, resource: Option<Basic
             BasicResource::Silicon(silicon) => silicon.to_generic(),
         };
         explorer.insert_in_bag(new_resource);
+        log_message!(
+            ActorType::Planet,
+            explorer.planet_id,
+            ActorType::Explorer,
+            explorer.explorer_id,
+            EventType::MessagePlanetToExplorer,
+            "generate resource response";
+            "explorer data"=>format!("{:?}", explorer)
+        );
     }
 }
 
@@ -104,12 +121,19 @@ pub fn put_complex_resource_in_bag(
                 ComplexResource::AIPartner(ai_partner) => ai_partner.to_generic(),
             };
             explorer.insert_in_bag(new_resource);
+            log_message!(
+                ActorType::Planet,
+                explorer.planet_id,
+                ActorType::Explorer,
+                explorer.explorer_id,
+                EventType::MessagePlanetToExplorer,
+                "combine resource response";
+                "explorer data"=>format!("{:?}", explorer)
+            );
         }
         Err((err_msg, res1, res2)) => {
-            println!(
-                "[EXPLORER DEBUG] Error receiving CombineResourceResponse: {}",
-                err_msg
-            );
+            // TODO log this error
+            
             // Put the resources back in the bag
             explorer.insert_in_bag(res1);
             explorer.insert_in_bag(res2);
