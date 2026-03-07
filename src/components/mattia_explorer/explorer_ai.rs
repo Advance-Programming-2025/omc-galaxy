@@ -34,7 +34,7 @@ const ENERGY_CELLS_DEFENSE_THRESHOLD: u32 = 2;
 /// Max age (in ticks) before neighbor info is considered stale
 //const MAX_NEIGHBOR_INFO_AGE: u64 = 100;
 /// Max age before energy info is considered stale
-const MAX_ENERGY_INFO_AGE: u64 = 50;
+const MAX_ENERGY_INFO_AGE: u64 = 150;
 /// --- EXPLORATION VS SAFETY BALANCE ---
 /// Base utility for exploring unknown planets (when safe)
 //const EXPLORATION_BASE_UTILITY: f32 = 0.7;
