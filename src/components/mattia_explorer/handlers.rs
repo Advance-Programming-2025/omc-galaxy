@@ -2,23 +2,22 @@ use crate::components::mattia_explorer::explorer_ai::AiData;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::ExplorerState;
-use crate::components::mattia_explorer::states::ExplorerState::Idle;
 use crate::components::mattia_explorer::{Explorer, PlanetInfo};
 use common_game::components::resource::{
-    BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType,
-    GenericResource, ResourceType,
+    BasicResource, BasicResourceType, ComplexResource, ComplexResourceType,
+    GenericResource,
 };
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
-use crossbeam_channel::{SendError, Sender};
-use logging_utils::{log_message, payload, warning_payload};
+use crossbeam_channel::Sender;
+use logging_utils::{log_internal_op, log_message, payload, warning_payload, LoggableActor};
 use one_million_crabs::planet::ToString2;
 use std::collections::HashSet;
 
-// this function put the explorer in the condition to receive messages (idle state),
-// it is called when the explorer receives the StartExplorerAI message
+/// this function put the explorer in the condition to receive messages (idle state),
+/// it is called when the explorer receives the StartExplorerAI message
 pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     explorer.manual_mode = false;
@@ -30,7 +29,7 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         EventType::MessageOrchestratorToExplorer,
         "explorer ai started"
     );
-
+    log_internal_op!(explorer, "sending StartExplorerAIResult");
     match explorer
         .orchestrator_channels
         .1
@@ -39,11 +38,7 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            println!(
-                "[EXPLORER DEBUG] Error sending start explorer AI result: {:?}",
-                err
-            );
-            LogEvent::new(
+            LogEvent::new( //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -61,8 +56,8 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     }
 }
 
-// this function resets the topology known by the explorer and its AiData,
-// it is called when the explorer receives the ResetExplorerAI message
+/// this function resets the topology known by the explorer and its AiData,
+/// it is called when the explorer receives the ResetExplorerAI message
 pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     explorer.topology_info.clear();
@@ -80,6 +75,7 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         EventType::MessageOrchestratorToExplorer,
         "explorer ai reset"
     );
+    log_internal_op!(explorer, "sending ResetExplorerAIResult");
     match explorer
         .orchestrator_channels
         .1
@@ -88,7 +84,7 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new(
+            LogEvent::new( //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -106,8 +102,8 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     }
 }
 
-// this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
-// it is called when the explorer receives the StopExplorerAI message
+/// this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
+/// it is called when the explorer receives the StopExplorerAI message
 pub fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.manual_mode = true;
     log_message!(
@@ -119,6 +115,7 @@ pub fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         "explorer ai stopped";
         "manual_mode"=>"true",
     );
+    log_internal_op!(explorer, "sending StopExplorerAIResult");
     match explorer
         .orchestrator_channels
         .1
@@ -127,7 +124,7 @@ pub fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new(
+            LogEvent::new( //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -145,7 +142,7 @@ pub fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     }
 }
 
-// this function puts the explorer in the Killed state waiting for the thread to be killed
+/// this function puts the explorer in the Killed state waiting for the thread to be terminated
 pub fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Killed;
     log_message!(
@@ -156,6 +153,8 @@ pub fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
         EventType::MessageOrchestratorToExplorer,
         "explorer killed"
     );
+
+    log_internal_op!(explorer, "sending KillExplorerResult");
     match explorer
         .orchestrator_channels
         .1
@@ -164,7 +163,7 @@ pub fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new(
+            LogEvent::new( //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -182,7 +181,7 @@ pub fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
     }
 }
 
-// this function sets the sender_to_planet of the explorer struct
+/// this function sets the sender_to_planet of the explorer struct
 pub fn move_to_planet(
     explorer: &mut Explorer,
     sender_to_new_planet: Option<Sender<ExplorerToPlanet>>,
@@ -202,7 +201,6 @@ pub fn move_to_planet(
     //LOG
     let mut ris;
     match sender_to_new_planet {
-        //TODO add send of MovedToPlanetResult
         //in case the planet dies there are 2 cases:
         // the orchestrator refuses the move operation
         // the orchestrator kills also the explorer if it has already accepted the move
@@ -220,6 +218,8 @@ pub fn move_to_planet(
                             orch_combination: false,
                         };
                     }
+
+                    log_internal_op!(explorer, "sending MovedToPlanetResult");
                     match explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::MovedToPlanetResult {
                             explorer_id: explorer.explorer_id,
@@ -242,6 +242,7 @@ pub fn move_to_planet(
                             orch_combination: false,
                         };
                     }
+                    log_internal_op!(explorer, "sending MovedToPlanetResult");
                     match explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::MovedToPlanetResult {
                             explorer_id: explorer.explorer_id,
@@ -250,20 +251,18 @@ pub fn move_to_planet(
                     ) {
                         Ok(_) => ris = Ok(()),
                         Err(err) => {
-                            //todo logs
                             ris = Err(err.to_string())
                         }
                     }
                 }
             }
-            //todo logs
             if !explorer.manual_mode {
                 gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
             }
             ris
         }
         None => {
-            //the explorer cannot move but it is not a problem
+            //the explorer cannot move, but it is not a problem
             //absolute priority
             explorer.current_planet_neighbors_update = true;
             log_message!(
@@ -280,7 +279,7 @@ pub fn move_to_planet(
     }
 }
 
-// this function sends the current planet id to the orchestrator
+/// this function sends the current planet id to the orchestrator
 pub fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     log_message!(
@@ -292,6 +291,7 @@ pub fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
         "current planet id requested";
         "planet_id"=>explorer.planet_id.to_string()
     );
+    log_internal_op!(explorer, "sending CurrentPlanetResult");
     match explorer
         .orchestrator_channels
         .1
@@ -301,7 +301,7 @@ pub fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new(
+            LogEvent::new(//todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -319,9 +319,9 @@ pub fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
     }
 }
 
-// this function sends the basic resources supported by the current planet to the orchestrator
-// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
-// response and then send it back to the orchestrator)
+/// this function sends the basic resources supported by the current planet to the orchestrator
+/// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
+/// response and then send it back to the orchestrator)
 pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String> {
     log_message!(
         ActorType::Orchestrator,
@@ -336,32 +336,15 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String>
         Some(planet_info) => {
             match &planet_info.basic_resources {
                 Some(basic_resources) => {
-                    match explorer.orchestrator_channels.1.send(
+                    log_internal_op!(explorer, "sending SupportedResourceResult");
+                    explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::SupportedResourceResult {
                             explorer_id: explorer.explorer_id,
                             supported_resources: basic_resources.clone(),
                         },
-                    ) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            LogEvent::new(
-                                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                                EventType::MessageExplorerToOrchestrator,
-                                Channel::Error,
-                                warning_payload!(
-                                    "SupportedResourceResult not sent",
-                                    err,
-                                    "supported_resource_request()";
-                                    "explorer data"=>format!("{:?}", explorer)
-                                ),
-                            )
-                            .emit();
-                        }
-                    }
+                    ).map_err(|err| err.to_string())?;
                 }
                 None => {
-                    //todo logs
                     match explorer.state {
                         ExplorerState::Idle => {
                             explorer.state = ExplorerState::Surveying {
@@ -388,14 +371,17 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String>
                                     "explorer data"=>format!("{:?}", explorer)
                                 )
                             ).emit();
+                            return Err("Tried to survey supported_resource from planet while not in Idle state".to_string());
                         }
                     }
                 }
             }
         }
         None => {
+            log_internal_op!(explorer, "the explorer doesnt have the current planet in his topology\
+                this isn't something that should happen, but the explorer will try to recover\
+                requesting information about the planet");
             //this should not happen
-            //todo logs
             match explorer.state {
                 ExplorerState::Idle => {
                     explorer.state = ExplorerState::Surveying {
@@ -422,6 +408,7 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String>
                             "explorer data"=>format!("{:?}", explorer)
                         )
                     ).emit();
+                    return Err("Tried to survey supported_resource from planet while not in Idle state".to_string());
                 }
             }
         }
@@ -429,9 +416,9 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String>
     Ok(())
 }
 
-// this function sends the complex resources supported by the current planet to the orchestrator
-// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
-// response and then send it back to the orchestrator)
+/// this function sends the complex resources supported by the current planet to the orchestrator
+/// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
+/// response and then send it back to the orchestrator)
 pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), String> {
     log_message!(
         ActorType::Orchestrator,
@@ -446,33 +433,15 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
         Some(planet_info) => {
             match &planet_info.complex_resources {
                 Some(complex_resource) => {
-                    match explorer.orchestrator_channels.1.send(
+                    explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::SupportedCombinationResult {
                             explorer_id: explorer.explorer_id,
                             combination_list: complex_resource.clone(),
                         },
-                    ) {
-                        Ok(_) => {}
-                        Err(err) => {
-                            LogEvent::new(
-                                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                                EventType::MessageExplorerToOrchestrator,
-                                Channel::Error,
-                                warning_payload!(
-                                    "SupportedCombinationResult not sent",
-                                    err,
-                                    "supported_combination_request()";
-                                    "explorer data"=>format!("{:?}", explorer)
-                                ),
-                            )
-                            .emit();
-                        }
-                    }
+                    ).map_err(|err| err.to_string())?;
                 }
                 None => {
                     //this should not happen
-                    //todo logs
                     match explorer.state {
                         ExplorerState::Idle => {
                             explorer.state = ExplorerState::Surveying {
@@ -499,6 +468,7 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
                                     "explorer data"=>format!("{:?}", explorer)
                                 )
                             ).emit();
+                            return Err("Tried to survey complex_resource from planet while not in Idle state".to_string());
                         }
                     }
                 }
@@ -506,7 +476,9 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
         }
         None => {
             //this should not happen
-            //todo logs
+            log_internal_op!(explorer, "the explorer doesnt have the current planet in his topology\
+                this isn't something that should happen, but the explorer will try to recover\
+                requesting information about the planet");
             match explorer.state {
                 ExplorerState::Idle => {
                     explorer.state = ExplorerState::Surveying {
@@ -534,6 +506,7 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
                         ),
                     )
                     .emit();
+                    return Err("Tried to survey complex_resource from planet while not in Idle state".to_string());
                 }
             }
         }
@@ -541,8 +514,8 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
     Ok(())
 }
 
-// this function sends the GenerateResourceRequest, waits for the planet response, and,
-// if successful puts the resource in the bag
+/// this function sends the GenerateResourceRequest, waits for the planet response, and,
+/// if successful puts the resource in the bag
 pub fn generate_resource_request(
     explorer: &mut Explorer,
     to_generate: BasicResourceType,
@@ -562,6 +535,8 @@ pub fn generate_resource_request(
         "to_orchestrator" => to_orchestrator,
         "planet_id"=>explorer.planet_id.to_string()
     );
+
+    log_internal_op!(explorer, "sending GenerateResourceRequest");
     match explorer
         .planet_channels
         .1
@@ -591,8 +566,8 @@ pub fn generate_resource_request(
     }
 }
 
-// this function sends the CombineResourceRequest, waits for the planet response, and,
-// if successful puts the resource in the bag
+/// this function sends the CombineResourceRequest, waits for the planet response, and,
+/// if successful puts the resource in the bag
 pub fn combine_resource_request(
     explorer: &mut Explorer,
     to_generate: ComplexResourceType,
@@ -623,6 +598,8 @@ pub fn combine_resource_request(
             explorer.state = ExplorerState::CombiningResources {
                 orchestrator_response: to_orchestrator,
             };
+
+            log_internal_op!(explorer, "sending CombineResourceRequest");
             match explorer
                 .planet_channels
                 .1
@@ -632,20 +609,34 @@ pub fn combine_resource_request(
                 }) {
                 Ok(_) => Ok(()),
                 Err(err) => {
-                    //TODO log
+                    LogEvent::new(
+                        Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                        Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+                        EventType::MessageExplorerToPlanet,
+                        Channel::Error,
+                        warning_payload!(
+                            "CombineResourceRequest not sent",
+                            err,
+                            "combine_resource_request()";
+                            "to_generate" => to_generate.to_string_2(),
+                            "to_orchestrator" => to_orchestrator,
+                            "explorer data"=>format!("{:?}", explorer)
+                        ),
+                    ).emit();
                     Err(err.to_string())
                 }
             }
         }
         Err(err) => {
-            //TODO finish this log
             LogEvent::self_directed(
                 Participant::new(ActorType::Explorer, explorer.explorer_id),
                 EventType::InternalExplorerAction,
                 Channel::Debug,
-                payload!(
-                    "fn"=>"combine_resource_request()",
-                    "result" => format!("Cannot create complex resource request for {:?}", to_generate),
+                warning_payload!(
+                    format!("Cannot create complex resource request for {:?}", to_generate),
+                    err,
+                    "combine_resource_request()";
+                    "explorer data"=>format!("{:?}", explorer)
                 )
             ).emit();
             explorer.state = ExplorerState::Idle;
@@ -654,39 +645,14 @@ pub fn combine_resource_request(
                     explorer_id: 0,
                     generated: Err("Not enough basic resource".to_string()),
                 },
-            );
+            ).map_err(|err| err.to_string())?;
             Err(err)
         }
     };
     ris
-
-    // match explorer.orchestrator_channels.1.send(ExplorerToOrchestrator::CombineResourceResponse {
-    //     explorer_id:explorer.explorer_id,
-    //     generated:ris ,
-    // }){
-    //     Ok(_) => {Ok(())}
-    //     Err(err) => {
-    //         LogEvent::new(
-    //             Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-    //             Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-    //             EventType::MessageExplorerToPlanet,
-    //             Channel::Error,
-    //             warning_payload!(
-    //                 "CombineResourceRequest not sent",
-    //                 err,
-    //                 "combine_resource_request()";
-    //                 "to_generate" => to_generate.to_string_2(),
-    //                 "to_orchestrator" => to_orchestrator,
-    //                 "explorer data"=>format!("{:?}", explorer)
-    //             )
-    //         ).emit();
-    //
-    //         Err(err.to_string())
-    //     }
-    // }
 }
 
-// this function updates the neighbours of the current planet
+/// this function updates the neighbours of the current planet
 pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
     explorer.state = ExplorerState::Idle;
     for &neighbour in &neighbors {
@@ -727,7 +693,9 @@ pub fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
         }
     }
 }
-
+/// this function takes a basic resource list and updates the explorer topology data,
+/// also if the orchestrator requested the supported resource this function will send it
+/// to the orchestrator
 pub fn manage_supported_resource_response(
     explorer: &mut Explorer,
     resource_list: HashSet<BasicResourceType>,
@@ -769,30 +737,13 @@ pub fn manage_supported_resource_response(
                 }
             }
             if orch_resource {
-                match explorer.orchestrator_channels.1.send(
+                log_internal_op!(explorer, "sending SupportedResourceResult");
+                explorer.orchestrator_channels.1.send(
                     ExplorerToOrchestrator::SupportedResourceResult {
                         explorer_id: explorer.explorer_id,
                         supported_resources: resource_list,
                     },
-                ) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        LogEvent::new(
-                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                            Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                            EventType::MessageExplorerToOrchestrator,
-                            Channel::Error,
-                            warning_payload!(
-                                "SupportedResourceResult not sent",
-                                err,
-                                "manage_supported_resource_response()";
-                                "explorer data"=>format!("{:?}", explorer)
-                            ),
-                        )
-                        .emit();
-                        return Err(err.to_string());
-                    }
-                }
+                ).map_err(|err| err.to_string())?;
             }
 
             //updating explorer state
@@ -824,11 +775,14 @@ pub fn manage_supported_resource_response(
                 ),
             )
             .emit();
+            return Err("tried to manage supported resource response while not in Idle state".to_string())
         }
     }
     Ok(())
 }
-
+/// this function takes a complex resource list and updates the explorer topology data,
+/// also if the orchestrator requested the supported combination this function will send it
+/// to the orchestrator
 pub fn manage_supported_combination_response(
     explorer: &mut Explorer,
     combination_list: HashSet<ComplexResourceType>,
@@ -870,30 +824,13 @@ pub fn manage_supported_combination_response(
                 }
             }
             if orch_combination {
-                match explorer.orchestrator_channels.1.send(
+                log_internal_op!(explorer, "sending SupportedCombinationResult");
+                explorer.orchestrator_channels.1.send(
                     ExplorerToOrchestrator::SupportedCombinationResult {
                         explorer_id: explorer.explorer_id,
                         combination_list,
                     },
-                ) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        LogEvent::new(
-                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                            Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                            EventType::MessageExplorerToOrchestrator,
-                            Channel::Error,
-                            warning_payload!(
-                                "SupportedCombinationResult not sent",
-                                err,
-                                "manage_supported_combination_response()";
-                                "explorer data"=>format!("{:?}", explorer)
-                            ),
-                        )
-                        .emit();
-                        return Err(err.to_string());
-                    }
-                }
+                ).map_err(|err| err.to_string())?;
             }
             if !resources && !energy_cells {
                 explorer.state = ExplorerState::Idle;
@@ -923,11 +860,13 @@ pub fn manage_supported_combination_response(
                 ),
             )
             .emit();
+            return Err("tried to manage supported combination response while not in Idle state".to_string())
         }
     }
     Ok(())
 }
-
+/// this function takes the generated resource from the planet and puts it in the bag of the explorer
+/// also if this action was started by the orchestrator it sends back the response
 pub fn manage_generate_response(
     explorer: &mut Explorer,
     resource: Option<BasicResource>,
@@ -960,30 +899,13 @@ pub fn manage_generate_response(
                 }
             }
             if orchestrator_response {
-                match explorer.orchestrator_channels.1.send(
+                log_internal_op!(explorer, "sending GenerateResourceResponse");
+                explorer.orchestrator_channels.1.send(
                     ExplorerToOrchestrator::GenerateResourceResponse {
                         explorer_id: explorer.explorer_id,
                         generated: orc_res,
                     },
-                ) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        LogEvent::new(
-                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                            Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                            EventType::MessageExplorerToOrchestrator,
-                            Channel::Error,
-                            warning_payload!(
-                                "GenerateResourceResponse not sent",
-                                err,
-                                "manage_generate_response()";
-                                "explorer data"=>format!("{:?}", explorer)
-                            ),
-                        )
-                        .emit();
-                        return Err(err.to_string());
-                    }
-                }
+                ).map_err(|err| err.to_string())?;
             }
             explorer.state = ExplorerState::Idle;
         }
@@ -1003,10 +925,13 @@ pub fn manage_generate_response(
                 ),
             )
             .emit();
+            return Err("tried to manage generated resource response while not in Idle state".to_string());
         }
     }
     Ok(())
 }
+/// this function takes the combined resource from the planet and puts it in the bag of the explorer
+/// also if this action was started by the orchestrator it sends back the response
 pub fn manage_combine_response(
     explorer: &mut Explorer,
     complex_response: Result<ComplexResource, (String, GenericResource, GenericResource)>,
@@ -1041,30 +966,13 @@ pub fn manage_combine_response(
                 }
             }
             if orchestrator_response {
-                match explorer.orchestrator_channels.1.send(
+                log_internal_op!(explorer, "sending CombineResourceResponse");
+                explorer.orchestrator_channels.1.send(
                     ExplorerToOrchestrator::CombineResourceResponse {
                         explorer_id: explorer.explorer_id,
                         generated: Ok(()),
                     },
-                ) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        LogEvent::new(
-                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                            Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                            EventType::MessageExplorerToOrchestrator,
-                            Channel::Error,
-                            warning_payload!(
-                                "CombineResourceResponse not sent",
-                                err,
-                                "combine_generate_response()";
-                                "explorer data"=>format!("{:?}", explorer)
-                            ),
-                        )
-                        .emit();
-                        return Err(err.to_string());
-                    }
-                }
+                ).map_err(|err| err.to_string())?;
             }
             explorer.state = ExplorerState::Idle;
         }
@@ -1084,6 +992,7 @@ pub fn manage_combine_response(
                 ),
             )
             .emit();
+            return Err("tried to manage complex resource response while not in Idle state".to_string());
         }
     }
     Ok(())

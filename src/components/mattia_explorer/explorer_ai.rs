@@ -888,7 +888,7 @@ fn find_best_action(
 }
 
 // ai core function that is called at every explorer cycle
-#[allow(clippy::too_many_lines)] //todo non sono sicuro che sia consentito
+#[allow(clippy::too_many_lines)]
 pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     //LOG
     log_fn_call!(explorer, "ai_core_function", explorer,);
@@ -967,6 +967,7 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                     if *max.0 != 0 {
                         //making sure that there is a planet to move to
                         explorer.state = ExplorerState::Traveling;
+                        log_internal_op!(explorer, "action"=>"sending TravelToPlanetRequest", "planet_id"=>*max.0);
                         match explorer.orchestrator_channels.1.send(
                             ExplorerToOrchestrator::TravelToPlanetRequest {
                                 explorer_id: explorer.explorer_id,
@@ -984,6 +985,7 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                 }
                 AIActionType::MoveTo(id) => {
                     explorer.state = ExplorerState::Traveling;
+                    log_internal_op!(explorer, "action"=>"sending TravelToPlanetRequest", "planet_id"=>id);
                     match explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::TravelToPlanetRequest {
                             explorer_id: explorer.explorer_id,
@@ -1002,6 +1004,7 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                 }
                 AIActionType::SurveyNeighbors => {
                     explorer.state = ExplorerState::WaitingForNeighbours;
+                    log_internal_op!(explorer, "sending NeighborsRequest");
                     match explorer.orchestrator_channels.1.send(
                         ExplorerToOrchestrator::NeighborsRequest {
                             explorer_id: explorer.explorer_id,
@@ -1039,6 +1042,8 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                     explorer.state = ExplorerState::GeneratingResource {
                         orchestrator_response: false,
                     };
+
+                    log_internal_op!(explorer, "sending GenerateResourceRequest");
                     match explorer.planet_channels.1.send(
                         ExplorerToPlanet::GenerateResourceRequest {
                             explorer_id: 0,
@@ -1055,7 +1060,7 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                     }
                 }
                 AIActionType::Combine(res) => {
-                    explorer.state = ExplorerState::GeneratingResource {
+                    explorer.state = ExplorerState::CombiningResources {
                         orchestrator_response: false,
                     };
                     let complex_resource_req = match res {
@@ -1069,6 +1074,7 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                     };
                     match complex_resource_req {
                         Ok(complex_resource_req) => {
+                            log_internal_op!(explorer, "sending CombineResourceRequest");
                             match explorer.planet_channels.1.send(
                                 ExplorerToPlanet::CombineResourceRequest {
                                     explorer_id: explorer.explorer_id,

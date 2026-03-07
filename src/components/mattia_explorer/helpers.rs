@@ -1,18 +1,21 @@
-use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::states::ExplorerState;
+use crate::components::mattia_explorer::Explorer;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use logging_utils::LoggableActor;
 use logging_utils::{log_internal_op, warning_payload};
 
+/// this function takes the explorer, and based on its state sends the
+/// correct messages to the planet in order to survey the amount of energy cells,
+/// the supported resource and the supported combination
 pub fn gather_info_from_planet(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     match explorer.state {
         ExplorerState::Surveying {
             resources,
             combinations,
             energy_cells,
-            orch_resource,
-            orch_combination,
+            orch_resource: _orch_resource,
+            orch_combination: _orch_combination,
         } => {
             if resources {
                 log_internal_op!(explorer, "sending SupportedResourceRequest");
@@ -49,7 +52,7 @@ pub fn gather_info_from_planet(explorer: &mut Explorer) -> Result<(), Box<dyn st
                 Channel::Warning,
                 warning_payload!(
                     "cannot send survey message to planet",
-                    "_",
+                    "the explorer is not in the state: Surveying",
                     "gather_info_from_planet()"
                 ),
             )
