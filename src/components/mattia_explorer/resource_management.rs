@@ -4,6 +4,7 @@ pub trait ToGeneric {
     fn res_to_generic(self) -> GenericResource;
 }
 impl ToGeneric for BasicResource {
+    ///cast basic resource to generic
     fn res_to_generic(self) -> GenericResource {
         match self {
             BasicResource::Oxygen(oxygen) => oxygen.to_generic(),
@@ -14,6 +15,7 @@ impl ToGeneric for BasicResource {
     }
 }
 impl ToGeneric for ComplexResource {
+    ///cast complex resource to generic
     fn res_to_generic(self) -> GenericResource {
         match self {
             ComplexResource::Diamond(diamond) => diamond.to_generic(),

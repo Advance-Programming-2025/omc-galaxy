@@ -1,4 +1,3 @@
-use crate::utils::registry::PlanetType;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::ActorType;
 use common_game::utils::ID;
@@ -45,6 +44,12 @@ pub struct PlanetInfo {
 }
 impl PlanetInfo {
     pub fn new(time: u64) -> Self {
+        log_fn_call!(
+            dir
+            ActorType::Explorer,
+            0u32,
+            "PlanetInfo::new()",
+        );
         Self {
             basic_resources: None,
             complex_resources: None,
@@ -98,6 +103,12 @@ impl PlanetInfo {
         self.timestamp_energy = current_time;
     }
     pub fn calculate_planet_type(&mut self) -> Result<(), String> {
+        log_fn_call!(
+            dir
+            ActorType::Explorer,
+            0u32,
+            "calculate_planet_type()",
+        );
         match (&self.basic_resources, &self.complex_resources) {
             //this should not happen
             (None, _) => Err("planet_info.basic_resources are None".to_string()),

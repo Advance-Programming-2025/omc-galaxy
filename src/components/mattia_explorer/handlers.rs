@@ -30,30 +30,13 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         "explorer ai started"
     );
     log_internal_op!(explorer, "sending StartExplorerAIResult");
-    match explorer
+    explorer
         .orchestrator_channels
         .1
         .send(ExplorerToOrchestrator::StartExplorerAIResult {
             explorer_id: explorer.explorer_id,
-        }) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            LogEvent::new( //todo forse posso togliere questo log
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "StartExplorerAIResult not sent",
-                    err,
-                    "start_explorer_ai()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-            Err(err.to_string())
-        }
-    }
+        }).map_err(|e| format!("Failed to send StartExplorerAIResult {}", e))?;
+    Ok(())
 }
 
 /// this function resets the topology known by the explorer and its AiData,
@@ -970,7 +953,7 @@ pub fn manage_combine_response(
                 explorer.orchestrator_channels.1.send(
                     ExplorerToOrchestrator::CombineResourceResponse {
                         explorer_id: explorer.explorer_id,
-                        generated: Ok(()),
+                        generated: orch_res,
                     },
                 ).map_err(|err| err.to_string())?;
             }
