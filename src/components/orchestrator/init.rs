@@ -341,7 +341,7 @@ impl Orchestrator {
     /// * `sender_explorer` - pre-existing explorer to planet channel
     /// REMEMBER in order to work this function needs to be called when the planet ai is ALREADY
     /// running, not before
-    pub(crate) fn add_tommy_explorer(
+    pub fn add_tommy_explorer(
         &mut self,
         explorer_id: u32,
         planet_id: u32,

@@ -42,14 +42,6 @@ pub enum OrchestratorEvent {
         explorer_id: u32,
         destination: u32,
     },
-    BasicResourceGenerated {
-        explorer_id: u32,
-        resource: BasicResourceType,
-    },
-    ComplexResourceGenerated {
-        explorer_id: u32,
-        resource: ComplexResourceType,
-    },
 }
 
 ///The core of the game.

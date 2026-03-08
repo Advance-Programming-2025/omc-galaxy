@@ -464,6 +464,8 @@ impl Orchestrator {
 
                 self.explorers_info
                     .update_current_planet(explorer_id, planet_id);
+
+                self.emit_explorer_move(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::CurrentPlanetResult {
                 explorer_id,
