@@ -1,6 +1,7 @@
 use crate::{PlanetInfoMap, utils::registry::PlanetType};
 use std::sync::Arc;
 
+use common_game::components::resource::BasicResourceType;
 use log::info;
 use rustc_hash::FxHashMap;
 
@@ -48,18 +49,13 @@ impl Orchestrator {
         //LOG
         self.planets_info.clone()
     }
-    pub fn get_explorer_states(&self) -> ExplorerInfoMap {
-        //LOG
-        log_fn_call!(self, "explorer_states()");
-
-        let it = self.explorers_info.iter();
-        for (explorer_id, _) in it {
-            // we ask the explorers for their bag content to update the info about them, this is needed to update the info about the resources they are carrying
-            let _ = self.send_bag_content_request(*explorer_id);
+    pub fn get_explorer_states(&self) -> Result<ExplorerInfoMap, String> {
+        for explorer_id in self.explorer_channels.keys() {
+            let _ = self.send_bag_content_request(*explorer_id); // ignora errori singoli
         }
-
-        self.explorers_info.clone()
+        Ok(self.explorers_info.clone())
     }
+
     pub fn get_galaxy_topology(&self) -> Vec<Vec<bool>> {
         self.galaxy_topology.clone()
     }

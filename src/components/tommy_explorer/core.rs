@@ -1,6 +1,6 @@
 use crossbeam_channel::{Receiver, Sender, select};
 use std::collections::{HashSet, VecDeque};
-
+use std::fmt;
 use super::actions::{ActionQueue, ExplorerAction, MoveQueue};
 use super::bag::{Bag, BagType};
 use super::handlers::{orchestrator, planet};
@@ -12,11 +12,14 @@ use crate::components::tommy_explorer::handlers::orchestrator::{
 use common_game::components::resource::{
     BasicResourceType, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType,
 };
+use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
+use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload};
+use crate::debug_println;
 
 /// struct of the explorer
 pub struct Explorer {
@@ -50,6 +53,17 @@ impl Explorer {
         explorer_to_planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
         energy_cells: u32, // useful in the case in which the explorer starts mid-game
     ) -> Self {
+        // LOG
+        log_fn_call!(dir
+            ActorType::Explorer,
+            explorer_id,
+            "Explorer::new()",
+            explorer_id,
+            planet_id;
+            "explorer_to_orchestrator_channels" => format!("({}, {})", get_receiver_id(&explorer_to_orchestrator_channels.0), get_sender_id(&explorer_to_orchestrator_channels.1)),
+            "explorer_to_planet_channels"=>format!("({}, {})", get_receiver_id(&explorer_to_planet_channels.0), get_sender_id(&explorer_to_planet_channels.1)),
+        );
+        // LOG
         Self {
             explorer_id,
             planet_id,
@@ -199,6 +213,19 @@ impl Explorer {
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
                     match msg_orchestrator {
                         Ok(msg) => {
+                            // LOG
+                            log_message!(
+                                ActorType::Orchestrator,
+                                0u32,
+                                ActorType::Explorer,
+                                self.explorer_id,
+                                EventType::MessageOrchestratorToExplorer,
+                                "message received";
+                                "msg"=>format!("{:?}", msg),
+                                "explorer data"=>format!("{:?}", self)
+                            );
+                            // LOG
+                            
                             // the explorer handles the message only if he is in the correct state to do so
                             if self.state.matches_orchestrator_msg(&msg) {
                                 // handle_message return Ok(true) if the explorer thread should terminate
@@ -213,7 +240,19 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("From orchestrator: {}", err);
+                            // LOG
+                            LogEvent::new(
+                                Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                                Some(Participant::new(ActorType::Explorer, self.explorer_id)),
+                                EventType::MessageOrchestratorToExplorer,
+                                Channel::Error,
+                                warning_payload!(
+                                    "receiving channel from orchestrator disconnected",
+                                    err,
+                                    "tommy_explorer::run()"
+                                )
+                            ).emit();
+                            // LOG
                             return Err(err.to_string());
                         }
                     }
@@ -222,6 +261,19 @@ impl Explorer {
                 recv(self.planet_channels.0) -> msg_planet => {
                     match msg_planet {
                         Ok(msg) => {
+                            // LOG
+                            log_message!(
+                                ActorType::Planet,
+                                self.planet_id,
+                                ActorType::Explorer,
+                                self.explorer_id,
+                                EventType::MessagePlanetToExplorer,
+                                "message received";
+                                "msg"=>format!("{:?}", msg),
+                                "explorer data"=>format!("{:?}", self)
+                            );
+                            // LOG
+                            
                             // the explorer handles the message only if he is in the correct state to do so
                             if self.state.matches_planet_msg(&msg) {
                                 planet::handle_message(self, msg)?;
@@ -232,8 +284,19 @@ impl Explorer {
                             }
                         }
                         Err(err) => {
-                            println!("Failed to receive from planet.");
-                            // TODO log
+                            // LOG
+                            LogEvent::new(
+                                Some(Participant::new(ActorType::Planet, self.planet_id)),
+                                Some(Participant::new(ActorType::Explorer, self.explorer_id)),
+                                EventType::MessagePlanetToExplorer,
+                                Channel::Error,
+                                warning_payload!(
+                                    "receiving channel from planet disconnected",
+                                    err,
+                                    "tommy_explorer::run()"
+                                )
+                            ).emit();
+                            // LOG
                         }
                     }
                 }
@@ -325,11 +388,11 @@ impl Explorer {
                             // if the sending is successful change the state to WaitingForNeighbours
                             // and push back the action
                             self.set_state(ExplorerState::WaitingForNeighbours);
-                            println!("[EXPLORER TOMY DEBUG] AskNeighbours");
+                            debug_println!("[EXPLORER TOMY DEBUG] AskNeighbours");
                         }
                         Err(err) => {
-                            println!(
-                                "[EXPLORER DEBUG] Error in sending NeighboursRequest: {}",
+                            debug_println!(
+                                "[EXPLORER TOMMY DEBUG] Error in sending NeighboursRequest: {}",
                                 err
                             );
                         }
@@ -344,7 +407,7 @@ impl Explorer {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedResources
                             self.set_state(ExplorerState::WaitingForSupportedResources);
-                            println!("[EXPLORER TOMY DEBUG] AskSupportedResources");
+                            debug_println!("[EXPLORER TOMY DEBUG] AskSupportedResources");
                         }
                         Err(err) => {
                             // TODO
@@ -360,7 +423,7 @@ impl Explorer {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedCombinations
                             self.set_state(ExplorerState::WaitingForSupportedCombinations);
-                            println!("[EXPLORER TOMY DEBUG] AskSupportedCombinations");
+                            debug_println!("[EXPLORER TOMY DEBUG] AskSupportedCombinations");
                         }
                         Err(err) => {
                             // TODO
@@ -374,7 +437,7 @@ impl Explorer {
                     }) {
                         Ok(_) => {
                             self.set_state(ExplorerState::WaitingForAvailableEnergyCells);
-                            println!("[EXPLORER TOMY DEBUG] AvailableEnergyCellRequest");
+                            debug_println!("[EXPLORER TOMY DEBUG] AvailableEnergyCellRequest");
                         }
                         Err(err) => {
                             // TODO
@@ -397,7 +460,7 @@ impl Explorer {
                     self.action_queue.push_back(action);
 
                     if self.energy_cells > 0 {
-                        println!("[EXPLORER TOMY DEBUG] GenerateOrCombine");
+                        debug_println!("[EXPLORER TOMY DEBUG] GenerateOrCombine");
                         if let Some(resource) = self.decide_resource_action() {
                             match resource {
                                 ResourceType::Basic(basic_resource) => match basic_resource {
@@ -492,11 +555,11 @@ impl Explorer {
                             ) {
                                 Ok(_) => {
                                     self.set_state(ExplorerState::Traveling); // TODO should be Idle, in the case in which the planet is dead and can't respond
-                                    println!("[EXPLORER TOMY DEBUG] Traveling");
+                                    debug_println!("[EXPLORER TOMY DEBUG] Traveling");
                                 }
                                 Err(_) => {
                                     self.move_queue.clear();
-                                    println!("[EXPLORER TOMY DEBUG] Not traveling");
+                                    debug_println!("[EXPLORER TOMY DEBUG] Not traveling");
                                 }
                             }
                         } else {
@@ -577,8 +640,8 @@ impl Explorer {
         }
 
         // this shouldn't happen (all possible cases should have been taken in consideration)
-        println!(
-            "[EXPLORER DEBUG] Something went wrong in the decision of the next needed resource."
+        debug_println!(
+            "[EXPLORER TOMMY DEBUG] Something went wrong in the decision of the next needed resource."
         );
         ResourceType::Basic(BasicResourceType::Carbon)
     }
@@ -724,5 +787,39 @@ impl Explorer {
             }
             _ => false,
         }
+    }
+}
+
+impl fmt::Debug for Explorer {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Explorer")
+            .field("explorer_id", &self.explorer_id)
+            .field("planet_id", &self.planet_id)
+            .field(
+                "orchestrator_channels",
+                &format!(
+                    "(RX: {:x}, TX: {:x})",
+                    get_receiver_id(&self.orchestrator_channels.0),
+                    get_sender_id(&self.orchestrator_channels.1)
+                ),
+            )
+            .field(
+                "planet_channels",
+                &format!(
+                    "(RX: {:x}, TX: {:x})",
+                    get_receiver_id(&self.planet_channels.0),
+                    get_sender_id(&self.planet_channels.1)
+                ),
+            )
+            .field("topology", &self.topology)
+            .field("state", &self.state)
+            .field("bag", &self.bag)
+            .field("manual_mode", &self.manual_mode)
+            .field(
+                "buffer_orchestrator_len",
+                &self.buffer_orchestrator_msg.len(),
+            )
+            .field("buffer_planet_len", &self.buffer_planet_msg.len())
+            .finish()
     }
 }
