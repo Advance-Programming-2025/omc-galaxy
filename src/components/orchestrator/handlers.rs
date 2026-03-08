@@ -244,8 +244,10 @@ impl Orchestrator {
                 );
                 match res {
                     Ok(_) => {
-                        let current_planet_id =
-                            self.explorers_info.get_current_planet(&explorer_id);
+                        let current_planet_id = self
+                            .explorers_info
+                            .get_current_planet(&explorer_id)
+                            .ok_or("could not get explorer planet".to_string())?;
                         let orch_current_planet_sender =
                             match self.planet_channels.get(&current_planet_id) {
                                 Some(sender) => sender,
@@ -501,7 +503,7 @@ impl Orchestrator {
                 //LOG
 
                 //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
-                let planet_id = self.explorers_info.get_current_planet(&explorer_id);
+                let planet_id = self.explorers_info.get_current_planet(&explorer_id).ok_or("could not get explorer planet".to_string())?;
                 self.planets_info
                     .update_supported_resources(planet_id, supported_resources)?;
             }
@@ -523,7 +525,7 @@ impl Orchestrator {
                 //LOG
 
                 //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
-                let planet_id = self.explorers_info.get_current_planet(&explorer_id);
+                let planet_id = self.explorers_info.get_current_planet(&explorer_id).ok_or("could not get explorer planet".to_string())?;
                 self.planets_info
                     .update_supported_combination(planet_id, combination_list)?;
             }

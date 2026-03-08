@@ -1,5 +1,5 @@
-use crate::components::mattia_explorer::states::ExplorerState;
 use crate::components::mattia_explorer::Explorer;
+use crate::components::mattia_explorer::states::ExplorerState;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use logging_utils::LoggableActor;

@@ -236,12 +236,12 @@ impl ExplorerInfoMap {
         self.map.len()
     }
 
-    pub fn get_status(&self, explorer_id: &u32) -> Status {
-        self.map.get(explorer_id).unwrap().status //todo paura questi unwrap
+    pub fn get_status(&self, explorer_id: &u32) -> Option<Status> {
+        self.map.get(explorer_id).map(|a| a.status)
     }
 
-    pub fn get_current_planet(&self, explorer_id: &u32) -> u32 {
-        self.get(explorer_id).unwrap().current_planet_id //todo paura questi unwrap
+    pub fn get_current_planet(&self, explorer_id: &u32) -> Option<u32> {
+        self.map.get(explorer_id).map(|a| a.current_planet_id)
     }
 
     pub fn is_empty(&self) -> bool {

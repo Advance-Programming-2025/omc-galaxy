@@ -2408,7 +2408,7 @@ mod explorer_full_tests {
                 let deadline = std::time::Instant::now() + Duration::from_secs(2);
                 loop {
                     orch.handle_game_messages().unwrap();
-                    if orch.explorers_info.get_status(&0) == Status::Running {
+                    if orch.explorers_info.get_status(&0).unwrap() == Status::Running {
                         break;
                     }
                     if std::time::Instant::now() > deadline {
@@ -2437,7 +2437,7 @@ mod explorer_full_tests {
                 let deadline = std::time::Instant::now() + Duration::from_secs(2);
                 loop {
                     orch.handle_game_messages().unwrap();
-                    if orch.explorers_info.get_status(&0) == Status::Dead {
+                    if orch.explorers_info.get_status(&0).unwrap() == Status::Dead {
                         break;
                     }
                     if std::time::Instant::now() > deadline {
@@ -2457,7 +2457,7 @@ mod explorer_full_tests {
                 let deadline = std::time::Instant::now() + Duration::from_secs(2);
                 loop {
                     match orch.handle_game_messages() {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(e) => break,
                     }
                     if orch.planets_info.get_status(&0) == Status::Dead {

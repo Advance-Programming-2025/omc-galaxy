@@ -3,6 +3,7 @@ use std::collections::HashSet;
 
 use super::planet;
 use crate::components::tommy_explorer::actions::ActionQueue;
+use crate::components::tommy_explorer::bag::BagType;
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
 use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResourceType};
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
@@ -12,7 +13,6 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use logging_utils::{debug_println, log_message, warning_payload};
 use one_million_crabs::planet::ToString2;
-use crate::components::tommy_explorer::bag::BagType;
 
 /// Handles all messages from the orchestrator,
 /// returns Ok(true) if the explorer should terminate, Ok(false) otherwise.
@@ -93,7 +93,8 @@ fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
                     "start_explorer_ai()";
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
             format!("Error sending start explorer AI result: {:?}", e)
         })?;
 
@@ -128,7 +129,7 @@ fn reset_explorer_ai(explorer: &mut Explorer) {
                 explorer.explorer_id,
                 EventType::MessageOrchestratorToExplorer,
                 "explorer ai reset"
-            );        
+            );
         }
         Err(err) => {
             LogEvent::new(
@@ -142,7 +143,8 @@ fn reset_explorer_ai(explorer: &mut Explorer) {
                     "reset_explorer_ai()";
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
         }
     }
 }
@@ -163,7 +165,7 @@ fn stop_explorer_ai(explorer: &mut Explorer) {
                 EventType::MessageOrchestratorToExplorer,
                 "explorer ai stopped";
                 "manual_mode"=>"true",
-            );        
+            );
         }
         Err(err) => {
             LogEvent::new(
@@ -177,14 +179,16 @@ fn stop_explorer_ai(explorer: &mut Explorer) {
                     "stop_explorer_ai()";
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
         }
     }
 }
 
 /// Puts the explorer in the Killed state waiting for the thread to be killed.
 fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
-    explorer.send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult {
+    explorer
+        .send_to_orchestrator(ExplorerToOrchestrator::KillExplorerResult {
             explorer_id: explorer.id(),
         })
         .map_err(|e| {
@@ -199,7 +203,8 @@ fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
                     "kill_explorer()";
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
             format!("Error sending kill explorer result: {:?}", e)
         })?;
 
@@ -285,7 +290,8 @@ fn current_planet_request(explorer: &mut Explorer) {
                     "current_planet_request()";
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
         }
     }
 }
@@ -301,7 +307,7 @@ fn supported_resource_request(explorer: &mut Explorer) {
         "supported resource request";
         "planet_id"=>explorer.planet_id.to_string()
     );
-    
+
     let mut supported_resources = HashSet::new();
 
     // check if we already have this information in the topology
@@ -314,8 +320,7 @@ fn supported_resource_request(explorer: &mut Explorer) {
         match explorer.send_to_planet(ExplorerToPlanet::SupportedResourceRequest {
             explorer_id: explorer.id(),
         }) {
-            Ok(_) => 
-            log_message!(
+            Ok(_) => log_message!(
                 ActorType::Explorer,
                 explorer.explorer_id,
                 ActorType::Planet,
@@ -336,7 +341,8 @@ fn supported_resource_request(explorer: &mut Explorer) {
                         "supported_resource_request()";
                         "explorer data"=>format!("{:?}", explorer)
                     ),
-                ).emit();
+                )
+                .emit();
                 return;
             }
         }
@@ -361,17 +367,18 @@ fn supported_resource_request(explorer: &mut Explorer) {
             }
             Err(err) => {
                 LogEvent::new(
-                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                EventType::MessagePlanetToExplorer,
-                Channel::Error,
-                warning_payload!(
-                    "SupportedResourceResponse not sent",
-                    err,
-                    "supported_resource_response()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-                ).emit();
+                    Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+                    Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                    EventType::MessagePlanetToExplorer,
+                    Channel::Error,
+                    warning_payload!(
+                        "SupportedResourceResponse not sent",
+                        err,
+                        "supported_resource_response()";
+                        "explorer data"=>format!("{:?}", explorer)
+                    ),
+                )
+                .emit();
                 return;
             }
         }
@@ -387,17 +394,18 @@ fn supported_resource_request(explorer: &mut Explorer) {
         }
         Err(err) => {
             LogEvent::new(
-            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-            Some(Participant::new(ActorType::Orchestrator, 0u32)),
-            EventType::MessageExplorerToOrchestrator,
-            Channel::Error,
-            warning_payload!(
-                "SupportedResourceResult not sent",
-                err,
-                "supported_resource_request()";
-                "explorer data"=>format!("{:?}", explorer)
-            ),
-            ).emit();
+                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                EventType::MessageExplorerToOrchestrator,
+                Channel::Error,
+                warning_payload!(
+                    "SupportedResourceResult not sent",
+                    err,
+                    "supported_resource_request()";
+                    "explorer data"=>format!("{:?}", explorer)
+                ),
+            )
+            .emit();
         }
     }
 }
@@ -413,7 +421,7 @@ fn supported_combination_request(explorer: &mut Explorer) {
         "supported combination request";
         "planet_id"=>explorer.planet_id.to_string()
     );
-    
+
     let mut supported_combinations = HashSet::new();
 
     // check if we already have this information in the topology
@@ -426,16 +434,15 @@ fn supported_combination_request(explorer: &mut Explorer) {
         match explorer.send_to_planet(ExplorerToPlanet::SupportedCombinationRequest {
             explorer_id: explorer.id(),
         }) {
-            Ok(_) =>
-                log_message!(
-                    ActorType::Explorer,
-                    explorer.explorer_id,
-                    ActorType::Planet,
-                    explorer.planet_id,
-                    EventType::MessageExplorerToPlanet,
-                    "supported combination request";
-                    "planet_id"=>explorer.planet_id.to_string()
-                ),
+            Ok(_) => log_message!(
+                ActorType::Explorer,
+                explorer.explorer_id,
+                ActorType::Planet,
+                explorer.planet_id,
+                EventType::MessageExplorerToPlanet,
+                "supported combination request";
+                "planet_id"=>explorer.planet_id.to_string()
+            ),
             Err(err) => {
                 LogEvent::new(
                     Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -448,7 +455,8 @@ fn supported_combination_request(explorer: &mut Explorer) {
                         "supported_combination_request()";
                         "explorer data"=>format!("{:?}", explorer)
                     ),
-                ).emit();
+                )
+                .emit();
                 return;
             }
         }
@@ -483,7 +491,8 @@ fn supported_combination_request(explorer: &mut Explorer) {
                         "supported_combination_request()";
                         "explorer data"=>format!("{:?}", explorer)
                     ),
-                ).emit();
+                )
+                .emit();
                 return;
             }
         }
@@ -509,7 +518,8 @@ fn supported_combination_request(explorer: &mut Explorer) {
                     "supported_combination_request()";
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
         }
     }
 }
@@ -526,22 +536,21 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
         "to_generate" => to_generate.to_string_2(),
         "planet_id"=>explorer.planet_id.to_string()
     );
-    
+
     match explorer.send_to_planet(ExplorerToPlanet::GenerateResourceRequest {
         explorer_id: explorer.id(),
         resource: to_generate,
     }) {
-        Ok(_) =>
-            log_message!(
-                ActorType::Explorer,
-                explorer.explorer_id,
-                ActorType::Planet,
-                explorer.planet_id,
-                EventType::MessageExplorerToPlanet,
-                "generate resource request";
-                "to_generate" => to_generate.to_string_2(),
-                "planet_id"=>explorer.planet_id.to_string()
-            ),
+        Ok(_) => log_message!(
+            ActorType::Explorer,
+            explorer.explorer_id,
+            ActorType::Planet,
+            explorer.planet_id,
+            EventType::MessageExplorerToPlanet,
+            "generate resource request";
+            "to_generate" => to_generate.to_string_2(),
+            "planet_id"=>explorer.planet_id.to_string()
+        ),
         Err(err) => {
             LogEvent::new(
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -555,9 +564,13 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                     "to_generate" => to_generate.to_string_2(),
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
-            
-            match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse { explorer_id: explorer.explorer_id, generated: Err("failed to generate resource".to_string()) }) {
+            )
+            .emit();
+
+            match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+                explorer_id: explorer.explorer_id,
+                generated: Err("failed to generate resource".to_string()),
+            }) {
                 Ok(_) => {}
                 Err(err) => {
                     LogEvent::new(
@@ -572,9 +585,10 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                             "to_generate" => to_generate.to_string_2(),
                             "explorer data"=>format!("{:?}", explorer)
                         ),
-                    ).emit();
+                    )
+                    .emit();
                 }
-            } 
+            }
             return;
         }
     }
@@ -593,10 +607,11 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                 "planet_id"=>explorer.planet_id.to_string()
             );
         }
-        Ok(_) => 
-            // shouldn't happen // TODO log  the message even if it's the wrong one?
+        Ok(_) =>
+        // shouldn't happen // TODO log  the message even if it's the wrong one?
+        {
             debug_println!("Explorer received an unexpected message from planet")
-            ,
+        }
         Err(err) => {
             LogEvent::new(
                 Some(Participant::new(ActorType::Planet, explorer.planet_id)),
@@ -610,9 +625,13 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                     "to_generate" => to_generate.to_string_2(),
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
 
-            match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse { explorer_id: explorer.explorer_id, generated: Err("failed to generate resource".to_string()) }) {
+            match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+                explorer_id: explorer.explorer_id,
+                generated: Err("failed to generate resource".to_string()),
+            }) {
                 Ok(_) => {}
                 Err(err) => {
                     LogEvent::new(
@@ -627,14 +646,18 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                             "to_generate" => to_generate.to_string_2(),
                             "explorer data"=>format!("{:?}", explorer)
                         ),
-                    ).emit();
+                    )
+                    .emit();
                 }
             }
             return;
         }
     }
 
-    match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse { explorer_id: explorer.explorer_id, generated: Ok(()) }) {
+    match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+        explorer_id: explorer.explorer_id,
+        generated: Ok(()),
+    }) {
         Ok(_) => {}
         Err(err) => {
             LogEvent::new(
@@ -643,13 +666,14 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                 EventType::MessageExplorerToOrchestrator,
                 Channel::Error,
                 warning_payload!(
-                            "GenerateResourceResponse was not sent",
-                            err,
-                            "generate_resource_request()";
-                            "to_generate" => to_generate.to_string_2(),
-                            "explorer data"=>format!("{:?}", explorer)
-                        ),
-            ).emit();
+                    "GenerateResourceResponse was not sent",
+                    err,
+                    "generate_resource_request()";
+                    "to_generate" => to_generate.to_string_2(),
+                    "explorer data"=>format!("{:?}", explorer)
+                ),
+            )
+            .emit();
         }
     }
 }
@@ -666,7 +690,7 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
         "to_generate" => to_generate.to_string_2(),
         "planet_id"=>explorer.planet_id.to_string()
     );
-    
+
     let complex_resource_req = explorer.make_complex_request(to_generate);
 
     match complex_resource_req {
@@ -675,17 +699,16 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                 explorer_id: explorer.id(),
                 msg: complex_resource_req,
             }) {
-                Ok(_) =>
-                    log_message!(
-                        ActorType::Explorer,
-                        explorer.explorer_id,
-                        ActorType::Planet,
-                        explorer.planet_id,
-                        EventType::MessageExplorerToPlanet,
-                        "combine resource request";
-                        "to_generate" => to_generate.to_string_2(),
-                        "planet_id"=>explorer.planet_id.to_string()
-                    ),
+                Ok(_) => log_message!(
+                    ActorType::Explorer,
+                    explorer.explorer_id,
+                    ActorType::Planet,
+                    explorer.planet_id,
+                    EventType::MessageExplorerToPlanet,
+                    "combine resource request";
+                    "to_generate" => to_generate.to_string_2(),
+                    "planet_id"=>explorer.planet_id.to_string()
+                ),
                 Err(err) => {
                     LogEvent::new(
                         Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -699,9 +722,15 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                             "to_generate" => to_generate.to_string_2(),
                             "explorer data"=>format!("{:?}", explorer)
                         ),
-                    ).emit();
+                    )
+                    .emit();
 
-                    match explorer.send_to_orchestrator(ExplorerToOrchestrator::CombineResourceResponse { explorer_id: explorer.explorer_id, generated: Err("failed to generate resource".to_string()) }) {
+                    match explorer.send_to_orchestrator(
+                        ExplorerToOrchestrator::CombineResourceResponse {
+                            explorer_id: explorer.explorer_id,
+                            generated: Err("failed to generate resource".to_string()),
+                        },
+                    ) {
                         Ok(_) => {}
                         Err(err) => {
                             LogEvent::new(
@@ -716,7 +745,8 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                                     "to_generate" => to_generate.to_string_2(),
                                     "explorer data"=>format!("{:?}", explorer)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                     return;
@@ -744,12 +774,16 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                             "to_generate" => to_generate.to_string_2(),
                             "explorer data"=>format!("{:?}", explorer)
                         ),
-                    ).emit();
+                    )
+                    .emit();
                     return;
                 }
             }
 
-            match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse { explorer_id: explorer.explorer_id, generated: Ok(()) }) {
+            match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+                explorer_id: explorer.explorer_id,
+                generated: Ok(()),
+            }) {
                 Ok(_) => {}
                 Err(err) => {
                     LogEvent::new(
@@ -764,7 +798,8 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                             "to_generate" => to_generate.to_string_2(),
                             "explorer data"=>format!("{:?}", explorer)
                         ),
-                    ).emit();
+                    )
+                    .emit();
                 }
             }
         }
@@ -784,7 +819,7 @@ fn bag_content_request(explorer: &mut Explorer) {
         EventType::MessageOrchestratorToExplorer,
         "bag content request";
     );
-    
+
     match explorer.send_to_orchestrator(ExplorerToOrchestrator::BagContentResponse {
         explorer_id: explorer.id(),
         bag_content: explorer.get_bag_content(),
@@ -802,7 +837,8 @@ fn bag_content_request(explorer: &mut Explorer) {
                     "bag_content_request()";
                     "explorer data"=>format!("{:?}", explorer)
                 ),
-            ).emit();
+            )
+            .emit();
         }
     }
 }

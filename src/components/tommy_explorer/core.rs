@@ -1,6 +1,3 @@
-use crossbeam_channel::{Receiver, Sender, select};
-use std::collections::{HashSet, VecDeque};
-use std::fmt;
 use super::actions::{ActionQueue, ExplorerAction, MoveQueue};
 use super::bag::{Bag, BagType};
 use super::handlers::{orchestrator, planet};
@@ -9,6 +6,7 @@ use super::topology::{PlanetInfo, TopologyManager};
 use crate::components::tommy_explorer::handlers::orchestrator::{
     combine_resource_request, generate_resource_request,
 };
+use crate::debug_println;
 use common_game::components::resource::{
     BasicResourceType, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType,
 };
@@ -18,8 +16,10 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
+use crossbeam_channel::{Receiver, Sender, select};
 use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload};
-use crate::debug_println;
+use std::collections::{HashSet, VecDeque};
+use std::fmt;
 
 /// struct of the explorer
 pub struct Explorer {
@@ -225,7 +225,7 @@ impl Explorer {
                                 "explorer data"=>format!("{:?}", self)
                             );
                             // LOG
-                            
+
                             // the explorer handles the message only if he is in the correct state to do so
                             if self.state.matches_orchestrator_msg(&msg) {
                                 // handle_message return Ok(true) if the explorer thread should terminate
@@ -273,7 +273,7 @@ impl Explorer {
                                 "explorer data"=>format!("{:?}", self)
                             );
                             // LOG
-                            
+
                             // the explorer handles the message only if he is in the correct state to do so
                             if self.state.matches_planet_msg(&msg) {
                                 planet::handle_message(self, msg)?;

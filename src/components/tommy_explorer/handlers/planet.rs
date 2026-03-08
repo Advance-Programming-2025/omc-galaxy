@@ -1,9 +1,9 @@
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
+use crate::log_message;
 use common_game::components::resource::{BasicResource, ComplexResource, GenericResource};
 use common_game::logging::{ActorType, EventType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::PlanetToExplorer;
-use crate::log_message;
 
 /// Handles all messages from the planet.
 pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<(), String> {
@@ -133,7 +133,7 @@ pub fn put_complex_resource_in_bag(
         }
         Err((err_msg, res1, res2)) => {
             // TODO log this error
-            
+
             // Put the resources back in the bag
             explorer.insert_in_bag(res1);
             explorer.insert_in_bag(res2);

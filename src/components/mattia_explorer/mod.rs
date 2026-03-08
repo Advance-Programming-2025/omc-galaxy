@@ -10,7 +10,7 @@ mod tests;
 
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
-use crate::components::mattia_explorer::explorer_ai::{ai_core_function, AiData};
+use crate::components::mattia_explorer::explorer_ai::{AiData, ai_core_function};
 use crate::components::mattia_explorer::handlers::{
     combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
     manage_combine_response, manage_generate_response, manage_supported_combination_response,
@@ -20,7 +20,7 @@ use crate::components::mattia_explorer::handlers::{
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::{
-    orch_msg_match_state, planet_msg_match_state, ExplorerState,
+    ExplorerState, orch_msg_match_state, planet_msg_match_state,
 };
 use common_game::components::resource::ResourceType;
 use common_game::protocols::orchestrator_explorer::{
@@ -28,7 +28,7 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
-use crossbeam_channel::{select, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, select};
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, VecDeque};
@@ -36,7 +36,7 @@ use std::collections::{HashMap, VecDeque};
 // this is the struct of the explorer
 pub struct Explorer {
     explorer_id: ID,
-    planet_id: ID, 
+    planet_id: ID,
     orchestrator_channels: (
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
@@ -371,7 +371,10 @@ impl Explorer {
 
 use crate::debug_println;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
-use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message, warning_payload, LoggableActor};
+use logging_utils::{
+    LoggableActor, get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message,
+    warning_payload,
+};
 use std::fmt;
 use std::sync::mpsc::channel;
 use std::thread::sleep;

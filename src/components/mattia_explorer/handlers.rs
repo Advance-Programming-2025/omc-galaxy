@@ -4,15 +4,14 @@ use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::ExplorerState;
 use crate::components::mattia_explorer::{Explorer, PlanetInfo};
 use common_game::components::resource::{
-    BasicResource, BasicResourceType, ComplexResource, ComplexResourceType,
-    GenericResource,
+    BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, GenericResource,
 };
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
 use crossbeam_channel::Sender;
-use logging_utils::{log_internal_op, log_message, payload, warning_payload, LoggableActor};
+use logging_utils::{LoggableActor, log_internal_op, log_message, payload, warning_payload};
 use one_million_crabs::planet::ToString2;
 use std::collections::HashSet;
 
@@ -35,7 +34,8 @@ pub fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         .1
         .send(ExplorerToOrchestrator::StartExplorerAIResult {
             explorer_id: explorer.explorer_id,
-        }).map_err(|e| format!("Failed to send StartExplorerAIResult {}", e))?;
+        })
+        .map_err(|e| format!("Failed to send StartExplorerAIResult {}", e))?;
     Ok(())
 }
 
@@ -67,7 +67,8 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new( //todo forse posso togliere questo log
+            LogEvent::new(
+                //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -107,7 +108,8 @@ pub fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new( //todo forse posso togliere questo log
+            LogEvent::new(
+                //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -146,7 +148,8 @@ pub fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new( //todo forse posso togliere questo log
+            LogEvent::new(
+                //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -233,9 +236,7 @@ pub fn move_to_planet(
                         },
                     ) {
                         Ok(_) => ris = Ok(()),
-                        Err(err) => {
-                            ris = Err(err.to_string())
-                        }
+                        Err(err) => ris = Err(err.to_string()),
                     }
                 }
             }
@@ -284,7 +285,8 @@ pub fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
         }) {
         Ok(_) => Ok(()),
         Err(err) => {
-            LogEvent::new(//todo forse posso togliere questo log
+            LogEvent::new(
+                //todo forse posso togliere questo log
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                 EventType::MessageExplorerToOrchestrator,
@@ -320,27 +322,28 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String>
             match &planet_info.basic_resources {
                 Some(basic_resources) => {
                     log_internal_op!(explorer, "sending SupportedResourceResult");
-                    explorer.orchestrator_channels.1.send(
-                        ExplorerToOrchestrator::SupportedResourceResult {
+                    explorer
+                        .orchestrator_channels
+                        .1
+                        .send(ExplorerToOrchestrator::SupportedResourceResult {
                             explorer_id: explorer.explorer_id,
                             supported_resources: basic_resources.clone(),
-                        },
-                    ).map_err(|err| err.to_string())?;
+                        })
+                        .map_err(|err| err.to_string())?;
                 }
-                None => {
-                    match explorer.state {
-                        ExplorerState::Idle => {
-                            explorer.state = ExplorerState::Surveying {
-                                resources: true,
-                                combinations: false,
-                                energy_cells: false,
-                                orch_resource: true,
-                                orch_combination: false,
-                            };
-                            gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
-                        }
-                        _ => {
-                            LogEvent::new(
+                None => match explorer.state {
+                    ExplorerState::Idle => {
+                        explorer.state = ExplorerState::Surveying {
+                            resources: true,
+                            combinations: false,
+                            energy_cells: false,
+                            orch_resource: true,
+                            orch_combination: false,
+                        };
+                        gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
+                    }
+                    _ => {
+                        LogEvent::new(
                                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
                                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                                 EventType::MessageOrchestratorToExplorer,
@@ -354,16 +357,18 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String>
                                     "explorer data"=>format!("{:?}", explorer)
                                 )
                             ).emit();
-                            return Err("Tried to survey supported_resource from planet while not in Idle state".to_string());
-                        }
+                        return Err("Tried to survey supported_resource from planet while not in Idle state".to_string());
                     }
-                }
+                },
             }
         }
         None => {
-            log_internal_op!(explorer, "the explorer doesnt have the current planet in his topology\
+            log_internal_op!(
+                explorer,
+                "the explorer doesnt have the current planet in his topology\
                 this isn't something that should happen, but the explorer will try to recover\
-                requesting information about the planet");
+                requesting information about the planet"
+            );
             //this should not happen
             match explorer.state {
                 ExplorerState::Idle => {
@@ -391,7 +396,10 @@ pub fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String>
                             "explorer data"=>format!("{:?}", explorer)
                         )
                     ).emit();
-                    return Err("Tried to survey supported_resource from planet while not in Idle state".to_string());
+                    return Err(
+                        "Tried to survey supported_resource from planet while not in Idle state"
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -416,12 +424,14 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
         Some(planet_info) => {
             match &planet_info.complex_resources {
                 Some(complex_resource) => {
-                    explorer.orchestrator_channels.1.send(
-                        ExplorerToOrchestrator::SupportedCombinationResult {
+                    explorer
+                        .orchestrator_channels
+                        .1
+                        .send(ExplorerToOrchestrator::SupportedCombinationResult {
                             explorer_id: explorer.explorer_id,
                             combination_list: complex_resource.clone(),
-                        },
-                    ).map_err(|err| err.to_string())?;
+                        })
+                        .map_err(|err| err.to_string())?;
                 }
                 None => {
                     //this should not happen
@@ -459,9 +469,12 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
         }
         None => {
             //this should not happen
-            log_internal_op!(explorer, "the explorer doesnt have the current planet in his topology\
+            log_internal_op!(
+                explorer,
+                "the explorer doesnt have the current planet in his topology\
                 this isn't something that should happen, but the explorer will try to recover\
-                requesting information about the planet");
+                requesting information about the planet"
+            );
             match explorer.state {
                 ExplorerState::Idle => {
                     explorer.state = ExplorerState::Surveying {
@@ -489,7 +502,10 @@ pub fn supported_combination_request(explorer: &mut Explorer) -> Result<(), Stri
                         ),
                     )
                     .emit();
-                    return Err("Tried to survey complex_resource from planet while not in Idle state".to_string());
+                    return Err(
+                        "Tried to survey complex_resource from planet while not in Idle state"
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -605,7 +621,8 @@ pub fn combine_resource_request(
                             "to_orchestrator" => to_orchestrator,
                             "explorer data"=>format!("{:?}", explorer)
                         ),
-                    ).emit();
+                    )
+                    .emit();
                     Err(err.to_string())
                 }
             }
@@ -620,15 +637,18 @@ pub fn combine_resource_request(
                     err,
                     "combine_resource_request()";
                     "explorer data"=>format!("{:?}", explorer)
-                )
-            ).emit();
+                ),
+            )
+            .emit();
             explorer.state = ExplorerState::Idle;
-            explorer.orchestrator_channels.1.send(
-                ExplorerToOrchestrator::CombineResourceResponse {
+            explorer
+                .orchestrator_channels
+                .1
+                .send(ExplorerToOrchestrator::CombineResourceResponse {
                     explorer_id: 0,
                     generated: Err("Not enough basic resource".to_string()),
-                },
-            ).map_err(|err| err.to_string())?;
+                })
+                .map_err(|err| err.to_string())?;
             Err(err)
         }
     };
@@ -721,12 +741,14 @@ pub fn manage_supported_resource_response(
             }
             if orch_resource {
                 log_internal_op!(explorer, "sending SupportedResourceResult");
-                explorer.orchestrator_channels.1.send(
-                    ExplorerToOrchestrator::SupportedResourceResult {
+                explorer
+                    .orchestrator_channels
+                    .1
+                    .send(ExplorerToOrchestrator::SupportedResourceResult {
                         explorer_id: explorer.explorer_id,
                         supported_resources: resource_list,
-                    },
-                ).map_err(|err| err.to_string())?;
+                    })
+                    .map_err(|err| err.to_string())?;
             }
 
             //updating explorer state
@@ -758,7 +780,9 @@ pub fn manage_supported_resource_response(
                 ),
             )
             .emit();
-            return Err("tried to manage supported resource response while not in Idle state".to_string())
+            return Err(
+                "tried to manage supported resource response while not in Idle state".to_string(),
+            );
         }
     }
     Ok(())
@@ -808,12 +832,14 @@ pub fn manage_supported_combination_response(
             }
             if orch_combination {
                 log_internal_op!(explorer, "sending SupportedCombinationResult");
-                explorer.orchestrator_channels.1.send(
-                    ExplorerToOrchestrator::SupportedCombinationResult {
+                explorer
+                    .orchestrator_channels
+                    .1
+                    .send(ExplorerToOrchestrator::SupportedCombinationResult {
                         explorer_id: explorer.explorer_id,
                         combination_list,
-                    },
-                ).map_err(|err| err.to_string())?;
+                    })
+                    .map_err(|err| err.to_string())?;
             }
             if !resources && !energy_cells {
                 explorer.state = ExplorerState::Idle;
@@ -843,7 +869,10 @@ pub fn manage_supported_combination_response(
                 ),
             )
             .emit();
-            return Err("tried to manage supported combination response while not in Idle state".to_string())
+            return Err(
+                "tried to manage supported combination response while not in Idle state"
+                    .to_string(),
+            );
         }
     }
     Ok(())
@@ -883,12 +912,14 @@ pub fn manage_generate_response(
             }
             if orchestrator_response {
                 log_internal_op!(explorer, "sending GenerateResourceResponse");
-                explorer.orchestrator_channels.1.send(
-                    ExplorerToOrchestrator::GenerateResourceResponse {
+                explorer
+                    .orchestrator_channels
+                    .1
+                    .send(ExplorerToOrchestrator::GenerateResourceResponse {
                         explorer_id: explorer.explorer_id,
                         generated: orc_res,
-                    },
-                ).map_err(|err| err.to_string())?;
+                    })
+                    .map_err(|err| err.to_string())?;
             }
             explorer.state = ExplorerState::Idle;
         }
@@ -908,7 +939,9 @@ pub fn manage_generate_response(
                 ),
             )
             .emit();
-            return Err("tried to manage generated resource response while not in Idle state".to_string());
+            return Err(
+                "tried to manage generated resource response while not in Idle state".to_string(),
+            );
         }
     }
     Ok(())
@@ -950,12 +983,14 @@ pub fn manage_combine_response(
             }
             if orchestrator_response {
                 log_internal_op!(explorer, "sending CombineResourceResponse");
-                explorer.orchestrator_channels.1.send(
-                    ExplorerToOrchestrator::CombineResourceResponse {
+                explorer
+                    .orchestrator_channels
+                    .1
+                    .send(ExplorerToOrchestrator::CombineResourceResponse {
                         explorer_id: explorer.explorer_id,
                         generated: orch_res,
-                    },
-                ).map_err(|err| err.to_string())?;
+                    })
+                    .map_err(|err| err.to_string())?;
             }
             explorer.state = ExplorerState::Idle;
         }
@@ -975,7 +1010,9 @@ pub fn manage_combine_response(
                 ),
             )
             .emit();
-            return Err("tried to manage complex resource response while not in Idle state".to_string());
+            return Err(
+                "tried to manage complex resource response while not in Idle state".to_string(),
+            );
         }
     }
     Ok(())

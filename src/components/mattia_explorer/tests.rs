@@ -17,8 +17,8 @@
 
 mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -95,7 +95,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -103,7 +104,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -111,7 +113,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -119,7 +122,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -127,7 +131,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -135,7 +140,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -143,7 +149,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -151,7 +158,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -159,7 +167,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -167,7 +176,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -175,7 +185,8 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         orchestrator.send_sunray(planet_id, &planet_channel);
         new_explorer
             .planet_channels
@@ -183,15 +194,20 @@ mod test_one_million_crabs_planet {
             .send(GenerateResourceRequest {
                 explorer_id,
                 resource: BasicResourceType::Silicon,
-            }).expect("testing expect");
+            })
+            .expect("testing expect");
         sleep(Duration::from_secs(1));
-        orchestrator.send_bag_content_request(explorer_id).expect("testing expect");
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0).expect("testing expect");
+            .send_bag_content_request(explorer_id)
+            .expect("testing expect");
+        orchestrator
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0)
+            .expect("testing expect");
         new_explorer
             .planet_channels
             .1
-            .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id }).expect("testing expect");
+            .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id })
+            .expect("testing expect");
 
         let timeout = tick(Duration::from_millis(1000));
         let mut available_energy_cells: i32 = -1;
@@ -299,13 +315,17 @@ mod test_one_million_crabs_planet {
 
         // max charge
         for _ in 0..5 {
-            orchestrator.send_sunray(planet_id, &planet_channel).expect("testing expect");
+            orchestrator
+                .send_sunray(planet_id, &planet_channel)
+                .expect("testing expect");
         }
 
         // mixed messages
         for i in 0..200 {
             if i % 3 == 0 {
-                orchestrator.send_sunray(planet_id, &planet_channel).expect("testing expect");
+                orchestrator
+                    .send_sunray(planet_id, &planet_channel)
+                    .expect("testing expect");
             }
             new_explorer
                 .planet_channels
@@ -313,17 +333,22 @@ mod test_one_million_crabs_planet {
                 .send(GenerateResourceRequest {
                     explorer_id,
                     resource: BasicResourceType::Silicon,
-                }).expect("testing expect");
+                })
+                .expect("testing expect");
         }
 
         sleep(Duration::from_secs(1));
-        orchestrator.send_bag_content_request(explorer_id).expect("testing expect");
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0).expect("testing expect");
+            .send_bag_content_request(explorer_id)
+            .expect("testing expect");
+        orchestrator
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0)
+            .expect("testing expect");
         new_explorer
             .planet_channels
             .1
-            .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id }).expect("testing expect");
+            .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id })
+            .expect("testing expect");
 
         let timeout = tick(Duration::from_millis(1000));
         let mut available_energy_cells: i32 = -1;
@@ -401,7 +426,7 @@ mod test_one_million_crabs_planet {
                 explorer_id,
                 planet_id,
                 (receiver_orch, orchestrator.sender_explorer_orch.clone()),
-                (receiver_planet, expl_to_planet.unwrap()), 
+                (receiver_planet, expl_to_planet.unwrap()),
             );
 
             //Update HashMaps
@@ -436,7 +461,9 @@ mod test_one_million_crabs_planet {
 
             // max charge
             for _ in 0..5 {
-                orchestrator.send_sunray(planet_id, &planet_channel).expect("testing expect");
+                orchestrator
+                    .send_sunray(planet_id, &planet_channel)
+                    .expect("testing expect");
             }
 
             // mixed messages
@@ -445,7 +472,9 @@ mod test_one_million_crabs_planet {
             for _ in 0..200 {
                 // 30% di probabilità di inviare un raggio di sole
                 if rng.random_bool(0.5) {
-                    orchestrator.send_sunray(planet_id, &planet_channel).expect("testing expect");
+                    orchestrator
+                        .send_sunray(planet_id, &planet_channel)
+                        .expect("testing expect");
                 }
 
                 // 70% di probabilità di provare a generare una risorsa
@@ -456,7 +485,8 @@ mod test_one_million_crabs_planet {
                         .send(GenerateResourceRequest {
                             explorer_id,
                             resource: BasicResourceType::Silicon,
-                        }).expect("testing expect");
+                        })
+                        .expect("testing expect");
                 }
 
                 if rng.random_bool(0.1) {
@@ -465,7 +495,9 @@ mod test_one_million_crabs_planet {
             }
 
             sleep(Duration::from_secs(1));
-            orchestrator.send_bag_content_request(explorer_id).expect("testing expect");
+            orchestrator
+                .send_bag_content_request(explorer_id)
+                .expect("testing expect");
 
             let timeout = tick(Duration::from_millis(3000));
 
@@ -488,10 +520,13 @@ mod test_one_million_crabs_planet {
             new_explorer
                 .planet_channels
                 .1
-                .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id }).expect("testing expect");
-            orchestrator.send_internal_state_request(
-                &orchestrator.planet_channels.get(&planet_id).unwrap().0,
-            ).expect("testing expect");
+                .send(ExplorerToPlanet::AvailableEnergyCellRequest { explorer_id })
+                .expect("testing expect");
+            orchestrator
+                .send_internal_state_request(
+                    &orchestrator.planet_channels.get(&planet_id).unwrap().0,
+                )
+                .expect("testing expect");
 
             let timeout = tick(Duration::from_millis(2000));
             let mut available_energy_cells: i32 = -1;
@@ -538,8 +573,12 @@ mod test_one_million_crabs_planet {
             );
 
             // killing planet and explorer
-            orchestrator.send_planet_kill_to_all().expect("testing expect");
-            orchestrator.send_kill_explorer_ai(explorer_id).expect("testing expect");
+            orchestrator
+                .send_planet_kill_to_all()
+                .expect("testing expect");
+            orchestrator
+                .send_kill_explorer_ai(explorer_id)
+                .expect("testing expect");
             orchestrator.planets_info.map.clear();
             orchestrator.planet_channels.clear();
             orchestrator.explorer_channels.clear();
@@ -551,18 +590,24 @@ mod test_one_million_crabs_planet {
 
 mod game_simulation {
     use super::*;
-    use crate::{debug_println, Orchestrator};
+    use crate::{Orchestrator, debug_println};
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     #[test]
     fn simulation_25s() {
         let mut orchestrator = Orchestrator::new().unwrap();
-        orchestrator.initialize_galaxy_by_file(
-            "./src/components/mattia_explorer/test_topology_files/t0.txt",
-        ).expect("testing expect");
+        orchestrator
+            .initialize_galaxy_by_file(
+                "./src/components/mattia_explorer/test_topology_files/t0.txt",
+            )
+            .expect("testing expect");
         orchestrator.start_all_planet_ais().expect("testing expect");
-        orchestrator.add_mattia_explorer(10, 0).expect("testing expect");
-        orchestrator.start_all_explorer_ais().expect("testing expect");
+        orchestrator
+            .add_mattia_explorer(10, 0)
+            .expect("testing expect");
+        orchestrator
+            .start_all_explorer_ais()
+            .expect("testing expect");
         let do_something = tick(Duration::from_millis(50));
         let mut counter = 500;
         loop {
@@ -632,7 +677,7 @@ mod communication {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{utils::registry::PlanetType, Status};
+    use crate::{Status, utils::registry::PlanetType};
 
     use super::*;
 
@@ -649,10 +694,11 @@ mod communication {
 
         //init explorer
         let explorer_id = 0;
-        orch.add_mattia_explorer(explorer_id, planet_id).expect("testing expect");
+        orch.add_mattia_explorer(explorer_id, planet_id)
+            .expect("testing expect");
 
         //should be paused because it is not already running
-        assert_eq!(orch.explorers_info.get_status(&explorer_id), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&explorer_id).unwrap(), Status::Paused);
 
         //in start all is used start_planet_ais
         orch.start_all_explorer_ais().unwrap();
@@ -662,7 +708,7 @@ mod communication {
 
         //should be running because started
         assert_eq!(
-            orch.explorers_info.get_status(&explorer_id),
+            orch.explorers_info.get_status(&explorer_id).unwrap(),
             Status::Running
         );
     }
@@ -680,7 +726,8 @@ mod communication {
 
         //init explorer
         let explorer_id = 0;
-        orch.add_mattia_explorer(explorer_id, planet_id).expect("testing expect");
+        orch.add_mattia_explorer(explorer_id, planet_id)
+            .expect("testing expect");
 
         //start_planet_ais
         orch.start_all_explorer_ais().unwrap();
@@ -692,7 +739,7 @@ mod communication {
         orch.handle_game_messages().unwrap();
 
         //should be running because started
-        assert_eq!(orch.explorers_info.get_status(&explorer_id), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&explorer_id).unwrap(), Status::Paused);
     }
 
     /// Test if the sunray exchange works properly
@@ -710,7 +757,8 @@ mod communication {
 
         //init explorer
         let explorer_id = 0;
-        orch.add_mattia_explorer(explorer_id, planet_id).expect("testing expect");
+        orch.add_mattia_explorer(explorer_id, planet_id)
+            .expect("testing expect");
 
         //stop_planet_ais
         orch.send_supported_resource_request(explorer_id).unwrap();
@@ -747,7 +795,8 @@ mod communication {
 
         //init explorer
         let explorer_id = 0;
-        orch.add_mattia_explorer(explorer_id, planet_id).expect("testing expect");
+        orch.add_mattia_explorer(explorer_id, planet_id)
+            .expect("testing expect");
 
         //stop_planet_ais
         orch.send_supported_combination_request(explorer_id)
@@ -821,8 +870,8 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::Status;
+    use crate::utils::registry::PlanetType;
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
@@ -830,12 +879,12 @@ mod lifecycle_tests {
     #[test]
     fn start_explorer_ai_sets_status_running() {
         let mut orch = setup_orch_with_explorer(PlanetType::OneMillionCrabs, 0, 0);
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Paused);
 
         orch.send_start_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 200);
 
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
     }
 
     // ---- StopExplorerAI -> StopExplorerAIResult ----
@@ -847,13 +896,13 @@ mod lifecycle_tests {
         // start first
         orch.send_start_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 200);
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
 
         // stop
         orch.send_stop_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 200);
 
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Paused);
     }
 
     // ---- ResetExplorerAI -> ResetExplorerAIResult ----
@@ -891,7 +940,7 @@ mod lifecycle_tests {
 
         // after reset the explorer should still be registered
         assert!(orch.explorers_info.get(&0).is_some());
-        assert_eq!(orch.explorers_info.get_status(&0u32), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0u32).unwrap(), Status::Running);
         assert!(ack_received);
     }
 
@@ -904,7 +953,7 @@ mod lifecycle_tests {
         orch.send_kill_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Dead);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Dead);
     }
 
     // ---- Start -> Stop -> Start cycle ----
@@ -916,17 +965,17 @@ mod lifecycle_tests {
         // start
         orch.send_start_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 200);
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
 
         // stop
         orch.send_stop_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Paused);
 
         // start again
         orch.send_start_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
     }
 
     // ---- Kill from idle state (no start) ----
@@ -939,7 +988,7 @@ mod lifecycle_tests {
         orch.send_kill_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 50);
 
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Dead);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Dead);
     }
 
     // ---- Kill while running ----
@@ -950,12 +999,12 @@ mod lifecycle_tests {
 
         orch.send_start_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 100);
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
 
         orch.send_kill_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Dead);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Dead);
     }
 
     // ---- Double start (idempotency) ----
@@ -966,7 +1015,7 @@ mod lifecycle_tests {
 
         orch.send_start_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 200);
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
 
         // send start again
         orch.send_start_explorer_ai(0).unwrap();
@@ -990,7 +1039,7 @@ mod lifecycle_tests {
         }
 
         // should still be running
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
         assert!(ack_received)
     }
 
@@ -1022,7 +1071,7 @@ mod lifecycle_tests {
             }
         }
 
-        assert_eq!(orch.explorers_info.get_status(&0), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Paused);
         assert!(ack_received);
     }
 
@@ -1041,23 +1090,23 @@ mod lifecycle_tests {
         orch.start_all_explorer_ais().unwrap();
         drain_messages(&mut orch, 200);
 
-        assert_eq!(orch.explorers_info.get_status(&10), Status::Running);
-        assert_eq!(orch.explorers_info.get_status(&20), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&10).unwrap(), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&20).unwrap(), Status::Running);
 
         // stop only one
         orch.send_stop_explorer_ai(10).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&10), Status::Paused);
-        assert_eq!(orch.explorers_info.get_status(&20), Status::Running);
+        assert_eq!(orch.explorers_info.get_status(&10).unwrap(), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&20).unwrap(), Status::Running);
 
         // kill both
         orch.send_kill_explorer_ai(10).unwrap();
         orch.send_kill_explorer_ai(20).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&10), Status::Dead);
-        assert_eq!(orch.explorers_info.get_status(&20), Status::Dead);
+        assert_eq!(orch.explorers_info.get_status(&10).unwrap(), Status::Dead);
+        assert_eq!(orch.explorers_info.get_status(&20).unwrap(), Status::Dead);
     }
 }
 
@@ -1100,7 +1149,7 @@ mod current_planet_tests {
         }
         assert!(response, "CurrentPlanetResult not received");
         assert_eq!(
-            orch.explorers_info.get_current_planet(&explorer_id),
+            orch.explorers_info.get_current_planet(&explorer_id).unwrap(),
             planet_id
         );
     }
@@ -1236,7 +1285,8 @@ mod generate_resource_tests {
         // charge the planet with sunrays first
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..5 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         drain_messages(&mut orch, 200);
 
@@ -1262,7 +1312,8 @@ mod generate_resource_tests {
 
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..5 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         drain_messages(&mut orch, 200);
 
@@ -1391,10 +1442,12 @@ mod combine_resource_tests {
         let mut orch = setup_orch_with_explorer(PlanetType::RustyCrab, 0, 0);
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..5 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         sleep(Duration::from_millis(200));
-        orch.send_generate_resource_request(0, BasicResourceType::Hydrogen).expect("testing expect");
+        orch.send_generate_resource_request(0, BasicResourceType::Hydrogen)
+            .expect("testing expect");
         drain_messages(&mut orch, 200);
         sleep(Duration::from_millis(200));
 
@@ -1438,11 +1491,13 @@ mod combine_resource_tests {
 
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..2 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         let planet_channel = orch.planet_channels.get(&1).unwrap().0.clone();
         for _ in 0..5 {
-            orch.send_sunray(1, &planet_channel).expect("testing expect");
+            orch.send_sunray(1, &planet_channel)
+                .expect("testing expect");
         }
         drain_messages(&mut orch, 100);
 
@@ -1496,7 +1551,8 @@ mod bag_content_tests {
         // charge planet
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..5 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         drain_messages(&mut orch, 100);
 
@@ -1583,7 +1639,7 @@ mod movement_tests {
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
         assert_eq!(pos, orch.explorers_info.get_current_planet(&explorer_id));
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id), 1);
+        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 1);
     }
 
     #[test]
@@ -1596,21 +1652,21 @@ mod movement_tests {
 
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id), 1);
+        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 1);
 
         // move 1 -> 2
         travel_explorer(&mut orch, explorer_id, 2);
 
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id), 2);
+        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 2);
 
         // move 2 -> 0
         travel_explorer(&mut orch, explorer_id, 0);
 
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id), 0);
+        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 0);
     }
 
     // ---- Full travel protocol via AI (start AI, let it explore) ----
@@ -1714,7 +1770,7 @@ mod resource_after_movement_tests {
         // verify explorer is on planet 1
         orch.send_current_planet_request(10).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&10), 1);
+        assert_eq!(orch.explorers_info.get_current_planet(&10).unwrap(), 1);
 
         // now generate a resource on planet 1
         orch.send_generate_resource_request(10, BasicResourceType::Silicon)
@@ -1760,7 +1816,7 @@ mod end_to_end_tests {
 
         // everything should have been processed without panic
         assert!(orch.explorers_info.get(&0).is_some());
-        assert_eq!(orch.explorers_info.get_current_planet(&0), 0);
+        assert_eq!(orch.explorers_info.get_current_planet(&0).unwrap(), 0);
     }
 
     /// Multiple generate requests in rapid succession (tests buffering)
@@ -1770,7 +1826,8 @@ mod end_to_end_tests {
 
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..5 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         drain_messages(&mut orch, 300);
 
@@ -1802,9 +1859,9 @@ mod end_to_end_tests {
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::utils::registry::PlanetType;
-    use crate::utils::ExplorerInfo;
     use crate::Status;
+    use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -1852,10 +1909,12 @@ mod explorer_planet_comms {
             .insert(explorer_id, (sender_orch, sender_planet.clone()));
 
         if let Some(orchestrator_sender) = orch_to_planet {
-            orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
-                explorer_id,
-                new_sender: sender_planet.clone(),
-            }).expect("testing expect");
+            orchestrator_sender
+                .send(OrchestratorToPlanet::IncomingExplorerRequest {
+                    explorer_id,
+                    new_sender: sender_planet.clone(),
+                })
+                .expect("testing expect");
         }
 
         (orch, new_explorer)
@@ -1944,7 +2003,8 @@ mod explorer_planet_comms {
         // charge the planet
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..5 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         sleep(Duration::from_millis(50));
 
@@ -1991,7 +2051,8 @@ mod explorer_planet_comms {
         // charge the planet
         let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
         for _ in 0..3 {
-            orch.send_sunray(0, &planet_channel).expect("testing expect");
+            orch.send_sunray(0, &planet_channel)
+                .expect("testing expect");
         }
         sleep(Duration::from_millis(50));
         explorer

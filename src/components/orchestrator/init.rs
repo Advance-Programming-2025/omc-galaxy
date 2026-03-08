@@ -450,11 +450,7 @@ impl Orchestrator {
     /// * `sender_explorer` - pre-existing explorer to planet channel
     /// REMEMBER in order to work this function needs to be called when the planet ai is ALREADY
     /// running, not before
-    pub fn add_mattia_explorer(
-        &mut self,
-        explorer_id: u32,
-        planet_id: u32,
-    ) -> Result<(), String> {
+    pub fn add_mattia_explorer(&mut self, explorer_id: u32, planet_id: u32) -> Result<(), String> {
         log_fn_call!(
             self,
             "add_mattia_explorer()",

@@ -55,7 +55,7 @@ mod tests_actor_management {
         orch.add_tommy_explorer(1, 10);
 
         assert!(orch.explorers_info.get(&1).is_some());
-        assert_eq!(orch.explorers_info.get_status(&1), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&1).unwrap(), Status::Paused);
         assert!(orch.explorer_channels.contains_key(&1));
     }
 }
