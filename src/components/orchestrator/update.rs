@@ -394,8 +394,8 @@ impl Orchestrator {
         self.start_all_planet_ais()?;
 
         //Add explorers here otherwise if the planets don't start first the explorers won't start either and the game will be stuck in a limbo state where the user can't do anything but quit
-        self.add_mattia_explorer(0, 0)?;
-        self.add_tommy_explorer(1, 1)?;
+        //self.add_mattia_explorer(0, 0)?;
+        //self.add_tommy_explorer(1, 1)?;
         self.start_all_explorer_ais()?;
         //LOG
         log_internal_op!(
