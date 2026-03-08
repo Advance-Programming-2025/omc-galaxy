@@ -81,6 +81,7 @@ impl Default for PlanetInfo {
 
 /// Struct that manages the topology information for all known planets.
 // ex TopologyInfo
+#[derive(Debug)]
 pub struct TopologyManager {
     planets: HashMap<ID, PlanetInfo>,
 }
