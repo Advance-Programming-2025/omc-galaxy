@@ -1,7 +1,7 @@
 #[cfg(test)]
 use crate::components::orchestrator::Orchestrator;
-use crate::utils::Status;
 use crate::utils::registry::PlanetType;
+use crate::utils::Status;
 
 #[cfg(test)]
 mod tests_core_lifecycle {
@@ -167,8 +167,8 @@ mod tests_file_integration {
 }
 #[cfg(test)]
 mod test_One_million_crabs_planet {
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::*;
+    use crate::utils::ExplorerInfo;
     use crate::*;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -185,8 +185,9 @@ mod test_One_million_crabs_planet {
         orchestrator
             .add_planet(planet_id, PlanetType::OneMillionCrabs)
             .unwrap();
-        orchestrator.start_all().unwrap();
-        orchestrator.add_mattia_explorer(explorer_id, planet_id);
+        orchestrator
+            .start_all(&[(explorer_id, planet_id)], &[])
+            .unwrap();
         let planet_channel = orchestrator
             .planet_channels
             .get(&planet_id)
@@ -272,8 +273,9 @@ mod test_One_million_crabs_planet {
         orchestrator
             .add_planet(planet_id, PlanetType::OneMillionCrabs)
             .unwrap();
-        orchestrator.start_all().unwrap();
-        orchestrator.add_mattia_explorer(explorer_id, planet_id);
+        orchestrator
+            .start_all(&[(explorer_id, planet_id)], &[])
+            .unwrap();
         let planet_channel = orchestrator
             .planet_channels
             .get(&planet_id)
@@ -371,7 +373,7 @@ mod tests {
             orch.add_planet(p_id_b, PlanetType::BlackAdidasShoe)
                 .unwrap();
 
-            orch.start_all().unwrap();
+            orch.start_all(&[], &[]).unwrap();
 
             // Phase 1: Provide resources
             // We give them sunrays. Only Type A should effectively use it.
@@ -441,7 +443,7 @@ mod tests {
                 id_counter += 1;
             }
 
-            orch.start_all().unwrap();
+            orch.start_all(&[], &[]).unwrap();
 
             // Sequence: 3 Sunrays (enough to build defense), then 1 Asteroid
             for _ in 0..3 {
@@ -481,7 +483,7 @@ mod tests {
                 id_counter += 1;
             }
 
-            orch.start_all().unwrap();
+            orch.start_all(&[], &[]).unwrap();
 
             //send 10 sunrays to all planets: they should all be full
             for _ in 0..40 {
@@ -536,7 +538,7 @@ mod tests {
                 orch.add_planet(i, PlanetType::random()).unwrap();
             }
 
-            orch.start_all().unwrap();
+            orch.start_all(&[], &[]).unwrap();
 
             // Long test: 10 cycles of sunrays/asteroids
             for cycle in 0..10 {
@@ -565,7 +567,7 @@ mod tests {
         fn test_orchestrator_heavy_channel_congestion() {
             let mut orch = Orchestrator::new().unwrap();
             orch.add_planet(0, PlanetType::Ciuc).unwrap();
-            orch.start_all().unwrap();
+            orch.start_all(&[], &[]).unwrap();
 
             // Spam 1000 sunrays to a single planet to test channel capacity/backpressure
             for _ in 0..1000 {

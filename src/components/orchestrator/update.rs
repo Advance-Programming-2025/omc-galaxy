@@ -8,10 +8,10 @@ use common_game::{
 };
 use log::info;
 use logging_utils::{
-    LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op,
-    log_message, payload, warning_payload,
+    debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload,
+    LoggableActor, Sender, LOG_ACTORS_ACTIVITY,
 };
-use rand::{Rng, random, seq::IndexedRandom};
+use rand::{random, seq::IndexedRandom, Rng};
 use std::sync::LockResult;
 
 use crate::utils::registry::PlanetType;
@@ -381,22 +381,45 @@ impl Orchestrator {
     }
 
     /// Global start function, starts all of the planets'
-    /// and explorer's AIs; wrapper on
-    /// [`start_all_planet_ais`](`Self::start_all_planet_ais`)
-    /// and on
-    /// [`start_all_explorer_ais`](`Self::start_all_explorer_ais`).
+    /// and explorer's AIs.
     ///
-    /// Returns Err if any of the planets fail to start.
-    pub fn start_all(&mut self) -> Result<(), String> {
+    /// The function performs the following steps in order:
+    /// 1. Starts all planet AIs
+    /// 2. Waits 20ms for the planets to be fully ready
+    /// 3. Spawns all explorers (mattia and tommy) on their respective planets
+    /// 4. Starts all explorer AIs
+    ///
+    /// Each element of `mattia_explorers` and `tommy_explorers` is a pair
+    /// `(explorer_id, planet_id)` indicating which explorer to create and
+    /// on which planet it should be spawned.
+    ///
+    /// Returns Err if any of the planets or explorers fail to start.
+    pub fn start_all(
+        &mut self,
+        mattia_explorers: &[(u32, u32)],
+        tommy_explorers: &[(u32, u32)],
+    ) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "start_all()");
         //LOG
+
+        // 1. Start all planet AIs
         self.start_all_planet_ais()?;
 
-        //Add explorers here otherwise if the planets don't start first the explorers won't start either and the game will be stuck in a limbo state where the user can't do anything but quit
-        //self.add_mattia_explorer(0, 0)?;
-        //self.add_tommy_explorer(1, 1)?;
+        // 2. Wait 20ms for the planets to be fully ready
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        // 3. Spawn all explorers on their designated planets
+        for &(explorer_id, planet_id) in mattia_explorers {
+            self.add_mattia_explorer(explorer_id, planet_id)?;
+        }
+        for &(explorer_id, planet_id) in tommy_explorers {
+            self.add_tommy_explorer(explorer_id, planet_id)?;
+        }
+
+        // 4. Start all explorer AIs
         self.start_all_explorer_ais()?;
+
         //LOG
         log_internal_op!(
             self,
@@ -406,6 +429,33 @@ impl Orchestrator {
         //LOG
         Ok(())
     }
+
+    // /// Global start function, starts all of the planets'
+    // /// and explorer's AIs; wrapper on
+    // /// [`start_all_planet_ais`](`Self::start_all_planet_ais`)
+    // /// and on
+    // /// [`start_all_explorer_ais`](`Self::start_all_explorer_ais`).
+    // ///
+    // /// Returns Err if any of the planets fail to start.
+    // pub fn start_all(&mut self) -> Result<(), String> {
+    //     //LOG
+    //     log_fn_call!(self, "start_all()");
+    //     //LOG
+    //     self.start_all_planet_ais()?;
+    //
+    //     //Add explorers here otherwise if the planets don't start first the explorers won't start either and the game will be stuck in a limbo state where the user can't do anything but quit
+    //     //self.add_mattia_explorer(0, 0)?;
+    //     //self.add_tommy_explorer(1, 1)?;
+    //     self.start_all_explorer_ais()?;
+    //     //LOG
+    //     log_internal_op!(
+    //         self,
+    //         "action"=>"all systems started",
+    //         "status"=>"success"
+    //     );
+    //     //LOG
+    //     Ok(())
+    // }
 
     /// Global stop function, pauses all of the planets'
     /// and explorer's AIs; wrapper on

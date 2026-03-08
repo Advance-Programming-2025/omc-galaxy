@@ -17,8 +17,8 @@
 
 mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -36,7 +36,7 @@ mod test_one_million_crabs_planet {
         orchestrator
             .add_planet(planet_id, PlanetType::OneMillionCrabs)
             .unwrap();
-        orchestrator.start_all().unwrap();
+        orchestrator.start_all(&[], &[]).unwrap();
 
         //Create the comms for the new explorer
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
@@ -260,7 +260,7 @@ mod test_one_million_crabs_planet {
         orchestrator
             .add_planet(planet_id, PlanetType::OneMillionCrabs)
             .unwrap();
-        orchestrator.start_all().unwrap();
+        orchestrator.start_all(&[], &[]).unwrap();
 
         //Create the comms for the new explorer
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
@@ -405,7 +405,7 @@ mod test_one_million_crabs_planet {
             orchestrator
                 .add_planet(planet_id, PlanetType::OneMillionCrabs)
                 .unwrap();
-            orchestrator.start_all().unwrap();
+            orchestrator.start_all(&[], &[]).unwrap();
 
             //Create the comms for the new explorer
             let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
@@ -590,7 +590,7 @@ mod test_one_million_crabs_planet {
 
 mod game_simulation {
     use super::*;
-    use crate::{Orchestrator, debug_println};
+    use crate::{debug_println, Orchestrator};
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     #[test]
@@ -677,7 +677,7 @@ mod communication {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{Status, utils::registry::PlanetType};
+    use crate::{utils::registry::PlanetType, Status};
 
     use super::*;
 
@@ -698,7 +698,10 @@ mod communication {
             .expect("testing expect");
 
         //should be paused because it is not already running
-        assert_eq!(orch.explorers_info.get_status(&explorer_id).unwrap(), Status::Paused);
+        assert_eq!(
+            orch.explorers_info.get_status(&explorer_id).unwrap(),
+            Status::Paused
+        );
 
         //in start all is used start_planet_ais
         orch.start_all_explorer_ais().unwrap();
@@ -739,7 +742,10 @@ mod communication {
         orch.handle_game_messages().unwrap();
 
         //should be running because started
-        assert_eq!(orch.explorers_info.get_status(&explorer_id).unwrap(), Status::Paused);
+        assert_eq!(
+            orch.explorers_info.get_status(&explorer_id).unwrap(),
+            Status::Paused
+        );
     }
 
     /// Test if the sunray exchange works properly
@@ -763,7 +769,7 @@ mod communication {
         //stop_planet_ais
         orch.send_supported_resource_request(explorer_id).unwrap();
         sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
-        // 1. planet result, explorer result, combination result
+                                           // 1. planet result, explorer result, combination result
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
@@ -802,7 +808,7 @@ mod communication {
         orch.send_supported_combination_request(explorer_id)
             .unwrap();
         sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
-        // 1. planet result, explorer result, combination result
+                                           // 1. planet result, explorer result, combination result
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
@@ -870,8 +876,8 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::Status;
     use crate::utils::registry::PlanetType;
+    use crate::Status;
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
@@ -940,7 +946,10 @@ mod lifecycle_tests {
 
         // after reset the explorer should still be registered
         assert!(orch.explorers_info.get(&0).is_some());
-        assert_eq!(orch.explorers_info.get_status(&0u32).unwrap(), Status::Running);
+        assert_eq!(
+            orch.explorers_info.get_status(&0u32).unwrap(),
+            Status::Running
+        );
         assert!(ack_received);
     }
 
@@ -1090,15 +1099,24 @@ mod lifecycle_tests {
         orch.start_all_explorer_ais().unwrap();
         drain_messages(&mut orch, 200);
 
-        assert_eq!(orch.explorers_info.get_status(&10).unwrap(), Status::Running);
-        assert_eq!(orch.explorers_info.get_status(&20).unwrap(), Status::Running);
+        assert_eq!(
+            orch.explorers_info.get_status(&10).unwrap(),
+            Status::Running
+        );
+        assert_eq!(
+            orch.explorers_info.get_status(&20).unwrap(),
+            Status::Running
+        );
 
         // stop only one
         orch.send_stop_explorer_ai(10).unwrap();
         drain_messages(&mut orch, 100);
 
         assert_eq!(orch.explorers_info.get_status(&10).unwrap(), Status::Paused);
-        assert_eq!(orch.explorers_info.get_status(&20).unwrap(), Status::Running);
+        assert_eq!(
+            orch.explorers_info.get_status(&20).unwrap(),
+            Status::Running
+        );
 
         // kill both
         orch.send_kill_explorer_ai(10).unwrap();
@@ -1149,7 +1167,9 @@ mod current_planet_tests {
         }
         assert!(response, "CurrentPlanetResult not received");
         assert_eq!(
-            orch.explorers_info.get_current_planet(&explorer_id).unwrap(),
+            orch.explorers_info
+                .get_current_planet(&explorer_id)
+                .unwrap(),
             planet_id
         );
     }
@@ -1298,11 +1318,9 @@ mod generate_resource_tests {
         // after GenerateResourceResponse the orchestrator sends BagContentRequest automatically
         // so the bag should be updated
         let explorer_info = orch.explorers_info.get(&0).unwrap();
-        assert!(
-            explorer_info
-                .bag
-                .contains(&ResourceType::Basic(BasicResourceType::Silicon))
-        )
+        assert!(explorer_info
+            .bag
+            .contains(&ResourceType::Basic(BasicResourceType::Silicon)))
     }
     // ---- Generate multiple resources in sequence ----
 
@@ -1327,18 +1345,15 @@ mod generate_resource_tests {
         }
         drain_messages(&mut orch, 500);
         let info = orch.explorers_info.get(&0).unwrap();
-        assert!(
-            info.bag
-                .contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
-        );
-        assert!(
-            info.bag
-                .contains(&ResourceType::Basic(BasicResourceType::Carbon))
-        );
-        assert!(
-            info.bag
-                .contains(&ResourceType::Basic(BasicResourceType::Oxygen))
-        );
+        assert!(info
+            .bag
+            .contains(&ResourceType::Basic(BasicResourceType::Hydrogen)));
+        assert!(info
+            .bag
+            .contains(&ResourceType::Basic(BasicResourceType::Carbon)));
+        assert!(info
+            .bag
+            .contains(&ResourceType::Basic(BasicResourceType::Oxygen)));
     }
 
     // ---- Generate resource without energy (no sunrays) ----
@@ -1474,13 +1489,12 @@ mod combine_resource_tests {
             }
         }
         assert!(response, "GeneratedResourceResponse not received");
-        assert!(
-            orch.explorers_info
-                .get(&0)
-                .unwrap()
-                .bag
-                .contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
-        );
+        assert!(orch
+            .explorers_info
+            .get(&0)
+            .unwrap()
+            .bag
+            .contains(&ResourceType::Basic(BasicResourceType::Hydrogen)));
     }
 
     // ---- Generate resources then combine ----
@@ -1639,7 +1653,12 @@ mod movement_tests {
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
         assert_eq!(pos, orch.explorers_info.get_current_planet(&explorer_id));
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 1);
+        assert_eq!(
+            orch.explorers_info
+                .get_current_planet(&explorer_id)
+                .unwrap(),
+            1
+        );
     }
 
     #[test]
@@ -1652,21 +1671,36 @@ mod movement_tests {
 
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 1);
+        assert_eq!(
+            orch.explorers_info
+                .get_current_planet(&explorer_id)
+                .unwrap(),
+            1
+        );
 
         // move 1 -> 2
         travel_explorer(&mut orch, explorer_id, 2);
 
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 2);
+        assert_eq!(
+            orch.explorers_info
+                .get_current_planet(&explorer_id)
+                .unwrap(),
+            2
+        );
 
         // move 2 -> 0
         travel_explorer(&mut orch, explorer_id, 0);
 
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 0);
+        assert_eq!(
+            orch.explorers_info
+                .get_current_planet(&explorer_id)
+                .unwrap(),
+            0
+        );
     }
 
     // ---- Full travel protocol via AI (start AI, let it explore) ----
@@ -1779,13 +1813,12 @@ mod resource_after_movement_tests {
         drain_messages(&mut orch, 200);
 
         // protocol completed
-        assert!(
-            orch.explorers_info
-                .get(&10)
-                .unwrap()
-                .bag
-                .contains(&ResourceType::Basic(BasicResourceType::Silicon))
-        );
+        assert!(orch
+            .explorers_info
+            .get(&10)
+            .unwrap()
+            .bag
+            .contains(&ResourceType::Basic(BasicResourceType::Silicon)));
     }
 }
 
@@ -1859,9 +1892,9 @@ mod end_to_end_tests {
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::Status;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
+    use crate::Status;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -1881,7 +1914,7 @@ mod explorer_planet_comms {
     ) -> (Orchestrator, crate::components::mattia_explorer::Explorer) {
         let mut orch = Orchestrator::new().unwrap();
         orch.add_planet(planet_id, planet_type).unwrap();
-        orch.start_all().unwrap();
+        orch.start_all(&[], &[]).unwrap();
 
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
             Orchestrator::init_comms_explorers();
