@@ -233,7 +233,7 @@ impl Orchestrator {
 
     /// sends the GenerateResourceRequest message
     pub fn send_generate_resource_request(
-        &mut self,
+        & self,
         explorer_id: u32,
         to_generate: BasicResourceType,
     ) -> Result<(), String> {

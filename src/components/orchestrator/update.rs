@@ -8,10 +8,10 @@ use common_game::{
 };
 use log::info;
 use logging_utils::{
-    debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload,
-    LoggableActor, Sender, LOG_ACTORS_ACTIVITY,
+    LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op,
+    log_message, payload, warning_payload,
 };
-use rand::{random, seq::IndexedRandom, Rng};
+use rand::{Rng, random, seq::IndexedRandom};
 use std::sync::LockResult;
 
 use crate::utils::registry::PlanetType;

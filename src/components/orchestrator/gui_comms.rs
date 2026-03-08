@@ -49,18 +49,21 @@ impl Orchestrator {
         //LOG
         self.planets_info.clone()
     }
-    pub fn get_explorer_states(&self) -> Result<ExplorerInfoMap, String> {
+    pub fn send_bag_content_request_from_ui(&self) -> Result<(), String> {
         for explorer_id in self.explorer_channels.keys() {
-            let _ = self.send_bag_content_request(*explorer_id); // ignora errori singoli
+            self.send_bag_content_request(*explorer_id)?;
         }
-        Ok(self.explorers_info.clone())
+        Ok(())
+    }
+    pub fn get_explorer_states(&self) -> ExplorerInfoMap {
+        self.explorers_info.clone()
     }
     // pub fn get_explorer_states(&self) -> Result<ExplorerInfoMap, String> {
     //     //LOG
     //     log_fn_call!(self, "explorer_states()");
     //
     //
-    //     self.send_bag_content_request(0)?;
+    // self.send_bag_content_request(0)?;
     //     self.send_bag_content_request(1)?;
     //
     //     // self.send_generate_resource_request(0, BasicResourceType::Carbon)?; // we ask the orchestrator to generate a resource to update the info about the resources in the galaxy, this is needed to update the info about the resources in the planets
