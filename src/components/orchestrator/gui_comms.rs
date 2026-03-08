@@ -82,26 +82,33 @@ impl Orchestrator {
     /// It sends a message that signals the death of planet
     /// `planet_id`
     pub(crate) fn emit_planet_death(&mut self, planet_id: u32) {
-        info!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event planet_death was triggered");
         self.gui_messages
             .push(OrchestratorEvent::PlanetDestroyed { planet_id });
     }
 
     pub(crate) fn emit_sunray_ack(&mut self, planet_id: u32) {
-        info!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event sunray_ack was triggered");
         self.gui_messages
             .push(OrchestratorEvent::SunrayReceived { planet_id });
     }
 
     pub(crate) fn emit_sunray_send(&mut self, planet_id: u32) {
-        info!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event sunray_send was triggered");
         self.gui_messages
             .push(OrchestratorEvent::SunraySent { planet_id });
     }
 
     pub(crate) fn emit_asteroid_send(&mut self, planet_id: u32) {
-        info!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event asteroid_send was triggered");
         self.gui_messages
             .push(OrchestratorEvent::AsteroidSent { planet_id });
     }
+
+    pub(crate) fn emit_explorer_move(&mut self,explorer_id: u32, planet_id: u32) {
+        info!("GUI event esplorer_move was triggered");
+        self.gui_messages
+            .push(OrchestratorEvent::ExplorerMoved { explorer_id, destination: planet_id });
+    }
+
 }
