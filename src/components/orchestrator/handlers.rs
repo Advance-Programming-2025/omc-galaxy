@@ -452,6 +452,8 @@ impl Orchestrator {
 
                 self.explorers_info
                     .update_current_planet(explorer_id, planet_id);
+
+                self.emit_explorer_move(explorer_id, planet_id);
             }
             ExplorerToOrchestrator::CurrentPlanetResult {
                 explorer_id,
@@ -491,7 +493,10 @@ impl Orchestrator {
                 //LOG
 
                 //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
-                let planet_id = self.explorers_info.get_current_planet(&explorer_id).ok_or("could not get explorer planet".to_string())?;
+                let planet_id = self
+                    .explorers_info
+                    .get_current_planet(&explorer_id)
+                    .ok_or("could not get explorer planet".to_string())?;
                 self.planets_info
                     .update_supported_resources(planet_id, supported_resources)?;
             }
@@ -513,7 +518,10 @@ impl Orchestrator {
                 //LOG
 
                 //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
-                let planet_id = self.explorers_info.get_current_planet(&explorer_id).ok_or("could not get explorer planet".to_string())?;
+                let planet_id = self
+                    .explorers_info
+                    .get_current_planet(&explorer_id)
+                    .ok_or("could not get explorer planet".to_string())?;
                 self.planets_info
                     .update_supported_combination(planet_id, combination_list)?;
             }

@@ -49,18 +49,21 @@ impl Orchestrator {
         //LOG
         self.planets_info.clone()
     }
-    pub fn get_explorer_states(&self) -> Result<ExplorerInfoMap, String> {
+    pub fn send_bag_content_request_from_ui(&self) -> Result<(), String> {
         for explorer_id in self.explorer_channels.keys() {
-            let _ = self.send_bag_content_request(*explorer_id); // ignora errori singoli
+            self.send_bag_content_request(*explorer_id)?;
         }
-        Ok(self.explorers_info.clone())
+        Ok(())
+    }
+    pub fn get_explorer_states(&self) -> ExplorerInfoMap {
+        self.explorers_info.clone()
     }
     // pub fn get_explorer_states(&self) -> Result<ExplorerInfoMap, String> {
     //     //LOG
     //     log_fn_call!(self, "explorer_states()");
     //
     //
-    //     self.send_bag_content_request(0)?;
+    // self.send_bag_content_request(0)?;
     //     self.send_bag_content_request(1)?;
     //
     //     // self.send_generate_resource_request(0, BasicResourceType::Carbon)?; // we ask the orchestrator to generate a resource to update the info about the resources in the galaxy, this is needed to update the info about the resources in the planets
@@ -79,26 +82,33 @@ impl Orchestrator {
     /// It sends a message that signals the death of planet
     /// `planet_id`
     pub(crate) fn emit_planet_death(&mut self, planet_id: u32) {
-        info!("planet-death: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event planet_death was triggered");
         self.gui_messages
             .push(OrchestratorEvent::PlanetDestroyed { planet_id });
     }
 
     pub(crate) fn emit_sunray_ack(&mut self, planet_id: u32) {
-        info!("sunray-ack: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event sunray_ack was triggered");
         self.gui_messages
             .push(OrchestratorEvent::SunrayReceived { planet_id });
     }
 
     pub(crate) fn emit_sunray_send(&mut self, planet_id: u32) {
-        info!("sunray-send: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event sunray_send was triggered");
         self.gui_messages
             .push(OrchestratorEvent::SunraySent { planet_id });
     }
 
     pub(crate) fn emit_asteroid_send(&mut self, planet_id: u32) {
-        info!("asteroid-send: THIS FUNCTION IS STILL BEING BUILT");
+        info!("GUI event asteroid_send was triggered");
         self.gui_messages
             .push(OrchestratorEvent::AsteroidSent { planet_id });
     }
+
+    pub(crate) fn emit_explorer_move(&mut self,explorer_id: u32, planet_id: u32) {
+        info!("GUI event esplorer_move was triggered");
+        self.gui_messages
+            .push(OrchestratorEvent::ExplorerMoved { explorer_id, destination: planet_id });
+    }
+
 }
