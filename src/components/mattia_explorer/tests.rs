@@ -719,7 +719,7 @@ mod communication {
 
     /// Test if the explorer ai stops properly
     #[test]
-    fn stop_planet_ai() {
+    fn stop_explorer_ai() {
         // init orchestrator
         let mut orch = Orchestrator::new().unwrap();
 
@@ -741,7 +741,7 @@ mod communication {
         //check if the explorer respond correctly(only the explorer starts so its the only one that can send messages)
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
-
+        orch.handle_game_messages().unwrap();
         //should be running because started
         assert_eq!(
             orch.explorers_info.get_status(&explorer_id).unwrap(),
