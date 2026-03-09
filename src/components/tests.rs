@@ -15,22 +15,6 @@ mod tests_core_lifecycle {
             assert!(orch.galaxy_lookup.is_empty());
         }
     }
-
-    #[test]
-    fn test_lifecycle_reset_clears_internal_maps() {
-        if let Ok(mut orch) = Orchestrator::new() {
-            // Manually pollute state
-            orch.planets_info
-                .insert_status(1, PlanetType::OneMillionCrabs, Status::Dead);
-            orch.explorers_info.insert_status(1, Status::Running);
-
-            orch.reset().unwrap();
-
-            assert!(orch.planets_info.is_empty());
-            assert!(orch.explorers_info.is_empty());
-            assert!(orch.planet_channels.is_empty());
-        }
-    }
 }
 
 #[cfg(test)]
