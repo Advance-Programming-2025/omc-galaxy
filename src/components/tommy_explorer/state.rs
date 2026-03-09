@@ -19,6 +19,16 @@ pub enum ExplorerState {
 impl ExplorerState {
     /// Checks if the orchestrator message received is the one expected (based on the explorer state).
     pub fn matches_orchestrator_msg(&self, msg: &OrchestratorToExplorer) -> bool {
+        // TODO these GUI messages should always be accepted?
+        // match msg {
+        //     OrchestratorToExplorer::StartExplorerAI |
+        //     OrchestratorToExplorer::StopExplorerAI |
+        //     OrchestratorToExplorer::KillExplorer |
+        //     OrchestratorToExplorer::BagContentRequest |
+        //     OrchestratorToExplorer::CurrentPlanetRequest => return true,
+        //     _ => {}
+        // }
+
         match (self, msg) {
             (ExplorerState::Idle, _) => true,
             (_, OrchestratorToExplorer::KillExplorer) => true,
@@ -52,7 +62,7 @@ impl ExplorerState {
             ) => true,
             (
                 ExplorerState::WaitingForSupportedCombinations,
-                PlanetToExplorer::CombineResourceResponse { .. },
+                PlanetToExplorer::SupportedCombinationResponse { .. },
             ) => true,
             (
                 ExplorerState::WaitingForAvailableEnergyCells,

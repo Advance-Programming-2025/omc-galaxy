@@ -208,6 +208,7 @@ impl Explorer {
         // do not match together the message is pushed into the corresponding buffer, and it will be read
         // when the explorer will be in an "Idle" state
         loop {
+            // println!("[TOMMY EXPLORER INFO] planet: {}", self.planet_id);
             select! {
                 // receive the orchestrator messages
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
@@ -388,13 +389,13 @@ impl Explorer {
                             // if the sending is successful change the state to WaitingForNeighbours
                             // and push back the action
                             self.set_state(ExplorerState::WaitingForNeighbours);
-                            debug_println!("[EXPLORER TOMY DEBUG] AskNeighbours");
+                            // println!("[EXPLORER TOMY DEBUG] AskNeighbours");
                         }
                         Err(err) => {
-                            debug_println!(
-                                "[EXPLORER TOMMY DEBUG] Error in sending NeighboursRequest: {}",
-                                err
-                            );
+                            // println!(
+                            //     "[EXPLORER TOMMY DEBUG] Error in sending NeighboursRequest: {}",
+                            //     err
+                            // );
                         }
                     }
                 }
@@ -407,7 +408,7 @@ impl Explorer {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedResources
                             self.set_state(ExplorerState::WaitingForSupportedResources);
-                            debug_println!("[EXPLORER TOMY DEBUG] AskSupportedResources");
+                            // println!("[EXPLORER TOMY DEBUG] AskSupportedResources");
                         }
                         Err(err) => {
                             // TODO
@@ -423,7 +424,7 @@ impl Explorer {
                         Ok(_) => {
                             // if the sending was successful change the state to WaitingForSupportedCombinations
                             self.set_state(ExplorerState::WaitingForSupportedCombinations);
-                            debug_println!("[EXPLORER TOMY DEBUG] AskSupportedCombinations");
+                            // println!("[EXPLORER TOMY DEBUG] AskSupportedCombinations");
                         }
                         Err(err) => {
                             // TODO
@@ -437,7 +438,7 @@ impl Explorer {
                     }) {
                         Ok(_) => {
                             self.set_state(ExplorerState::WaitingForAvailableEnergyCells);
-                            debug_println!("[EXPLORER TOMY DEBUG] AvailableEnergyCellRequest");
+                            // println!("[EXPLORER TOMY DEBUG] AvailableEnergyCellRequest");
                         }
                         Err(err) => {
                             // TODO
@@ -459,8 +460,10 @@ impl Explorer {
 
                     self.action_queue.push_back(action);
 
-                    if self.energy_cells > 0 {
-                        debug_println!("[EXPLORER TOMY DEBUG] GenerateOrCombine");
+                    let is_exploring = self.topology.find_path_to_nearest_frontier(self.planet_id).is_some();
+                    if self.energy_cells > 0 && !is_exploring {
+
+                        // println!("[EXPLORER TOMY DEBUG] GenerateOrCombine");
                         if let Some(resource) = self.decide_resource_action() {
                             match resource {
                                 ResourceType::Basic(basic_resource) => match basic_resource {
@@ -543,23 +546,50 @@ impl Explorer {
                         self.move_queue.push_path(path)
                     }
 
+                    // println!("[EXPLORER TOMY DEBUG] move queue {:?}", self.move_queue);
+
+                    let mut next_planet = self.move_queue.next_move();
+
+                    if next_planet == Some(self.planet_id) {
+                        next_planet = self.move_queue.next_move();
+                    }
+
+                    // Wander instinct
+                    if next_planet.is_none() {
+                        let wants_to_craft = self.decide_resource_action().is_some();
+
+                        let is_map_done = self.topology.is_fully_discovered();
+
+                        let stuck_exploring = !is_map_done;
+
+                        let stuck_crafting = is_map_done && wants_to_craft && self.energy_cells == 0;
+
+                        if stuck_exploring || stuck_crafting {
+                            if let Some(info) = self.topology.get(self.planet_id) {
+                                if let Some(neighbours) = info.get_neighbours() {
+                                    next_planet = neighbours.iter().next().copied();
+                                }
+                            }
+                        }
+                    }
+
                     // if the explorer has to move somewhere send a TravelToPlanetRequest
-                    if let Some(next_planet) = self.move_queue.next_move() {
-                        if self.topology.contains(next_planet) {
+                    if let Some(target_planet) = next_planet {
+                        if self.topology.contains(target_planet) {
                             match self.send_to_orchestrator(
                                 ExplorerToOrchestrator::TravelToPlanetRequest {
                                     explorer_id: self.explorer_id,
                                     current_planet_id: self.planet_id,
-                                    dst_planet_id: next_planet,
+                                    dst_planet_id: target_planet,
                                 },
                             ) {
                                 Ok(_) => {
                                     self.set_state(ExplorerState::Traveling); // TODO should be Idle, in the case in which the planet is dead and can't respond
-                                    debug_println!("[EXPLORER TOMY DEBUG] Traveling");
+                                    // println!("[EXPLORER TOMY DEBUG] Traveling");
                                 }
                                 Err(_) => {
                                     self.move_queue.clear();
-                                    debug_println!("[EXPLORER TOMY DEBUG] Not traveling");
+                                    // println!("[EXPLORER TOMY DEBUG] Not traveling");
                                 }
                             }
                         } else {
@@ -640,9 +670,9 @@ impl Explorer {
         }
 
         // this shouldn't happen (all possible cases should have been taken in consideration)
-        debug_println!(
-            "[EXPLORER TOMMY DEBUG] Something went wrong in the decision of the next needed resource."
-        );
+        // println!(
+        //     "[EXPLORER TOMMY DEBUG] Something went wrong in the decision of the next needed resource."
+        // );
         ResourceType::Basic(BasicResourceType::Carbon)
     }
 

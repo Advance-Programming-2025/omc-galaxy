@@ -80,6 +80,7 @@ impl Default for ActionQueue {
 
 /// Struct that manages the moves that the explorer has to do.
 /// It contains all the planet of the chosen path in order.
+#[derive(Debug)]
 pub struct MoveQueue {
     move_queue: VecDeque<u32>,
 }
@@ -104,6 +105,7 @@ impl MoveQueue {
 
     /// Replace the content of the queue with the given path.
     pub fn push_path(&mut self, path: VecDeque<u32>) {
+        self.move_queue.clear();
         self.move_queue = path;
     }
 

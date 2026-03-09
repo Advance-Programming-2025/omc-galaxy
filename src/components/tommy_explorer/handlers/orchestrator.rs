@@ -13,6 +13,7 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use logging_utils::{debug_println, log_message, warning_payload};
 use one_million_crabs::planet::ToString2;
+use crate::components::tommy_explorer::ExplorerState::CombiningResources;
 
 /// Handles all messages from the orchestrator,
 /// returns Ok(true) if the explorer should terminate, Ok(false) otherwise.
@@ -234,6 +235,14 @@ fn move_to_planet(
 
             explorer.set_planet_sender(sender);
             explorer.set_planet_id(planet_id);
+
+            let _ = explorer.send_to_orchestrator(
+                ExplorerToOrchestrator::MovedToPlanetResult {
+                    explorer_id: explorer.id(),
+                    planet_id,
+                }
+            );
+
             //LOG
             log_message!(
                 ActorType::Orchestrator,
@@ -247,15 +256,21 @@ fn move_to_planet(
             //LOG
         }
         None => {
-            log_message!(
-                ActorType::Orchestrator,
-                0u32,
-                ActorType::Explorer,
-                explorer.explorer_id,
-                EventType::MessageOrchestratorToExplorer,
-                "move to planet failed - sender channel is None";
-                "planet_id"=>planet_id.to_string()
-            );
+            // TODO log error
+            // log_message!(
+            //     ActorType::Orchestrator,
+            //     0u32,
+            //     ActorType::Explorer,
+            //     explorer.explorer_id,
+            //     EventType::MessageOrchestratorToExplorer,
+            //     "move to planet failed - sender channel is None";
+            //     "planet_id"=>planet_id.to_string()
+            // );
+            explorer.action_queue.clear();
+            explorer.action_queue.reset();
+            explorer.move_queue.clear();
+
+            explorer.topology.mark_as_dead(planet_id);
         }
     }
 }
@@ -541,16 +556,20 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
         explorer_id: explorer.id(),
         resource: to_generate,
     }) {
-        Ok(_) => log_message!(
-            ActorType::Explorer,
-            explorer.explorer_id,
-            ActorType::Planet,
-            explorer.planet_id,
-            EventType::MessageExplorerToPlanet,
-            "generate resource request";
-            "to_generate" => to_generate.to_string_2(),
-            "planet_id"=>explorer.planet_id.to_string()
-        ),
+        Ok(_) => {
+            explorer.set_state(ExplorerState::GeneratingResource);
+
+            log_message!(
+                ActorType::Explorer,
+                explorer.explorer_id,
+                ActorType::Planet,
+                explorer.planet_id,
+                EventType::MessageExplorerToPlanet,
+                "generate resource request";
+                "to_generate" => to_generate.to_string_2(),
+                "planet_id"=>explorer.planet_id.to_string()
+            )
+        },
         Err(err) => {
             LogEvent::new(
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -658,7 +677,9 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
         explorer_id: explorer.explorer_id,
         generated: Ok(()),
     }) {
-        Ok(_) => {}
+        Ok(_) => {
+            explorer.set_state(ExplorerState::Idle);
+        }
         Err(err) => {
             LogEvent::new(
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -699,16 +720,20 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                 explorer_id: explorer.id(),
                 msg: complex_resource_req,
             }) {
-                Ok(_) => log_message!(
-                    ActorType::Explorer,
-                    explorer.explorer_id,
-                    ActorType::Planet,
-                    explorer.planet_id,
-                    EventType::MessageExplorerToPlanet,
-                    "combine resource request";
-                    "to_generate" => to_generate.to_string_2(),
-                    "planet_id"=>explorer.planet_id.to_string()
-                ),
+                Ok(_) => {
+                    explorer.set_state(ExplorerState::CombiningResources);
+
+                    log_message!(
+                        ActorType::Explorer,
+                        explorer.explorer_id,
+                        ActorType::Planet,
+                        explorer.planet_id,
+                        EventType::MessageExplorerToPlanet,
+                        "combine resource request";
+                        "to_generate" => to_generate.to_string_2(),
+                        "planet_id"=>explorer.planet_id.to_string()
+                    )
+                },
                 Err(err) => {
                     LogEvent::new(
                         Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -731,7 +756,9 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                             generated: Err("failed to generate resource".to_string()),
                         },
                     ) {
-                        Ok(_) => {}
+                        Ok(_) => {
+                            explorer.set_state(ExplorerState::Idle);
+                        }
                         Err(err) => {
                             LogEvent::new(
                                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -784,7 +811,9 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                 explorer_id: explorer.explorer_id,
                 generated: Ok(()),
             }) {
-                Ok(_) => {}
+                Ok(_) => {
+                    explorer.set_state(ExplorerState::Idle);
+                }
                 Err(err) => {
                     LogEvent::new(
                         Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
