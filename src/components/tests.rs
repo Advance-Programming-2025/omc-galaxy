@@ -563,4 +563,72 @@ mod tests {
             assert!(result.is_ok());
         }
     }
+
+
+    #[cfg(test)]
+    mod tests_bag_content_request {
+        use super::*;
+        use crate::components::orchestrator::Orchestrator;
+        use crate::utils::registry::PlanetType;
+
+        #[test]
+        fn test_send_bag_content_success() {
+            let mut orch = Orchestrator::new().unwrap();
+            let planet_id = 1;
+            let explorer_id = 100;
+
+            orch.add_planet(planet_id, PlanetType::OneMillionCrabs).unwrap();
+
+            orch.add_tommy_explorer(explorer_id, planet_id).unwrap();
+
+            let result = orch.send_bag_content_request(explorer_id);
+
+            assert!(
+                result.is_ok(),
+                "L'invio della richiesta bag_content all'explorer {} è fallito: {:?}",
+                explorer_id,
+                result.err()
+            );
+        }
+
+        #[test]
+        fn test_send_bag_content_missing_explorer() {
+            let orch = Orchestrator::new().unwrap();
+            let invalid_explorer_id = 999;
+
+            let result = orch.send_bag_content_request(invalid_explorer_id);
+
+            assert!(result.is_err(), "L'invio doveva fallire per un explorer inesistente");
+            assert_eq!(
+                result.unwrap_err(),
+                format!("No sender found for explorer {}", invalid_explorer_id)
+            );
+        }
+
+        #[test]
+        fn test_send_bag_content_disconnected_channel() {
+            let mut orch = Orchestrator::new().unwrap();
+            let planet_id = 2;
+            let explorer_id = 200;
+
+            orch.add_planet(planet_id, PlanetType::Ciuc).unwrap();
+            orch.add_tommy_explorer(explorer_id, planet_id).unwrap();
+
+            let (dead_sender, dead_receiver) = crossbeam_channel::unbounded();
+            drop(dead_receiver);
+
+            let (_, planet_sender) = orch.explorer_channels.get(&explorer_id).unwrap().clone();
+            orch.explorer_channels.insert(explorer_id, (dead_sender, planet_sender));
+
+            let result = orch.send_bag_content_request(explorer_id);
+
+            assert!(result.is_err());
+            let err_msg = result.unwrap_err();
+            assert!(
+                err_msg.contains("Failed to send bag content request"),
+                "Il messaggio di errore era imprevisto: {}",
+                err_msg
+            );
+        }
+    }
 }

@@ -10,10 +10,12 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
     match msg {
         PlanetToExplorer::SupportedResourceResponse { resource_list } => {
             update_basic_resources(explorer, resource_list);
+            explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
         PlanetToExplorer::SupportedCombinationResponse { combination_list } => {
             update_complex_resources(explorer, combination_list);
+            explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
         PlanetToExplorer::GenerateResourceResponse { resource } => {
@@ -23,6 +25,7 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
             //         explorer_id: explorer.explorer_id,
             //         bag_content: explorer.bag.to_resource_types() })
             //     .unwrap();
+            explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
         PlanetToExplorer::CombineResourceResponse { complex_response } => {
@@ -32,10 +35,12 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
             //         explorer_id: explorer.explorer_id,
             //         bag_content: explorer.bag.to_resource_types() })
             //     .unwrap();
+            explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
         PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {
             explorer.set_energy_cells(available_cells);
+            explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
         PlanetToExplorer::Stopped => {
@@ -137,6 +142,8 @@ pub fn put_complex_resource_in_bag(
             // Put the resources back in the bag
             explorer.insert_in_bag(res1);
             explorer.insert_in_bag(res2);
+
+            explorer.set_energy_cells(0);
         }
     }
 }

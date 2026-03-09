@@ -17,6 +17,10 @@ impl TopologyManager {
 
         while let Some(current) = queue.pop_front() {
             let info = self.get(current)?;
+            // let Some(info) = self.get(current) else {
+            //     // nodo non ancora in topologia → è un frontier
+            //     return Some(self.reconstruct_path(parent_map, current));
+            // };
 
             if !info.is_complete() {
                 // planet exists, but we don't have its resource info
@@ -48,6 +52,16 @@ impl TopologyManager {
             curr = parent;
         }
         path
+        // let mut path = VecDeque::new();
+        // let mut curr = target;
+        // loop {
+        //     path.push_front(curr);
+        //     match parent_map.get(&curr) {
+        //         Some(&parent) => curr = parent,
+        //         None => break,
+        //     }
+        // }
+        // path
     }
 
     /// Finds the fastest path to a planet that has the specified resource through a BFS.

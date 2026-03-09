@@ -148,12 +148,46 @@ impl TopologyManager {
 
     /// Checks if all the known planets' information are complete.
     pub fn is_fully_discovered(&self) -> bool {
-        self.known_planets().iter().all(|id| {
+        let mut all_known_ids = HashSet::new();
+
+        for (id, info) in &self.planets {
+            all_known_ids.insert(*id);
+            if let Some(neighbours) = &info.neighbours {
+                for &neighbor in neighbours {
+                    all_known_ids.insert(neighbor);
+                }
+            }
+        }
+
+        if all_known_ids.is_empty() {
+            return false;
+        }
+
+        all_known_ids.iter().all(|id| {
             if let Some(planet_info) = self.planets.get(id) {
                 planet_info.is_complete()
             } else {
                 false
             }
         })
+    }
+    // pub fn is_fully_discovered(&self) -> bool {
+    //     self.known_planets().iter().all(|id| {
+    //         if let Some(planet_info) = self.planets.get(id) {
+    //             planet_info.is_complete()
+    //         } else {
+    //             false
+    //         }
+    //     })
+    // }
+
+    /// Remove the planet from the explorer memory
+    pub fn mark_as_dead(&mut self, planet_id: ID) {
+        self.planets.remove(&planet_id);
+        for info in self.planets.values_mut() {
+            if let Some(neighbours) = &mut info.neighbours {
+                neighbours.remove(&planet_id);
+            }
+        }
     }
 }
