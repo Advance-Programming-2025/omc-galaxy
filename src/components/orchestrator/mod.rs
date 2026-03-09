@@ -74,6 +74,9 @@ pub struct Orchestrator {
 
     //Galaxy
     pub galaxy_topology: GalaxyTopology,
+    /// `(planet_id, (planet index in the adj matrix, PlanetType))`
+    /// 
+    /// Indexed by the planet_id returns the couple: \[planet_idx, PlanetType]
     pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
 
     //Status for each planet and explorers, BTreeMaps are useful for printing

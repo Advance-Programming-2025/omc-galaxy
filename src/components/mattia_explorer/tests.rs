@@ -201,7 +201,7 @@ mod test_one_million_crabs_planet {
             .send_bag_content_request(explorer_id)
             .expect("testing expect");
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0)
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id)
             .expect("testing expect");
         new_explorer
             .planet_channels
@@ -342,7 +342,7 @@ mod test_one_million_crabs_planet {
             .send_bag_content_request(explorer_id)
             .expect("testing expect");
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0)
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id)
             .expect("testing expect");
         new_explorer
             .planet_channels
@@ -525,6 +525,7 @@ mod test_one_million_crabs_planet {
             orchestrator
                 .send_internal_state_request(
                     &orchestrator.planet_channels.get(&planet_id).unwrap().0,
+                    planet_id,
                 )
                 .expect("testing expect");
 

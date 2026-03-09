@@ -183,8 +183,6 @@ macro_rules! log_message {
     }};
 }
 
-pub const TIMEOUT_DURATION: Duration = Duration::from_millis(2000);
-
 #[cfg(feature = "debug-prints")]
 #[macro_export]
 macro_rules! debug_println {

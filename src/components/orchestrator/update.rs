@@ -12,7 +12,9 @@ use logging_utils::{
     LoggableActor, Sender, LOG_ACTORS_ACTIVITY,
 };
 use rand::{random, seq::IndexedRandom, Rng};
+use std::collections::HashSet;
 use std::sync::LockResult;
+use std::time::Duration;
 
 use crate::utils::registry::PlanetType;
 use crate::{components::orchestrator::Orchestrator, utils::Status};
@@ -39,11 +41,15 @@ impl Orchestrator {
     /// using the galaxy lookup hashmap.
     ///
     /// * `dead_planet_pos` - Position of the dead planet in the matrix. Must be a valid index
-    pub fn destroy_topology_link(&mut self, dead_planet_pos: usize) -> Result<(), String> {
+    pub fn destroy_topology_link(&mut self, dead_planet_id: usize) -> Result<(), String> {
         //LOG
-        log_fn_call!(self, "destroy_topology_link()", dead_planet_pos,);
+        log_fn_call!(self, "destroy_topology_link()", dead_planet_id,);
         //LOG
-
+        let dead_planet_pos = self
+            .galaxy_lookup
+            .get(&(dead_planet_id as u32))
+            .map(|(i, _)| *i as usize)
+            .ok_or_else(|| format!("planet {} not in lookup", dead_planet_id))?;
         let gtop_len = self.galaxy_topology.len();
         if dead_planet_pos < gtop_len {
             for i in 0..gtop_len {
@@ -82,20 +88,26 @@ impl Orchestrator {
     /// Starts the AI of every planet.
     ///
     /// Goes through every PlanetToOrchestrator channel and sends the `StartPlanetAI`
-    /// message. As of version 0.1 of the project, the execution of this function is
-    /// non-deterministic and might never return in case one of the channels just
-    /// hangs forever.
+    /// message. Each planet has 1 second to respond. If a planet does not respond
+    /// within 1 second, the message is re-sent once. If it still does not respond
+    /// after the second attempt, an error is returned listing the unresponsive planets.
     ///
-    /// Returns Err if any of the communication channels are inaccessible.
+    /// Returns Err if any of the communication channels are inaccessible or if any
+    /// planet fails to respond after a retry.
     pub(crate) fn start_all_planet_ais(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "start_all_planet_ais()");
         //LOG
 
+        // Collect all planet ids that we need to hear back from
+        let mut pending_planets: HashSet<u32> = HashSet::new();
+
         for (_id, (from_orch, _)) in &self.planet_channels {
             from_orch
                 .try_send(OrchestratorToPlanet::StartPlanetAI)
-                .map_err(|_| "Cannot send message to {_id}".to_string())?;
+                .map_err(|_| format!("Cannot send message to {_id}"))?;
+
+            pending_planets.insert(*_id);
 
             //LOG
             log_message!(
@@ -108,25 +120,22 @@ impl Orchestrator {
             //LOG
         }
 
-        let mut count = 0;
-        //TODO REVIEW is it possible that this loop could block forever the game?
+        let timeout = Duration::from_secs(1);
+
+        // First attempt: wait for responses with a 1-second timeout
         loop {
-            if count == self.planet_channels.len() {
+            if pending_planets.is_empty() {
                 //LOG
                 log_internal_op!(
                     self,
                     "action"=>"all planets started",
-                    "count"=>count
+                    "count"=>self.planet_channels.len()
                 );
                 //LOG
-                break;
+                return Ok(());
             }
-            let receive_channel = self
-                .receiver_orch_planet
-                .recv()
-                .map_err(|_| "Cannot receive message from planets".to_string())?;
-            match receive_channel {
-                PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
+            match self.receiver_orch_planet.recv_timeout(timeout) {
+                Ok(PlanetToOrchestrator::StartPlanetAIResult { planet_id }) => {
                     debug_println!("Started Planet AI: {}", planet_id);
 
                     //LOG
@@ -145,12 +154,80 @@ impl Orchestrator {
                     //LOG
                     self.planets_info
                         .update_status(planet_id, Status::Running)?;
-                    count += 1;
+                    pending_planets.remove(&planet_id);
                 }
-                _ => {}
+                Ok(_) => {}
+                Err(_) => {
+                    // Timeout: some planets did not respond in time, break to retry
+                    break;
+                }
             }
         }
-        Ok(())
+
+        // Retry: re-send StartPlanetAI to planets that haven't responded
+        let retry_planets: Vec<u32> = pending_planets.iter().copied().collect();
+        for planet_id in &retry_planets {
+            if let Some((from_orch, _)) = self.planet_channels.get(planet_id) {
+                let _ = from_orch.try_send(OrchestratorToPlanet::StartPlanetAI);
+
+                //LOG
+                log_message!(
+                    ActorType::Orchestrator, 0u32,
+                    ActorType::Planet, *planet_id,
+                    EventType::MessageOrchestratorToPlanet,
+                    "StartPlanetAI (retry)";
+                    "planet_id"=>planet_id
+                );
+                //LOG
+            }
+        }
+
+        // Second attempt: wait again with a 1-second timeout
+        loop {
+            if pending_planets.is_empty() {
+                //LOG
+                log_internal_op!(
+                    self,
+                    "action"=>"all planets started",
+                    "count"=>self.planet_channels.len()
+                );
+                //LOG
+                return Ok(());
+            }
+            match self.receiver_orch_planet.recv_timeout(timeout) {
+                Ok(PlanetToOrchestrator::StartPlanetAIResult { planet_id }) => {
+                    debug_println!("Started Planet AI: {}", planet_id);
+
+                    //LOG
+                    let event = LogEvent::new(
+                        Some(Participant::new(ActorType::Planet, planet_id)),
+                        Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                        EventType::MessagePlanetToOrchestrator,
+                        LOG_ACTORS_ACTIVITY,
+                        payload!(
+                            "message"=>"StartPlanetAIResult",
+                            "planet_id"=>planet_id,
+                            "status"=>"Running"
+                        ),
+                    );
+                    event.emit();
+                    //LOG
+                    self.planets_info
+                        .update_status(planet_id, Status::Running)?;
+                    pending_planets.remove(&planet_id);
+                }
+                Ok(_) => {}
+                Err(_) => {
+                    // Timeout again: these planets are unresponsive
+                    let unresponsive: Vec<String> =
+                        pending_planets.iter().map(|id| id.to_string()).collect();
+                    return Err(format!(
+                        "Planets failed to respond after retry: [{}]",
+                        unresponsive.join(", ")
+                    ));
+                }
+            }
+        }
     }
 
     /// Stops the AI of every planet.

@@ -213,7 +213,7 @@ mod test_One_million_crabs_planet {
         sleep(Duration::from_secs(1));
         orchestrator.send_bag_content_request(explorer_id);
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id);
         let timeout = tick(Duration::from_millis(1000));
         loop {
             select! {
@@ -309,7 +309,7 @@ mod test_One_million_crabs_planet {
         sleep(Duration::from_secs(1));
         orchestrator.send_bag_content_request(explorer_id);
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0);
+            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id);
         let timeout = tick(Duration::from_millis(1000));
         loop {
             select! {

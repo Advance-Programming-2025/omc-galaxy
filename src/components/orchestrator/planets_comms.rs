@@ -63,7 +63,7 @@ impl Orchestrator {
         self.emit_sunray_send(planet_id);
 
         //send update request
-        self.send_internal_state_request(sender)?;
+        self.send_internal_state_request(sender, planet_id)?;
 
         //LOG
         log_message!(
@@ -131,7 +131,7 @@ impl Orchestrator {
             .map_err(|_| "Unable to send asteroid to planet: {id}".to_string());
         self.emit_asteroid_send(planet_id);
         //send update request
-        self.send_internal_state_request(sender)?;
+        self.send_internal_state_request(sender, planet_id)?;
 
         //LOG
         log_message!(
@@ -206,7 +206,7 @@ impl Orchestrator {
             ActorType::Orchestrator,
             0u32,
             ActorType::Planet,
-            0u32, //TODO missing planet id
+            planet_id,
             EventType::MessageOrchestratorToPlanet,
             "KillPlanet",
         );
@@ -246,6 +246,7 @@ impl Orchestrator {
     pub fn send_internal_state_request(
         &self,
         sender: &Sender<OrchestratorToPlanet>,
+        planet_id: ID,
     ) -> Result<(), String> {
         //LOG
         log_fn_call!(
@@ -262,7 +263,7 @@ impl Orchestrator {
             ActorType::Orchestrator,
             0u32,
             ActorType::Planet,
-            0u32, //TODO missing planet id
+            planet_id,
             EventType::MessageOrchestratorToPlanet,
             "RequestPlanetState",
         );

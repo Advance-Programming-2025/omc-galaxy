@@ -19,6 +19,7 @@ use logging_utils::{
 use crate::components::explorer::BagType;
 use crate::utils::ExplorerInfoMap;
 use crate::{components::orchestrator::Orchestrator, utils::Status};
+pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
 impl Orchestrator {
     /// Handle the planet messages that are sent through the orchestrator's
@@ -118,29 +119,7 @@ impl Orchestrator {
                         );
                         //LOG
                         //sending explorer kill
-                        let mut ris = "".to_string();
-                        for i in self
-                            .explorers_info
-                            .iter()
-                            .filter(|x| x.1.current_planet_id == planet_id)
-                        {
-                            match self
-                                .explorer_channels
-                                .get(i.0)
-                                .unwrap()
-                                .0
-                                .send(OrchestratorToExplorer::KillExplorer)
-                            {
-                                Ok(_) => {
-                                    ris = "".to_string();
-                                }
-                                Err(err) => {
-                                    //todo logs
-                                    ris.push_str(&err.to_string());
-                                }
-                            }
-                        }
-                        return if ris.is_empty() { Ok(()) } else { Err(ris) };
+                        self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                     }
                 }
             }
@@ -166,8 +145,8 @@ impl Orchestrator {
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
                 self.destroy_topology_link(planet_id as usize)?;
                 self.planets_info.update_status(planet_id, Status::Dead);
-                //todo send kill to every explorer on the planet
                 self.emit_planet_death(planet_id);
+
                 //LOG
                 debug_println!("Planet killed: {}", planet_id);
                 let event = LogEvent::new(
@@ -181,6 +160,8 @@ impl Orchestrator {
                     ),
                 );
                 event.emit();
+                //killing explorer just in case the KillPlanet message is manually sended
+                self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                 //LOG
             }
             // PlanetToOrchestrator::OutgoingExplorerResponse { planet_id, res }=>{},
@@ -296,7 +277,14 @@ impl Orchestrator {
                         }
                     }
                     Err(err) => {
-                        //todo logs
+                        log_message!(
+                            ActorType::Planet,
+                            planet_id,
+                            ActorType::Orchestrator,
+                            0u32,
+                            EventType::MessagePlanetToOrchestrator,
+                            err,
+                        )
                     }
                 }
             }
@@ -687,7 +675,7 @@ impl Orchestrator {
     pub fn handle_game_messages(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "handle_game_messages()");
-        let deadline = Instant::now() + Duration::from_millis(10);
+        let deadline = Instant::now() + TIMEOUT_DURATION;
         while Instant::now() < deadline {
             select! {
                 recv(self.receiver_orch_planet)->msg=>{
@@ -733,4 +721,29 @@ impl Orchestrator {
 
         Ok(())
     }
+    fn send_kill_to_explorers_on_dying_planet(&mut self, planet_id: &ID) ->Result<(), String>{
+        let mut ris = "".to_string();
+        for i in self
+            .explorers_info
+            .iter()
+            .filter(|x| x.1.current_planet_id == *planet_id&&x.1.status!=Status::Dead)
+        {
+            match self
+                .explorer_channels
+                .get(i.0)
+                .unwrap()
+                .0
+                .send(OrchestratorToExplorer::KillExplorer)
+            {
+                Ok(_) => {
+                    ris = "".to_string();
+                }
+                Err(err) => {
+                    ris.push_str(&err.to_string());
+                }
+            }
+        }
+        return if ris.is_empty() { Ok(()) } else { Err(ris) };
+    }
 }
+

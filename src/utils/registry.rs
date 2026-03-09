@@ -43,8 +43,7 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
     map.insert(
         PlanetType::Ciuc,
         Box::new(|rx_o, tx_p, rx_e, planet_id| {
-            one_million_crabs::planet::create_planet(rx_o, tx_p, rx_e, planet_id) //TODO change this with ciuc
-            // Ok(ciuc_planet::create_planet(rx_o, tx_p, rx_e, id))),
+            Ok(ciuc_planet::create_planet(rx_o, tx_p, rx_e, planet_id))
         }),
     );
 
@@ -68,6 +67,7 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
         PlanetType::ImmutableCosmicBorrow,
         Box::new(|rx_o, tx_o, rx_e, planet_id| {
             one_million_crabs::planet::create_planet(rx_o, tx_o, rx_e, planet_id) //TODO change this with immutable cosmic borrow
+            //immutable_cosmic_borrow::create_planet()
         }),
     );
     map.insert(
