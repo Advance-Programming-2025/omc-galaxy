@@ -291,7 +291,7 @@ fn current_planet_request(explorer: &mut Explorer) {
         planet_id: explorer.planet_id(),
     }) {
         Ok(_) => {
-            explorer.set_state(ExplorerState::Idle);
+            // explorer.set_state(ExplorerState::Idle);
         }
         Err(err) => {
             LogEvent::new(
