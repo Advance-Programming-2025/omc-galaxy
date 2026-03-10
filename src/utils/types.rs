@@ -1,3 +1,4 @@
+use common_game::logging::ActorType;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt::Debug;
 use std::path::Iter;
@@ -9,10 +10,11 @@ use common_game::components::resource::{BasicResourceType, ComplexResourceType, 
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use crossbeam_channel::{Receiver, Sender};
+use logging_utils::{log_internal_op, LoggableActor};
 use rustrelli::planet;
 
-use crate::utils::Status;
 use crate::utils::registry::PlanetType;
+use crate::utils::Status;
 
 pub type PlanetFactory = Box<
     dyn Fn(
@@ -35,7 +37,7 @@ pub type GalaxyTopology = Vec<Vec<bool>>;
 pub type GalaxySnapshot = Vec<(u32, u32)>;
 
 pub struct PlanetInfoMap {
-    pub(crate) map: BTreeMap<u32, PlanetInfo>, // todo i made this public for testing purpose
+    pub(crate) map: BTreeMap<u32, PlanetInfo>,
 }
 impl PlanetInfoMap {
     pub fn new() -> Self {
@@ -45,15 +47,20 @@ impl PlanetInfoMap {
     }
     pub fn insert(&mut self, planet_id: u32, info: PlanetInfo) {
         self.map.insert(planet_id, info);
+        log_internal_op!(dir ActorType::Planet, planet_id, "action"=>format!("inserted new planet in PlanetInfoMap: {}", planet_id));
     }
+
+    ///Warning! this function overwrite the old value if there is
     pub fn insert_status(&mut self, planet_id: u32, name: PlanetType, status: Status) {
         let new_info = PlanetInfo::from(name, status, vec![], 0, false, None, None);
+        log_internal_op!(dir ActorType::Planet, planet_id, "action"=>format!("new status inserted in PlanetInfoMap, planet_id:{}, planet_info:{:?}", planet_id, new_info));
         self.map.insert(planet_id, new_info);
     }
 
     pub fn update_status(&mut self, planet_id: u32, status: Status) -> Result<(), String> {
         if let Some(planet_info) = self.map.get_mut(&planet_id) {
             planet_info.status = status;
+            log_internal_op!(dir ActorType::Planet, planet_id, "action"=>format!("planet: {} status updated to: {:?}", planet_id, status));
             Ok(())
         } else {
             Err("planet info is not already present".to_string())
@@ -65,6 +72,7 @@ impl PlanetInfoMap {
         supported_resources: HashSet<BasicResourceType>,
     ) -> Result<(), String> {
         if let Some(planet_info) = self.map.get_mut(&planet_id) {
+            log_internal_op!(dir ActorType::Planet, planet_id, "action"=> format!("planet: {} supported resources updated to: {:?}", planet_id, supported_resources));
             planet_info.supported_resources = Some(supported_resources);
             Ok(())
         } else {
@@ -77,6 +85,7 @@ impl PlanetInfoMap {
         supported_combination: HashSet<ComplexResourceType>,
     ) -> Result<(), String> {
         if let Some(planet_info) = self.map.get_mut(&planet_id) {
+            log_internal_op!(dir ActorType::Planet, planet_id, "action"=> format!("planet: {} supported resource combinations updated to: {:?}", planet_id, supported_combination));
             planet_info.supported_combination = Some(supported_combination);
             Ok(())
         } else {
@@ -86,6 +95,9 @@ impl PlanetInfoMap {
 
     pub fn update_from_planet_state(&mut self, planet_id: u32, planet_state: DummyPlanetState) {
         if let Some(planet_info) = self.map.get_mut(&planet_id) {
+            log_internal_op!(dir ActorType::Planet, planet_id, "action"=>format!(
+                "updated planet info from DummyPlanetState, new energy_cells: {:?}, new charged_cells_count: {}, new has_rocket: {}",  planet_state.energy_cells, planet_state.charged_cells_count, planet_state.has_rocket
+            ));
             planet_info.energy_cells = planet_state.energy_cells;
             planet_info.charged_cells_count = planet_state.charged_cells_count;
             planet_info.rocket = planet_state.has_rocket;
@@ -212,22 +224,26 @@ impl ExplorerInfoMap {
 
     pub fn insert(&mut self, explorer_id: u32, info: ExplorerInfo) {
         self.map.insert(explorer_id, info);
+        log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("inserted new explorer in ExplorerInfoMap: {}", explorer_id));
     }
 
     pub fn insert_status(&mut self, explorer_id: u32, status: Status) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
             explorer_info.status = status;
+            log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} status updated to: {:?}", explorer_id, status));
         }
     }
 
     pub fn update_bag(&mut self, explorer_id: u32, bag: Vec<ResourceType>) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
+            log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} bag updated to: {:?}", explorer_id, bag));
             explorer_info.bag = bag;
         }
     }
 
     pub fn update_current_planet(&mut self, explorer_id: u32, planet_id: u32) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
+            log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} current planet updated to: {}", explorer_id, planet_id));
             explorer_info.current_planet_id = planet_id;
         }
     }

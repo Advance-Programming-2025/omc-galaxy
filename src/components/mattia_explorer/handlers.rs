@@ -11,7 +11,7 @@ use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
 use crossbeam_channel::Sender;
-use logging_utils::{LoggableActor, log_internal_op, log_message, payload, warning_payload};
+use logging_utils::{log_internal_op, log_message, payload, warning_payload, LoggableActor};
 use one_million_crabs::planet::ToString2;
 use std::collections::HashSet;
 
@@ -49,7 +49,7 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         .insert(explorer.planet_id, PlanetInfo::new(0));
     explorer.current_planet_neighbors_update = false;
     explorer.manual_mode = false;
-    explorer.ai_data = AiData::new();
+    explorer.ai_data = AiData::new(explorer.ai_data.params.clone());
     log_message!(
         ActorType::Orchestrator,
         0u32,

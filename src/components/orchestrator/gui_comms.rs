@@ -1,4 +1,4 @@
-use crate::{PlanetInfoMap, utils::registry::PlanetType};
+use crate::{utils::registry::PlanetType, PlanetInfoMap};
 use std::sync::Arc;
 
 use common_game::components::resource::BasicResourceType;
@@ -7,12 +7,12 @@ use rustc_hash::FxHashMap;
 
 use crate::utils::ExplorerInfoMap;
 use crate::{
-    GalaxyTopology,
     components::orchestrator::{Orchestrator, OrchestratorEvent},
     utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
+    GalaxyTopology,
 };
-use logging_utils::LoggableActor;
 use logging_utils::log_fn_call;
+use logging_utils::LoggableActor;
 
 impl Orchestrator {
     /// Get a snapshot of the current galaxy topology
@@ -33,7 +33,18 @@ impl Orchestrator {
         for i in 0..topology.len() {
             for j in (i + 1)..topology[i].len() {
                 if topology[i][j] {
-                    edges.push((i as u32, j as u32));
+                    // Translate matrix indices back to real planet_ids
+                    let planet_a = self
+                        .galaxy_reverse_lookup
+                        .get(&(i as u32))
+                        .copied()
+                        .unwrap_or(i as u32);
+                    let planet_b = self
+                        .galaxy_reverse_lookup
+                        .get(&(j as u32))
+                        .copied()
+                        .unwrap_or(j as u32);
+                    edges.push((planet_a, planet_b));
                 }
             }
         }
@@ -105,10 +116,9 @@ impl Orchestrator {
             .push(OrchestratorEvent::AsteroidSent { planet_id });
     }
 
-    pub(crate) fn emit_explorer_move(&mut self,explorer_id: u32, planet_id: u32) {
+    pub(crate) fn emit_explorer_move(&mut self, explorer_id: u32, planet_id: u32) {
         info!("GUI event esplorer_move was triggered");
         self.gui_messages
             .push(OrchestratorEvent::ExplorerMoved { explorer_id, destination: planet_id });
     }
-
 }

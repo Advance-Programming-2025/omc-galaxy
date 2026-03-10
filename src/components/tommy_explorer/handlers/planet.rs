@@ -107,6 +107,8 @@ pub fn put_basic_resource_in_bag(explorer: &mut Explorer, resource: Option<Basic
             "generate resource response";
             "explorer data"=>format!("{:?}", explorer)
         );
+    } else {
+        explorer.set_energy_cells(0);
     }
 }
 

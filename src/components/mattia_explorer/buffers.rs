@@ -1,4 +1,3 @@
-use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::handlers::{
     combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
     manage_combine_response, manage_generate_response, manage_supported_combination_response,
@@ -6,15 +5,16 @@ use crate::components::mattia_explorer::handlers::{
     start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request,
 };
 use crate::components::mattia_explorer::states::{
-    ExplorerState, orch_msg_match_state, planet_msg_match_state,
+    orch_msg_match_state, planet_msg_match_state, ExplorerState,
 };
+use crate::components::mattia_explorer::Explorer;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
 use common_game::protocols::planet_explorer::PlanetToExplorer;
 use logging_utils::log_fn_call;
-use logging_utils::{LoggableActor, warning_payload};
+use logging_utils::{warning_payload, LoggableActor};
 
 /// this function manages all the messages that were put in the buffers
 /// (in the same way the explorer usually manages them)
@@ -110,7 +110,11 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
                             if let Some(planet_info) =
                                 explorer.topology_info.get_mut(&explorer.planet_id)
                             {
-                                planet_info.update_charge_rate(available_cells, explorer.time);
+                                planet_info.update_charge_rate(
+                                    available_cells,
+                                    explorer.time,
+                                    explorer.ai_data.params.charge_rate_alpha,
+                                );
                             }
                             if !resources && !combinations {
                                 explorer.state = ExplorerState::Idle;

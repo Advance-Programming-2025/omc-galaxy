@@ -1,4 +1,4 @@
-use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
+use logging_utils::{get_receiver_id, get_sender_id, LoggableActor};
 use std::{
     fs,
     sync::{Arc, RwLock},
@@ -13,7 +13,7 @@ use common_game::{
         planet_explorer::{ExplorerToPlanet, PlanetToExplorer},
     },
 };
-use crossbeam_channel::{Receiver, Sender, unbounded};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use rustc_hash::FxHashMap;
 
 use super::Orchestrator;
@@ -22,13 +22,13 @@ use crate::utils::registry::PlanetType::{
     RustyCrab, TheCompilerStrikesBack,
 };
 use crate::{
-    GalaxyTopology,
     components::mattia_explorer::Explorer as MattiaExplorer,
     components::tommy_explorer::Explorer as TommyExplorer,
     utils::{
+        registry::{PlanetType, PLANET_REGISTRY},
         Status,
-        registry::{PLANET_REGISTRY, PlanetType},
     },
+    GalaxyTopology,
 };
 
 use crate::utils::{ExplorerInfo, PlanetInfo};
@@ -46,7 +46,6 @@ impl Orchestrator {
         //LOG
         Vec::new()
     }
-
 
     /// Initialize communication channels for planets.
     ///
@@ -222,11 +221,7 @@ impl Orchestrator {
     /// * `sender_explorer` - pre-existing explorer to planet channel
     /// REMEMBER in order to work this function needs to be called when the planet ai is ALREADY
     /// running, not before
-    pub fn add_tommy_explorer(
-        &mut self,
-        explorer_id: u32,
-        planet_id: u32,
-    ) -> Result<(), String> {
+    pub fn add_tommy_explorer(&mut self, explorer_id: u32, planet_id: u32) -> Result<(), String> {
         log_fn_call!(
             self,
             "add_tommy_explorer()",
@@ -293,15 +288,11 @@ impl Orchestrator {
 
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                match orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                if let Err(err) = orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
                     explorer_id,
                     new_sender: sender_planet.clone(),
                 }) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        //todo logs
-                        return Err(err.to_string());
-                    }
+                    return Err(err.to_string());
                 }
             }
             None => {}
@@ -309,7 +300,7 @@ impl Orchestrator {
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(move || -> Result<(), String> {
-            let _ = new_explorer.run().map_err(|_| "Error run"); //TODO implement a run function for explorer to interact with orchestrator
+            let _ = new_explorer.run().map_err(|_| "Error run");
             Ok(())
         });
         log_internal_op!(
@@ -388,15 +379,11 @@ impl Orchestrator {
         );
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                match orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                if let Err(err) =orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
                     explorer_id,
                     new_sender: sender_planet.clone(),
                 }) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        //todo logs
-                        return Err(err.to_string());
-                    }
+                    return Err(err.to_string());
                 }
             }
             None => {}
@@ -405,7 +392,7 @@ impl Orchestrator {
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(move || -> Result<(), String> {
-            let _ = new_explorer.run().map_err(|_| "Error run"); //TODO implement a run function for explorer to interact with orchestrator
+            let _ = new_explorer.run().map_err(|_| "Error run");
             Ok(())
         });
         log_internal_op!(
@@ -534,6 +521,12 @@ impl Orchestrator {
         }
 
         self.galaxy_lookup = new_lookup;
+        // Build the reverse lookup: matrix_index -> planet_id
+        self.galaxy_reverse_lookup = self
+            .galaxy_lookup
+            .iter()
+            .map(|(&planet_id, &(matrix_idx, _))| (matrix_idx, planet_id))
+            .collect();
         //Initialize the orchestrator galaxy topology
         self.initialize_galaxy_by_adj_list(adj_list_for_topology)?;
 
@@ -632,7 +625,6 @@ impl Orchestrator {
         log_fn_call!(self, "initialize_planets_by_ids_list()", ids_list,);
         //LOG
         for planet_id in ids_list.iter() {
-            //TODO we need to initialize the other planets randomly or precisely
             match self.galaxy_lookup.get(&planet_id) {
                 None => {
                     //LOG

@@ -33,8 +33,9 @@ mod test_one_million_crabs_planet {
         let mut orchestrator = Orchestrator::new().unwrap();
         let planet_id = 1;
         let explorer_id = 2;
+        let topology = format!("{},{}\n", planet_id, PlanetType::OneMillionCrabs as u32);
         orchestrator
-            .add_planet(planet_id, PlanetType::OneMillionCrabs)
+            .initialize_galaxy_by_content(&topology)
             .unwrap();
         orchestrator.start_all(&[], &[]).unwrap();
 
@@ -201,7 +202,10 @@ mod test_one_million_crabs_planet {
             .send_bag_content_request(explorer_id)
             .expect("testing expect");
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id)
+            .send_internal_state_request(
+                &orchestrator.planet_channels.get(&planet_id).unwrap().0,
+                planet_id,
+            )
             .expect("testing expect");
         new_explorer
             .planet_channels
@@ -257,8 +261,9 @@ mod test_one_million_crabs_planet {
         let mut orchestrator = Orchestrator::new().unwrap();
         let planet_id = 1;
         let explorer_id = 2;
+        let topology = format!("{},{}\n", planet_id, PlanetType::OneMillionCrabs as u32);
         orchestrator
-            .add_planet(planet_id, PlanetType::OneMillionCrabs)
+            .initialize_galaxy_by_content(&topology)
             .unwrap();
         orchestrator.start_all(&[], &[]).unwrap();
 
@@ -342,7 +347,10 @@ mod test_one_million_crabs_planet {
             .send_bag_content_request(explorer_id)
             .expect("testing expect");
         orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id)
+            .send_internal_state_request(
+                &orchestrator.planet_channels.get(&planet_id).unwrap().0,
+                planet_id,
+            )
             .expect("testing expect");
         new_explorer
             .planet_channels
@@ -402,8 +410,9 @@ mod test_one_million_crabs_planet {
         for _ in 0..50 {
             let planet_id = 1;
             let explorer_id = 2;
+            let topology = format!("{},{}\n", planet_id, PlanetType::OneMillionCrabs as u32);
             orchestrator
-                .add_planet(planet_id, PlanetType::OneMillionCrabs)
+                .initialize_galaxy_by_content(&topology)
                 .unwrap();
             orchestrator.start_all(&[], &[]).unwrap();
 
@@ -690,8 +699,8 @@ mod communication {
 
         //init pianeta
         let planet_id = 0;
-        orch.add_planet(planet_id, PlanetType::BlackAdidasShoe)
-            .unwrap();
+        let topology = format!("{},{}\n", planet_id, PlanetType::BlackAdidasShoe as u32);
+        orch.initialize_galaxy_by_content(&topology).unwrap();
 
         //init explorer
         let explorer_id = 0;
@@ -725,8 +734,8 @@ mod communication {
 
         //init pianeta
         let planet_id = 0;
-        orch.add_planet(planet_id, PlanetType::BlackAdidasShoe)
-            .unwrap();
+        let topology = format!("{},{}\n", planet_id, PlanetType::BlackAdidasShoe as u32);
+        orch.initialize_galaxy_by_content(&topology).unwrap();
 
         //init explorer
         let explorer_id = 0;
@@ -757,8 +766,8 @@ mod communication {
 
         //init pianeta
         let planet_id = 0;
-        orch.add_planet(planet_id, PlanetType::BlackAdidasShoe)
-            .unwrap();
+        let topology = format!("{},{}\n", planet_id, PlanetType::BlackAdidasShoe as u32);
+        orch.initialize_galaxy_by_content(&topology).unwrap();
         //start planet ai
         orch.start_all_planet_ais().unwrap();
 
@@ -795,8 +804,8 @@ mod communication {
 
         //init pianeta
         let planet_id = 0;
-        orch.add_planet(planet_id, PlanetType::OneMillionCrabs)
-            .unwrap();
+        let topology = format!("{},{}\n", planet_id, PlanetType::OneMillionCrabs as u32);
+        orch.initialize_galaxy_by_content(&topology).unwrap();
         //start_planet_ais
         orch.start_all_planet_ais().unwrap();
 
@@ -838,7 +847,10 @@ fn setup_orch_with_explorer(
     explorer_id: u32,
 ) -> Orchestrator {
     let mut orch = Orchestrator::new().unwrap();
-    orch.add_planet(planet_id, planet_type).unwrap();
+    // Initialize the galaxy topology so that NeighborsRequest can be served
+    // Format: "planet_id, planet_type_discriminant\n"
+    let topology = format!("{},{}\n", planet_id, planet_type as u32);
+    orch.initialize_galaxy_by_content(&topology).unwrap();
     orch.start_all_planet_ais().unwrap();
     orch.add_mattia_explorer(explorer_id, planet_id).unwrap();
     orch
@@ -979,12 +991,12 @@ mod lifecycle_tests {
 
         // stop
         orch.send_stop_explorer_ai(0).unwrap();
-        drain_messages(&mut orch, 50);
+        drain_messages(&mut orch, 100);
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Paused);
 
         // start again
         orch.send_start_explorer_ai(0).unwrap();
-        drain_messages(&mut orch, 50);
+        drain_messages(&mut orch, 100);
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
     }
 
@@ -1090,7 +1102,8 @@ mod lifecycle_tests {
     #[test]
     fn multiple_explorers_independent_lifecycle() {
         let mut orch = Orchestrator::new().unwrap();
-        orch.add_planet(0, PlanetType::OneMillionCrabs).unwrap();
+        let topology = format!("{},{}\n", 0, PlanetType::OneMillionCrabs as u32);
+        orch.initialize_galaxy_by_content(&topology).unwrap();
         orch.start_all_planet_ais().unwrap();
 
         orch.add_mattia_explorer(10, 0).unwrap();
@@ -1914,7 +1927,8 @@ mod explorer_planet_comms {
         explorer_id: u32,
     ) -> (Orchestrator, crate::components::mattia_explorer::Explorer) {
         let mut orch = Orchestrator::new().unwrap();
-        orch.add_planet(planet_id, planet_type).unwrap();
+        let topology = format!("{},{}\n", planet_id, planet_type as u32);
+        orch.initialize_galaxy_by_content(&topology).unwrap();
         orch.start_all(&[], &[]).unwrap();
 
         let (sender_orch, receiver_orch, sender_planet, receiver_planet) =

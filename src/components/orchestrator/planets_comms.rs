@@ -1,4 +1,4 @@
-use crate::{Status, components::orchestrator::Orchestrator, settings};
+use crate::{components::orchestrator::Orchestrator, settings, Status};
 use common_game::logging::{Channel, LogEvent, Participant};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
@@ -8,10 +8,13 @@ use common_game::{
 };
 use crossbeam_channel::Sender;
 use log::info;
-use logging_utils::{LoggableActor, debug_println, log_fn_call, log_message, warning_payload};
+use logging_utils::{
+    debug_println, log_fn_call, log_message, log_orch_to_planet, warning_payload, LoggableActor,
+};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
+        log_fn_call!(self, "send_sunray_or_asteroid()");
         // debug_println!("{:?}", self.ticker);
         match settings::pop_sunray_asteroid_sequence() {
             Some('S') => {
@@ -66,14 +69,7 @@ impl Orchestrator {
         self.send_internal_state_request(sender, planet_id)?;
 
         //LOG
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "Sunray",
-        );
+        log_orch_to_planet!(self, "sunray sent", planet_id);
         //LOG
         Ok(())
     }
@@ -134,14 +130,7 @@ impl Orchestrator {
         self.send_internal_state_request(sender, planet_id)?;
 
         //LOG
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "Asteroid",
-        );
+        log_orch_to_planet!(self, "asteroid sent", planet_id);
         //LOG
         Ok(())
     }
@@ -155,7 +144,7 @@ impl Orchestrator {
         log_fn_call!(self, "send_asteroid_to_all()");
         //LOG
 
-        //TODO unwrap cannot fail because every id is contained in the map
+        //unwrap cannot fail because every id is contained in the map
         //collect all of the senders in a vector
         let sender_asteroid: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
             .planet_channels
@@ -195,21 +184,11 @@ impl Orchestrator {
             "send_planet_kill()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
-
-        info!("killing planet {planet_id}");
         //LOG
         sender
             .send(OrchestratorToPlanet::KillPlanet)
             .map_err(|_| "Unable to send kill message to planet: {id}".to_string())?;
-
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "KillPlanet",
-        );
+        log_orch_to_planet!(self, "KillPlanet sent", planet_id);
         Ok(())
     }
 
@@ -258,15 +237,7 @@ impl Orchestrator {
         let handle_by_log = sender
             .send(OrchestratorToPlanet::InternalStateRequest)
             .map_err(|_| "Unable to send planet state request".to_string());
-
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "RequestPlanetState",
-        );
+        log_orch_to_planet!(self, "RequestPlanetState sent", planet_id);
         Ok(())
     }
 
@@ -281,7 +252,17 @@ impl Orchestrator {
             planet_id,
             explorer_id,
         );
-        //todo logs
+
+        // Guard: if the destination planet is dead its channel is disconnected,
+        // so skip the send instead of returning an error.
+        if self.planets_info.is_dead(&planet_id) {
+            debug_println!( //todo cambiarlo in un vero log
+                "send_incoming_explorer_request: planet {} is dead, skipping",
+                planet_id
+            );
+            return Ok(());
+        }
+
         let sender = match self.planet_channels.get(&planet_id) {
             Some(sender) => sender,
             None => {
@@ -305,6 +286,7 @@ impl Orchestrator {
                 new_sender: new_planet_to_explorer_sender.1.clone(),
             }) {
             Ok(_) => {
+                log_orch_to_planet!(self, "IncomingExplorerRequest sent", planet_id);
                 debug_println!("IncomingExplorerRequest sent correctly")
             }
             Err(err) => {
@@ -322,7 +304,6 @@ impl Orchestrator {
                     ),
                 )
                 .emit();
-                //todo logs
                 return Err(err.to_string());
             }
         }

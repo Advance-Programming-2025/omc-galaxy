@@ -9,16 +9,17 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use crossbeam_channel::{SendError, select};
+use crossbeam_channel::{select, SendError};
 use log::info;
 use logging_utils::{
-    LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
-    payload, warning_payload,
+    debug_println, log_explorer_to_orch, log_fn_call, log_internal_op, log_message,
+    log_orch_to_planet, log_planet_to_orch, payload, warning_payload, LoggableActor,
+    LOG_ACTORS_ACTIVITY,
 };
 
 use crate::components::explorer::BagType;
 use crate::utils::ExplorerInfoMap;
-use crate::{components::orchestrator::Orchestrator, utils::Status};
+use crate::{components::orchestrator::Orchestrator, utils::Status, PlanetInfoMap};
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
 impl Orchestrator {
@@ -40,6 +41,7 @@ impl Orchestrator {
             "handle_planet_message()";
             "message_type"=>format!("{:?}", msg)
         );
+        log_planet_to_orch!(format!("{:?} received", msg), msg.planet_id());
         //LOG
 
         match msg {
@@ -47,244 +49,207 @@ impl Orchestrator {
                 debug_println!("SunrayAck from: {}", planet_id);
 
                 self.emit_sunray_ack(planet_id);
-                //LOG
-                log_message!(
-                    ActorType::Planet,
-                    planet_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessagePlanetToOrchestrator,
-                    "SunrayAck",
-                    planet_id
-                );
-                //LOG
             }
             PlanetToOrchestrator::AsteroidAck { planet_id, rocket } => {
                 debug_println!("AsteroidAck from: {}", planet_id);
-                //LOG
-                log_message!(
-                    ActorType::Planet, planet_id,
-                    ActorType::Orchestrator, 0u32,
-                    EventType::MessagePlanetToOrchestrator,
-                    "AsteroidAck",
-                    planet_id;
-                    "has_rocket"=>rocket.is_some()
-                );
-                //LOG
 
-                match rocket {
-                    Some(_) => {
-                        info!("I'm planet {planet_id} and I got an asteroid. Got rocket!");
-                    }
-                    None => {
-                        info!("I'm planet {planet_id} and I got an asteroid. NO rocket!");
-                        //If you have the id then surely that planet exist so we can unwrap without worring
-                        //TODO it seems fine to me but just to be more precise we could add error handling
-                        let sender = &self.planet_channels.get(&planet_id).unwrap().0;
-
-                        //Send KillPlanet message, if it returns Err then the planet it's already killed
-                        //TODO we could log this too
-                        let _log = sender
-                            .send(OrchestratorToPlanet::KillPlanet)
-                            .map_err(|_| "Unable to send to planet: {planet_id}");
-
-                        //LOG
-                        log_message!(
-                            ActorType::Orchestrator, 0u32,
-                            ActorType::Planet, planet_id,
-                            EventType::MessageOrchestratorToPlanet,
-                            "KillPlanet",
-                            planet_id;
-                            "reason"=>"no rocket to deflect asteroid"
+                if let None = rocket {
+                    // Skip if the planet is already dead (e.g. a previous AsteroidAck
+                    // already triggered its kill before this one was processed)
+                    if self.planets_info.get_status(&planet_id) == Status::Dead {
+                        debug_println!( //todo loggare in modo opportuno invece di debug_println
+                            "AsteroidAck for already-dead planet {}, skipping",
+                            planet_id
                         );
-                        //LOG
+                        return Ok(());
+                    }
 
-                        self.destroy_topology_link(planet_id as usize)?;
+                    //If you have the id then surely that planet exists so we can unwrap without worrying
+                    let sender = &self.planet_channels.get(&planet_id).ok_or_else(
+                        || format!{"No channels found in the orchestrator for planet:{}", planet_id}
+                    )?.0;
 
-                        //Update planet State
-                        match self.planets_info.update_status(planet_id, Status::Dead) {
-                            Ok(_) => {}
-                            Err(err) => {
-                                //todo logs
-                                debug_println!("planet status not updated: {}", err);
-                                return Err(err.to_string());
-                            }
+                    //Send KillPlanet message, if it returns Err then the planet it's already killed
+                    sender.send(OrchestratorToPlanet::KillPlanet).map_err(|_| {
+                        format!("Unable to send KillPlanet to planet: {}", planet_id)
+                    })?;
+
+                    //LOG
+                    log_message!(
+                        ActorType::Orchestrator, 0u32,
+                        ActorType::Planet, planet_id,
+                        EventType::MessageOrchestratorToPlanet,
+                        "KillPlanet sent",
+                        planet_id;
+                        "reason"=>"no rocket to deflect asteroid"
+                    );
+                    //LOG
+
+                    self.destroy_topology_link(planet_id as usize)?;
+
+                    //Update planet State
+                    match self.planets_info.update_status(planet_id, Status::Dead) {
+                        Ok(_) => {}
+                        Err(err) => {
+                            debug_println!("planet status not updated: {}", err);
+                            return Err(err.to_string());
                         }
-                        //LOG
-                        log_internal_op!(
-                            self,
-                            "action"=>"planet status updated to Dead",
-                            "planet_id"=>planet_id,
-                            "planet status"=> format!("{:?}",self.planets_info.get_status(&planet_id))
-                        );
-                        //LOG
-                        //sending explorer kill
-                        self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                     }
+                    //LOG
+                    log_internal_op!(
+                        self,
+                        "action"=>"planet status updated to Dead",
+                        "planet_id"=>planet_id,
+                        "planet status"=> format!("{:?}",self.planets_info.get_status(&planet_id))
+                    );
+                    //LOG
+                    //sending explorer kill
+                    self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                 }
             }
             PlanetToOrchestrator::InternalStateResponse {
                 planet_id,
                 planet_state,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Planet,
-                    planet_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessagePlanetToOrchestrator,
-                    "InternalStateResponse",
-                    planet_id,
-                    planet_state,
-                );
-                //LOG
                 self.planets_info
                     .update_from_planet_state(planet_id, planet_state);
             }
             PlanetToOrchestrator::KillPlanetResult { planet_id } => {
+                // Guard: if the planet is already dead (e.g. killed via AsteroidAck
+                // before this KillPlanetResult arrived), skip redundant processing
+                if self.planets_info.get_status(&planet_id) == Status::Dead {
+                    debug_println!(
+                        "KillPlanetResult for already-dead planet {}, skipping",
+                        planet_id
+                    );
+                    return Ok(());
+                }
                 self.destroy_topology_link(planet_id as usize)?;
-                self.planets_info.update_status(planet_id, Status::Dead);
+                self.planets_info.update_status(planet_id, Status::Dead)?;
                 self.emit_planet_death(planet_id);
 
                 //LOG
                 debug_println!("Planet killed: {}", planet_id);
-                let event = LogEvent::new(
+                LogEvent::new(
                     Some(Participant::new(ActorType::Planet, planet_id)),
                     Some(Participant::new(ActorType::Orchestrator, 0u32)),
                     EventType::MessagePlanetToOrchestrator,
                     LOG_ACTORS_ACTIVITY,
                     payload!(
-                        "Message"=>"KillPlanetResult",
+                        "Message"=>"Planet killed",
                         "planet_id"=>planet_id,
                     ),
-                );
-                event.emit();
+                ).emit();
                 //killing explorer just in case the KillPlanet message is manually sended
                 self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                 //LOG
             }
             // PlanetToOrchestrator::OutgoingExplorerResponse { planet_id, res }=>{},
             PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
-                self.planets_info.update_status(planet_id, Status::Running);
+                self.planets_info
+                    .update_status(planet_id, Status::Running)?;
                 //LOG
-                let event = LogEvent::new(
+                LogEvent::new(
                     Some(Participant::new(ActorType::Planet, planet_id)),
                     Some(Participant::new(ActorType::Orchestrator, 0u32)),
                     EventType::MessagePlanetToOrchestrator,
                     LOG_ACTORS_ACTIVITY,
                     payload!(
-                        "message"=>"StartPlanetAIResult",
+                        "message"=>"Planet AI started",
                         "planet_id"=>planet_id
                     ),
-                );
-                event.emit();
+                ).emit();
                 //LOG
             }
             PlanetToOrchestrator::StopPlanetAIResult { planet_id } => {
                 //LOG
-                let event = LogEvent::new(
+                LogEvent::new(
                     Some(Participant::new(ActorType::Planet, planet_id)),
                     Some(Participant::new(ActorType::Orchestrator, 0u32)),
                     EventType::MessagePlanetToOrchestrator,
                     LOG_ACTORS_ACTIVITY,
                     payload!(
-                        "message"=>"StopPlanetAIResult",
+                        "message"=>"Planet AI stopped",
                         "planet_id"=>planet_id
                     ),
-                );
-                event.emit();
+                ).emit();
                 //LOG
+                self.planets_info.update_status(planet_id, Status::Paused)?;
             }
-            PlanetToOrchestrator::Stopped { planet_id } => {
-                log_message!(
-                    ActorType::Planet,
-                    planet_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessagePlanetToOrchestrator,
-                    "Stopped",
-                    planet_id
-                )
-            }
+            PlanetToOrchestrator::Stopped { planet_id } => {}
             PlanetToOrchestrator::IncomingExplorerResponse {
                 planet_id,
                 explorer_id,
                 res,
             } => {
-                log_message!(
-                    ActorType::Planet,
-                    planet_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessagePlanetToOrchestrator,
-                    "PlanetToOrchestrator::IncomingExplorerResponse";
-                    "planet_id"=>planet_id,
-                    "explorer_id" => explorer_id,
-                    "Result"=> format!("{:?}", res)
-                );
-                match res {
-                    Ok(_) => {
-                        let current_planet_id = self
-                            .explorers_info
-                            .get_current_planet(&explorer_id)
-                            .ok_or("could not get explorer planet".to_string())?;
-                        let orch_current_planet_sender =
-                            match self.planet_channels.get(&current_planet_id) {
-                                Some(sender) => sender,
-                                None => {
-                                    return Err(format!("Planet not found: {}", planet_id));
-                                }
-                            };
-                        //this is safe because we already checked it before
-                        let move_to_planet_id = self
-                            .explorers_info
-                            .get(&explorer_id)
-                            .unwrap()
-                            .move_to_planet_id;
-                        if move_to_planet_id >= 0 {
-                            match orch_current_planet_sender
-                                .0
-                                .send(OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id })
-                            {
-                                Ok(_) => {
-                                    log_internal_op!(
-                                        self,
-                                        "Action"=>"sended OutgoingExplorerRequest",
-                                        "planet_id"=>current_planet_id
-                                    )
-                                }
-                                Err(err) => {
-                                    LogEvent::new(
-                                        Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                                        Some(Participant::new(ActorType::Planet, current_planet_id)),
-                                        EventType::MessageOrchestratorToPlanet,
-                                        Channel::Warning,
-                                        warning_payload!(
-                                            "Failed to send OutgoingExplorerRequest",
-                                            err,
-                                            "handle_planet_msg()";
-                                            "msg" => format!("PlanetToOrchestrator::IncomingExplorerResponse {{ {}, {}, {:?} }}",planet_id, explorer_id, res )
-                                        )
-                                    ).emit();
+                if let Ok(_) = res {
+                    // Guard: if the explorer is already dead, skip processing
+                    if self.explorers_info.is_dead(&explorer_id) {
+                        debug_println!(
+                            "IncomingExplorerResponse for dead explorer {}, skipping",
+                            explorer_id
+                        );
+                        return Ok(());
+                    }
 
-                                    return Err(format!(
-                                        "Failed to send explorer request: {}",
-                                        err
-                                    ));
-                                }
+                    let current_planet_id = self
+                        .explorers_info
+                        .get_current_planet(&explorer_id)
+                        .ok_or("could not get explorer planet".to_string())?;
+
+                    // Guard: if the current planet is dead, we cannot send OutgoingExplorerRequest
+                    if self.planets_info.is_dead(&current_planet_id) {
+                        debug_println!(
+                            "IncomingExplorerResponse: current planet {} is dead, skipping",
+                            current_planet_id
+                        );
+                        return Ok(());
+                    }
+
+                    let orch_current_planet_sender =
+                        match self.planet_channels.get(&current_planet_id) {
+                            Some(sender) => sender,
+                            None => {
+                                return Err(format!("Planet not found: {}", planet_id));
+                            }
+                        };
+                    //this is safe because we already checked it before
+                    let move_to_planet_id = self
+                        .explorers_info
+                        .get(&explorer_id)
+                        .unwrap()
+                        .move_to_planet_id;
+                    if move_to_planet_id >= 0 {
+                        match orch_current_planet_sender
+                            .0
+                            .send(OrchestratorToPlanet::OutgoingExplorerRequest { explorer_id })
+                        {
+                            Ok(_) => {
+                                log_message!(
+                                    ActorType::Orchestrator, 0u32,
+                                    ActorType::Planet, current_planet_id,
+                                    EventType::MessageOrchestratorToPlanet,
+                                    "OutgoingExplorerRequest sended"
+                                );
+                            }
+                            Err(err) => {
+                                //todo possible to log this in the main loop
+                                LogEvent::new(
+                                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                                    Some(Participant::new(ActorType::Planet, current_planet_id)),
+                                    EventType::MessageOrchestratorToPlanet,
+                                    Channel::Warning,
+                                    warning_payload!(
+                                        "Failed to send OutgoingExplorerRequest",
+                                        err,
+                                        "handle_planet_msg()";
+                                        "msg" => format!("PlanetToOrchestrator::IncomingExplorerResponse {{ {}, {}, {:?} }}",planet_id, explorer_id, res )
+                                    )
+                                ).emit();
+
+                                return Err(format!("Failed to send explorer request: {}", err));
                             }
                         }
-                    }
-                    Err(err) => {
-                        log_message!(
-                            ActorType::Planet,
-                            planet_id,
-                            ActorType::Orchestrator,
-                            0u32,
-                            EventType::MessagePlanetToOrchestrator,
-                            err,
-                        )
                     }
                 }
             }
@@ -293,25 +258,25 @@ impl Orchestrator {
                 explorer_id,
                 res,
             } => {
-                match res {
-                    Ok(_) => {
-                        let dst_planet_id = match self.explorers_info.get(&explorer_id) {
-                            Some(explorer_info) => explorer_info.move_to_planet_id,
-                            None => {
-                                //todo logs
-                                return Err(format!("Planet not found: {}", planet_id));
-                            }
-                        };
-                        match self.send_move_to_planet(explorer_id, dst_planet_id as u32) {
-                            Ok(_) => {}
-                            Err(err) => {
-                                //todo logs
-                                return Err(format!("Failed to send explorer request: {}", err));
-                            }
-                        }
+                if let Ok(_) = res {
+                    // Guard: if the explorer is already dead, skip sending
+                    if self.explorers_info.is_dead(&explorer_id) {
+                        debug_println!(
+                            "OutgoingExplorerResponse for dead explorer {}, skipping",
+                            explorer_id
+                        );
+                        return Ok(());
                     }
-                    Err(err) => {
-                        //todo logs
+                    //todo aggiungere controllo per pianeta morto?
+
+                    let dst_planet_id = match self.explorers_info.get(&explorer_id) {
+                        Some(explorer_info) => explorer_info.move_to_planet_id,
+                        None => {
+                            return Err(format!("Explorer not found: {}", explorer_id));
+                        }
+                    };
+                    if let Err(err) = self.send_move_to_planet(explorer_id, dst_planet_id as u32) {
+                        return Err(format!("Failed to send explorer request: {}", err));
                     }
                 }
             }
@@ -324,24 +289,41 @@ impl Orchestrator {
         msg: ExplorerToOrchestrator<BagType>,
     ) -> Result<(), String> {
         log_internal_op!(self, "explorer message received");
+        log_explorer_to_orch!(format!("{:?} received", msg), msg.explorer_id());
+
+        // Guard: skip messages from dead explorers (stale messages that were
+        // queued before the explorer was killed). We still allow
+        // KillExplorerResult through so the status update is recorded.
+        let explorer_id_for_guard = msg.explorer_id();
+        if !matches!(msg, ExplorerToOrchestrator::KillExplorerResult { .. }) {
+            if self.explorers_info.is_dead(&explorer_id_for_guard) {
+                debug_println!(
+                    "Ignoring message from dead explorer {}, skipping",
+                    explorer_id_for_guard
+                );
+                return Ok(());
+            }
+        }
+
         match msg {
             ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
                 //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
+                LogEvent::new(
+                    Some(Participant::new(ActorType::Explorer, explorer_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
                     EventType::MessageExplorerToOrchestrator,
-                    "StartExplorerAIResult",
-                    explorer_id
-                );
+                    LOG_ACTORS_ACTIVITY,
+                    payload!(
+                        "message"=> "Explorer AI started",
+                        "explorer_id"=>explorer_id,
+                    )
+                ).emit();
                 //LOG
 
                 self.explorers_info
                     .insert_status(explorer_id, Status::Running);
                 if self.explorers_info.get(&explorer_id).is_none() {
-                    self.send_current_planet_request(explorer_id)?;
+                    self.send_current_planet_request(explorer_id)?; //todo is this necessary?
                 }
 
                 //LOG
@@ -355,21 +337,19 @@ impl Orchestrator {
             ExplorerToOrchestrator::KillExplorerResult { explorer_id } => {
                 debug_println!("Explorer killed: {}", explorer_id);
 
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "KillExplorerResult",
-                    explorer_id
-                );
-                //LOG
-
                 self.explorers_info.insert_status(explorer_id, Status::Dead);
 
                 //LOG
+                LogEvent::new(
+                    Some(Participant::new(ActorType::Explorer, explorer_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                    EventType::MessageExplorerToOrchestrator,
+                    LOG_ACTORS_ACTIVITY,
+                    payload!(
+                        "message"=> "Explorer killed",
+                        "explorer_id"=>explorer_id,
+                    )
+                ).emit();
                 log_internal_op!(
                     self,
                     "action" => "explorer status updated to Dead",
@@ -379,21 +359,22 @@ impl Orchestrator {
             }
             ExplorerToOrchestrator::ResetExplorerAIResult { explorer_id } => {
                 //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
+                LogEvent::new(
+                    Some(Participant::new(ActorType::Explorer, explorer_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
                     EventType::MessageExplorerToOrchestrator,
-                    "ResetExplorerAIResult",
-                    explorer_id
-                );
+                    LOG_ACTORS_ACTIVITY,
+                    payload!(
+                        "message"=> "Explorer AI reset",
+                        "explorer_id"=>explorer_id,
+                    )
+                ).emit();
                 //LOG
                 //the ai is started if it was in manual mode
                 self.explorers_info
                     .insert_status(explorer_id, Status::Running);
                 if self.explorers_info.get(&explorer_id).is_none() {
-                    self.send_current_planet_request(explorer_id)?;
+                    self.send_current_planet_request(explorer_id)?; //todo is this necessary
                 }
 
                 //LOG
@@ -406,17 +387,17 @@ impl Orchestrator {
             }
             ExplorerToOrchestrator::StopExplorerAIResult { explorer_id } => {
                 //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
+                LogEvent::new(
+                    Some(Participant::new(ActorType::Explorer, explorer_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
                     EventType::MessageExplorerToOrchestrator,
-                    "StopExplorerAIResult",
-                    explorer_id
-                );
+                    LOG_ACTORS_ACTIVITY,
+                    payload!(
+                        "message"=> "Explorer AI stopped ",
+                        "explorer_id"=>explorer_id,
+                    )
+                ).emit();
                 //LOG
-
                 self.explorers_info
                     .insert_status(explorer_id, Status::Paused);
                 if self.explorers_info.get(&explorer_id).is_none() {
@@ -437,19 +418,6 @@ impl Orchestrator {
             } => {
                 debug_println!("Explorer {} moved to planet {}", explorer_id, planet_id);
 
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "MovedToPlanetResult",
-                    explorer_id;
-                    "planet_id" => planet_id
-                );
-                //LOG
-
                 self.explorers_info
                     .update_current_planet(explorer_id, planet_id);
 
@@ -459,19 +427,6 @@ impl Orchestrator {
                 explorer_id,
                 planet_id,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "CurrentPlanetResult",
-                    explorer_id;
-                    "planet_id" => planet_id
-                );
-                //LOG
-
                 self.explorers_info
                     .update_current_planet(explorer_id, planet_id);
             }
@@ -479,19 +434,6 @@ impl Orchestrator {
                 explorer_id,
                 supported_resources,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "SupportedResourceResult",
-                    explorer_id;
-                    "resources_count" => supported_resources.len()
-                );
-                //LOG
-
                 //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
                 let planet_id = self
                     .explorers_info
@@ -504,19 +446,6 @@ impl Orchestrator {
                 explorer_id,
                 combination_list,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "SupportedCombinationResult",
-                    explorer_id;
-                    "combinations_count" => combination_list.len()
-                );
-                //LOG
-
                 //dobbiamo aggiornare le info dei pianeti salvarcele una volta per poterle riusare a piacimento
                 let planet_id = self
                     .explorers_info
@@ -529,18 +458,6 @@ impl Orchestrator {
                 explorer_id,
                 generated,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "GenerateResourceResponse",
-                    explorer_id;
-                    "success" => generated.is_ok()
-                );
-                //LOG
                 if generated.is_ok() {
                     self.send_bag_content_request(explorer_id)?;
                 }
@@ -549,127 +466,83 @@ impl Orchestrator {
                 explorer_id,
                 generated,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "CombineResourceResponse",
-                    explorer_id;
-                    "success" => generated.is_ok()
-                );
-                //LOG
-
-                self.send_bag_content_request(explorer_id)?;
+                if generated.is_ok() {
+                    self.send_bag_content_request(explorer_id)?;
+                }
             }
             ExplorerToOrchestrator::BagContentResponse {
                 explorer_id,
                 bag_content,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "BagContentResponse",
-                    explorer_id;
-                    "items_count" => bag_content.len()
-                );
-                //LOG
-
                 self.explorers_info.update_bag(explorer_id, bag_content);
             }
             ExplorerToOrchestrator::NeighborsRequest {
                 explorer_id,
                 current_planet_id,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "NeighborsRequest",
-                    explorer_id;
-                    "current_planet_id" => current_planet_id
-                );
-                //LOG
                 self.send_neighbours_response(explorer_id, current_planet_id)?;
             }
             ExplorerToOrchestrator::TravelToPlanetRequest {
-                //todo nel caso non sia possibile muoversi la funzione
-                explorer_id, //todo deve mandare un MoveToPlanet con il sender None
+                explorer_id,
                 current_planet_id,
                 dst_planet_id,
             } => {
-                //LOG
-                log_message!(
-                    ActorType::Explorer,
-                    explorer_id,
-                    ActorType::Orchestrator,
-                    0u32,
-                    EventType::MessageExplorerToOrchestrator,
-                    "TravelToPlanetRequest",
-                    explorer_id;
-                    "current_planet_id" => current_planet_id,
-                    "dst_planet_id" => dst_planet_id,
-                );
-                //LOG
-                //todo un explorer può andare su un pianeta che è stoppato?
+                //un explorer può andare su un pianeta che è stoppato? risposta: no
 
                 // verify that the planet exists and that the destination planet is a neighbour
                 let is_neighbour = {
-                    let guard = &self.galaxy_topology;
+                    // Translate real planet_ids to matrix indices via the lookup table
+                    let current_idx = self
+                        .galaxy_lookup
+                        .get(&current_planet_id)
+                        .map(|(idx, _)| *idx as usize);
+                    let dst_idx = self
+                        .galaxy_lookup
+                        .get(&dst_planet_id)
+                        .map(|(idx, _)| *idx as usize);
 
-                    guard
-                        .get(current_planet_id as usize)
-                        .and_then(|row| row.get(dst_planet_id as usize))
-                        .copied()
-                        .unwrap_or(false)
+                    match (current_idx, dst_idx) {
+                        (Some(ci), Some(di)) => self
+                            .galaxy_topology
+                            .get(ci)
+                            .and_then(|row| row.get(di))
+                            .copied()
+                            .unwrap_or(false),
+                        _ => false,
+                    }
                 };
 
-                // if not existing or not a neighbour of the current planet return and Err
-                //todo questa sarebbe da rimuovere in favore di un aggiornamento corretto della topologia
+                // if not existing or not a neighbour of the current planet, reject
                 if !is_neighbour || self.planets_info.get_status(&dst_planet_id) != Status::Running
                 {
-                    match self.explorer_channels.get(&explorer_id).unwrap().0.send(
-                        OrchestratorToExplorer::MoveToPlanet {
+                    // Try to notify the explorer that the move was rejected.
+                    // If the explorer is already dead its channel is disconnected,
+                    // so we just log and move on instead of propagating the error.
+                    if let Some(ch) = self.explorer_channels.get(&explorer_id) {
+                        let _ = ch.0.send(OrchestratorToExplorer::MoveToPlanet {
                             sender_to_new_planet: None,
                             planet_id: dst_planet_id,
-                        },
-                    ) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            //todo logs
-                        }
+                        });
                     }
-                    return Err("Planet id not found".to_string());
+                    else{
+                        //todo logs per explorer morto
+                    }
+                    return Ok(());
                 }
-                //todo add incomingexplorerRequest and outgoingexplorerrequest
+
                 //updating move_to_planet_id
+                if self.explorers_info.get(&explorer_id).is_some() {
+                    log_internal_op!(self, "updated move_to_planet_id");
+                }
                 match self.explorers_info.get_mut(&explorer_id) {
                     Some(explorer_info) => {
                         explorer_info.move_to_planet_id = dst_planet_id as i32;
                     }
                     None => {
-                        //todo logs
                         return Err(format!("Explorer {} not found", explorer_id));
                     }
                 }
-                match self.send_incoming_explorer_request(dst_planet_id, explorer_id) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        //todo logs
-                    }
-                }
-
-                // else send the move to planet
-                //return self.send_move_to_planet(explorer_id, dst_planet_id);
+                self.send_incoming_explorer_request(dst_planet_id, explorer_id)?
             }
         }
         Ok(())
@@ -691,7 +564,7 @@ impl Orchestrator {
                         Ok(res)=>res,
                         Err(e)=>{
                             //LOG
-                            let event=LogEvent::self_directed(
+                            LogEvent::self_directed(
                                 Participant::new(ActorType::Orchestrator, 0u32),
                                 EventType::InternalOrchestratorAction,
                                 Channel::Warning,
@@ -700,26 +573,49 @@ impl Orchestrator {
                                     e,
                                     "handle_game_messages()"
                                 )
-                            );
-                            event.emit();
+                            ).emit();
                             //LOG
-                            // TODO not using the "e" in Err(e), which version to use? this one or the one used below for explorer msg?
-                            return Err("Cannot receive message from planets".to_string())
+                            return Err(format!{"Cannot receive message from planets: {}", e})
                         },
                     };
-                    self.handle_planet_message(msg_unwraped)?;
+                    let msg_string=format!("{:?}", msg_unwraped);
+                    if let Err(err)=self.handle_planet_message(msg_unwraped){
+                            //LOG
+                            LogEvent::self_directed(
+                                Participant::new(ActorType::Orchestrator, 0u32),
+                                EventType::InternalOrchestratorAction,
+                                Channel::Warning,
+                                warning_payload!(
+                                    format!("A handler returned a error while handling the planet msg: {:?}", msg_string),
+                                    err,
+                                    "handle_game_messages()"
+                                )
+                            ).emit();
+                            //LOG
+                    }
                 }
                 recv(self.receiver_orch_explorer)->msg=>{
                     let msg_unwraped = match msg{
                         Ok(res)=>res,
                         Err(e)=>{
-                            //LOG
-                            // TODO
-                            //LOG
                             return Err(format!("Cannot receive message from explorers: {}", e));
                         },
                     };
-                    self.handle_explorer_message(msg_unwraped)?;
+                    let msg_string=format!("{:?}", msg_unwraped);
+                    if let Err(err)=self.handle_explorer_message(msg_unwraped){
+                            //LOG
+                            LogEvent::self_directed(
+                                Participant::new(ActorType::Orchestrator, 0u32),
+                                EventType::InternalOrchestratorAction,
+                                Channel::Warning,
+                                warning_payload!(
+                                    format!("A handler returned a error while handling the explorer msg: {:?}", msg_string),
+                                    err,
+                                    "handle_game_messages()"
+                                )
+                            ).emit();
+                            //LOG
+                    }
                 }
                 default=>{
 
@@ -729,12 +625,12 @@ impl Orchestrator {
 
         Ok(())
     }
-    fn send_kill_to_explorers_on_dying_planet(&mut self, planet_id: &ID) ->Result<(), String>{
-        let mut ris = "".to_string();
+    fn send_kill_to_explorers_on_dying_planet(&mut self, planet_id: &ID) -> Result<(), String> {
+        log_fn_call!(self, "send_kill_to_explorers_on_dying_planet()", planet_id);
         for i in self
             .explorers_info
             .iter()
-            .filter(|x| x.1.current_planet_id == *planet_id&&x.1.status!=Status::Dead)
+            .filter(|x| x.1.current_planet_id == *planet_id && x.1.status != Status::Dead)
         {
             match self
                 .explorer_channels
@@ -744,14 +640,24 @@ impl Orchestrator {
                 .send(OrchestratorToExplorer::KillExplorer)
             {
                 Ok(_) => {
-                    ris = "".to_string();
+                    log_message!(
+                        ActorType::Orchestrator, 0u32,
+                        ActorType::Explorer, *i.0,
+                        EventType::MessageOrchestratorToExplorer,
+                        "KillExplorer sended"
+                    );
                 }
-                Err(err) => {
-                    ris.push_str(&err.to_string());
+                Err(_err) => {
+                    // The explorer's channel is already disconnected (thread
+                    // exited). This is expected during race conditions when
+                    // multiple kill paths converge. Just log and continue.
+                    debug_println!(
+                        "send_kill_to_explorers_on_dying_planet: explorer {} channel disconnected, skipping",
+                        i.0
+                    );
                 }
             }
         }
-        return if ris.is_empty() { Ok(()) } else { Err(ris) };
+        Ok(())
     }
 }
-

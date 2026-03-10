@@ -1,57 +1,16 @@
-use crate::components::mattia_explorer::ActorType;
-use crate::components::mattia_explorer::Explorer;
+use crate::components::mattia_explorer::ai_params::AiParams;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::ExplorerState;
+use crate::components::mattia_explorer::ActorType;
+use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
-use logging_utils::{LoggableActor, log_fn_call, log_internal_op};
+use logging_utils::{log_fn_call, log_internal_op, LoggableActor};
 use rand::Rng;
 use std::collections::HashMap;
-
-/// Noise level for utility calculations
-const RANDOMNESS_RANGE: f64 = 0.1;
-/// Decay factor for outdated information
-const LAMBDA: f32 = 0.005;
-/// Resource need propagation (kept for future resource-gathering modes)
-const PROPAGATION_FACTOR: f32 = 0.8;
-// --- SAFETY THRESHOLDS ---
-/// Critical danger threshold - immediate evacuation
-const SAFETY_CRITICAL: f32 = 0.3;
-/// Warning threshold - start looking for safer planets
-const SAFETY_WARNING: f32 = 0.6;
-/// Comfortable safety level
-//const SAFETY_COMFORTABLE: f32 = 0.8;
-/// Energy cells threshold to assume planet has rockets
-const ENERGY_CELLS_DEFENSE_THRESHOLD: u32 = 2;
-/// Probability threshold to consider a planet "likely defended"
-//const HIGH_DEFENSE_PROBABILITY: f32 = 0.6;
-/// Probability threshold to consider a planet "possibly defended"
-//const MEDIUM_DEFENSE_PROBABILITY: f32 = 0.3;
-// --- INFORMATION STALENESS ---
-/// Max age (in ticks) before neighbor info is considered stale
-//const MAX_NEIGHBOR_INFO_AGE: u64 = 100;
-/// Max age before energy info is considered stale
-const MAX_ENERGY_INFO_AGE: u64 = 150;
-/// --- EXPLORATION VS SAFETY BALANCE ---
-/// Base utility for exploring unknown planets (when safe)
-//const EXPLORATION_BASE_UTILITY: f32 = 0.7;
-/// Penalty multiplier for information staleness
-//const STALENESS_PENALTY_FACTOR: f32 = 0.01;
-/// Minimum utility to consider moving (prevents thrashing)
-//const MIN_MOVEMENT_UTILITY: f32 = 0.4;
-/// Minimum advantage required to switch actions
-const ACTION_HYSTERESIS_MARGIN: f32 = 0.07;
-// --- CHARGE RATE BASED PREDICTIONS ---
-/// Minimum charge rate to consider planet "actively charging" (1 energy every 5 ticks)
-const MIN_ACTIVE_CHARGE_RATE: f32 = 0.05;
-/// Maximum ticks into future to predict (avoid over-optimistic projections)
-const MAX_PREDICTION_HORIZON: u64 = 100;
-/// maximum ticks for considering a value perfectly unchanged
-const PERFECT_INFO_MAX_TIME: u64 = 10;
-const SAFETY_MIN_DIFF: f32 = 0.07;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum AIActionType {
@@ -131,101 +90,76 @@ impl ResourceNeeds {
             dolphin: 0.0,
         }
     }
-    // pub fn get(&self, resource_type: ResourceType) -> f32 {
-    //     match resource_type {
-    //         //basic
-    //         ResourceType::Basic(BasicResourceType::Oxygen) => self.oxygen,
-    //         ResourceType::Basic(BasicResourceType::Hydrogen) => self.hydrogen,
-    //         ResourceType::Basic(BasicResourceType::Carbon) => self.carbon,
-    //         ResourceType::Basic(BasicResourceType::Silicon) => self.silicon,
-    //         //complex
-    //         ResourceType::Complex(ComplexResourceType::Water) => self.water,
-    //         ResourceType::Complex(ComplexResourceType::Diamond) => self.diamond,
-    //         ResourceType::Complex(ComplexResourceType::Life) => self.life,
-    //         ResourceType::Complex(ComplexResourceType::Robot) => self.robot,
-    //         ResourceType::Complex(ComplexResourceType::Dolphin) => self.dolphin,
-    //         ResourceType::Complex(ComplexResourceType::AIPartner) => self.ai_partner,
-    //     }
-    // }
-    // pub fn get_mut(&mut self, resource_type: ResourceType) -> &mut f32 {
-    //     match resource_type {
-    //         // basic
-    //         ResourceType::Basic(BasicResourceType::Oxygen) => &mut self.oxygen,
-    //         ResourceType::Basic(BasicResourceType::Hydrogen) => &mut self.hydrogen,
-    //         ResourceType::Basic(BasicResourceType::Carbon) => &mut self.carbon,
-    //         ResourceType::Basic(BasicResourceType::Silicon) => &mut self.silicon,
-    //
-    //         // complex
-    //         ResourceType::Complex(ComplexResourceType::Water) => &mut self.water,
-    //         ResourceType::Complex(ComplexResourceType::Diamond) => &mut self.diamond,
-    //         ResourceType::Complex(ComplexResourceType::Life) => &mut self.life,
-    //         ResourceType::Complex(ComplexResourceType::Robot) => &mut self.robot,
-    //         ResourceType::Complex(ComplexResourceType::Dolphin) => &mut self.dolphin,
-    //         ResourceType::Complex(ComplexResourceType::AIPartner) => &mut self.ai_partner,
-    //     }
-    // }
     // return the total need of a resource
-    pub fn get_effective_need(&self, resource: ResourceType) -> f32 {
+    pub fn get_effective_need(&self, resource: ResourceType, params: &AiParams) -> f32 {
+        let pf = params.propagation_factor;
         match resource {
             //level 4
             ResourceType::Complex(ComplexResourceType::AIPartner) => self.ai_partner,
 
             // level 3
             ResourceType::Complex(ComplexResourceType::Robot) => {
-                let ai_partner_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::AIPartner));
-                (self.robot + ai_partner_need * PROPAGATION_FACTOR).min(1.0)
+                let ai_partner_need = self.get_effective_need(
+                    ResourceType::Complex(ComplexResourceType::AIPartner),
+                    params,
+                );
+                (self.robot + ai_partner_need * pf).min(1.0)
             }
             ResourceType::Complex(ComplexResourceType::Dolphin) => self.dolphin,
 
             // level 2
             ResourceType::Complex(ComplexResourceType::Life) => {
-                let robot_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Robot));
-                let dolphin_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Dolphin));
-                (self.life + robot_need * PROPAGATION_FACTOR + dolphin_need * PROPAGATION_FACTOR)
-                    .min(1.0)
+                let robot_need = self
+                    .get_effective_need(ResourceType::Complex(ComplexResourceType::Robot), params);
+                let dolphin_need = self.get_effective_need(
+                    ResourceType::Complex(ComplexResourceType::Dolphin),
+                    params,
+                );
+                (self.life + robot_need * pf + dolphin_need * pf).min(1.0)
             }
             ResourceType::Complex(ComplexResourceType::Diamond) => {
-                let ai_partner_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::AIPartner));
-                (self.diamond + ai_partner_need * PROPAGATION_FACTOR).min(1.0)
+                let ai_partner_need = self.get_effective_need(
+                    ResourceType::Complex(ComplexResourceType::AIPartner),
+                    params,
+                );
+                (self.diamond + ai_partner_need * pf).min(1.0)
             }
 
             // level 1
             ResourceType::Complex(ComplexResourceType::Water) => {
-                let life_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Life));
-                let dolphin_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Dolphin));
-                (self.water + life_need * PROPAGATION_FACTOR + dolphin_need * PROPAGATION_FACTOR)
-                    .min(1.0)
+                let life_need = self
+                    .get_effective_need(ResourceType::Complex(ComplexResourceType::Life), params);
+                let dolphin_need = self.get_effective_need(
+                    ResourceType::Complex(ComplexResourceType::Dolphin),
+                    params,
+                );
+                (self.water + life_need * pf + dolphin_need * pf).min(1.0)
             }
 
             // level 0: basic resources
             ResourceType::Basic(BasicResourceType::Carbon) => {
-                let diamond_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Diamond));
-                let life_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Life));
-                (self.carbon + diamond_need * PROPAGATION_FACTOR + life_need * PROPAGATION_FACTOR)
-                    .min(1.0)
+                let diamond_need = self.get_effective_need(
+                    ResourceType::Complex(ComplexResourceType::Diamond),
+                    params,
+                );
+                let life_need = self
+                    .get_effective_need(ResourceType::Complex(ComplexResourceType::Life), params);
+                (self.carbon + diamond_need * pf + life_need * pf).min(1.0)
             }
             ResourceType::Basic(BasicResourceType::Oxygen) => {
-                let water_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Water));
-                (self.oxygen + water_need * PROPAGATION_FACTOR).min(1.0)
+                let water_need = self
+                    .get_effective_need(ResourceType::Complex(ComplexResourceType::Water), params);
+                (self.oxygen + water_need * pf).min(1.0)
             }
             ResourceType::Basic(BasicResourceType::Hydrogen) => {
-                let water_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Water));
-                (self.hydrogen + water_need * PROPAGATION_FACTOR).min(1.0)
+                let water_need = self
+                    .get_effective_need(ResourceType::Complex(ComplexResourceType::Water), params);
+                (self.hydrogen + water_need * pf).min(1.0)
             }
             ResourceType::Basic(BasicResourceType::Silicon) => {
-                let robot_need =
-                    self.get_effective_need(ResourceType::Complex(ComplexResourceType::Robot));
-                (self.silicon + robot_need * PROPAGATION_FACTOR).min(1.0)
+                let robot_need = self
+                    .get_effective_need(ResourceType::Complex(ComplexResourceType::Robot), params);
+                (self.silicon + robot_need * pf).min(1.0)
             }
         }
     }
@@ -236,19 +170,21 @@ pub struct AiData {
     pub ai_action: AIAction,
     pub last_action: Option<AIActionType>,
     pub last_action_planet_id: Option<ID>,
+    pub params: AiParams,
 }
 impl AiData {
-    pub fn new() -> Self {
+    pub fn new(params: AiParams) -> Self {
         Self {
             resource_needs: ResourceNeeds::new(),
             ai_action: AIAction::new(),
             last_action: None,
             last_action_planet_id: None,
+            params,
         }
     }
 }
 
-fn calculate_time_decay(planet_timestamp: u64, current_time: u64) -> f32 {
+fn calculate_time_decay(planet_timestamp: u64, current_time: u64, params: &AiParams) -> f32 {
     if planet_timestamp == 0 {
         //planet never visited
         0.0
@@ -257,7 +193,7 @@ fn calculate_time_decay(planet_timestamp: u64, current_time: u64) -> f32 {
         let delta_t = (current_time - planet_timestamp) as f32;
 
         // e^(-lambda*delta_t)
-        (-LAMBDA * delta_t).exp()
+        (-params.lambda * delta_t).exp()
     }
 }
 
@@ -271,9 +207,9 @@ fn calculate_max_number_cells(planet_info: &PlanetInfo) -> u32 {
     }
 }
 
-fn add_noise(value: f32) -> f32 {
+fn add_noise(value: f32, params: &AiParams) -> f32 {
     let mut rng = rand::rng();
-    let noise = rng.random_range((1.0 - RANDOMNESS_RANGE)..=(1.0 + RANDOMNESS_RANGE));
+    let noise = rng.random_range((1.0 - params.randomness_range)..=(1.0 + params.randomness_range));
     #[allow(clippy::cast_possible_truncation)]
     (value * noise as f32).clamp(0.0, 1.0)
 }
@@ -283,11 +219,12 @@ fn predict_energy_cells(
     charge_rate: Option<f32>,
     time_elapsed: u64,
     max_cells: u32,
+    params: &AiParams,
 ) -> u32 {
     let energy = current_energy.unwrap_or(1); //default value of 1 energy cells
     let rate = charge_rate.unwrap_or(0.0);
     // Cap prediction horizon to avoid over-optimism
-    let prediction_time = time_elapsed.min(MAX_PREDICTION_HORIZON);
+    let prediction_time = time_elapsed.min(params.max_prediction_horizon);
 
     // Calculate predicted energy accumulation
     #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
@@ -301,7 +238,11 @@ fn predict_energy_cells(
     result
 }
 
-fn estimate_current_energy(planet_info: &PlanetInfo, current_time: u64) -> (u32, f32) {
+fn estimate_current_energy(
+    planet_info: &PlanetInfo,
+    current_time: u64,
+    params: &AiParams,
+) -> (u32, f32) {
     let time_elapsed = current_time.saturating_sub(planet_info.timestamp_energy);
     let max_cells = calculate_max_number_cells(planet_info);
 
@@ -311,18 +252,19 @@ fn estimate_current_energy(planet_info: &PlanetInfo, current_time: u64) -> (u32,
         planet_info.charge_rate,
         time_elapsed,
         max_cells,
+        params,
     );
 
     // Confidence in prediction decreases with time elapsed
     let confidence = if planet_info.energy_cells.is_none() {
         // No energy info at all
         0.0
-    } else if time_elapsed <= PERFECT_INFO_MAX_TIME {
+    } else if time_elapsed <= params.perfect_info_max_time {
         1.0 // Perfect information
-    } else if time_elapsed <= MAX_ENERGY_INFO_AGE {
+    } else if time_elapsed <= params.max_energy_info_age {
         // 1 to 0.5
         #[allow(clippy::cast_precision_loss)]
-        let decay = time_elapsed as f32 / (MAX_ENERGY_INFO_AGE as f32 * 2.0);
+        let decay = time_elapsed as f32 / (params.max_energy_info_age as f32 * 2.0);
         1.0 - decay
     } else {
         0.3 // Low confidence for very old data
@@ -419,7 +361,8 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
     explorer.ai_data.ai_action.survey_neighbors = score_survey_neighbors(explorer)?;
 
     // wait with bonus for safe planet: high charge rate and safety
-    let wait_base = 0.08f32;
+    let params = &explorer.ai_data.params;
+    let wait_base = params.wait_base;
     let wait_bonus = if charge_rate.is_some_and(|x| x > 0.0)
         && explorer
             .get_current_planet_info()?
@@ -427,7 +370,7 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
             .as_ref()
             .is_some_and(super::planet_info::PlanetClassType::can_have_rocket)
     {
-        0.1
+        params.wait_bonus
     } else {
         0.0
     };
@@ -435,11 +378,12 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
 
     // calculating run away values:
     // using pow to make it more reactive when the safeness is low
+    let safety_warning = explorer.ai_data.params.safety_warning;
     let safety_score = {
         explorer
             .get_current_planet_info()?
             .safety_score
-            .unwrap_or(SAFETY_WARNING) //optimistic prediction
+            .unwrap_or(safety_warning) //optimistic prediction
     };
     explorer.ai_data.ai_action.run_away = (1.0 - safety_score).powi(2).clamp(0.0, 1.0);
     Ok(())
@@ -450,6 +394,7 @@ fn score_basic_resource_production(
     explorer: &Explorer,
     resource_type: BasicResourceType,
 ) -> Result<f32, &'static str> {
+    let params = &explorer.ai_data.params;
     //get current planet info
     let planet_info = explorer.get_current_planet_info()?;
 
@@ -460,12 +405,12 @@ fn score_basic_resource_production(
         .count(ResourceType::Basic(resource_type))
         .max(1);
     //calculating reliability of the energy data
-    let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time);
+    let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time, params);
 
     let base = explorer
         .ai_data
         .resource_needs
-        .get_effective_need(ResourceType::Basic(resource_type))
+        .get_effective_need(ResourceType::Basic(resource_type), params)
         * (1.0 / resource_count as f32) //less resource -> more needs
         * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
@@ -474,7 +419,7 @@ fn score_basic_resource_production(
             0.8
         })
         * (reliability * 0.2 + 0.8); //in this case the reliability on the information about the energy cells it isn't very important
-    //adding some randomness
+                                     //adding some randomness
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
 
@@ -486,6 +431,7 @@ fn score_complex_resource_production(
     explorer: &Explorer,
     resource_type: ComplexResourceType,
 ) -> Result<f32, &'static str> {
+    let params = &explorer.ai_data.params;
     //getting info
     let planet_info = explorer.get_current_planet_info()?;
 
@@ -496,12 +442,12 @@ fn score_complex_resource_production(
         .count(ResourceType::Complex(resource_type))
         .max(1);
     //reliability of energy data
-    let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time);
+    let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time, params);
 
     let mut base = explorer
         .ai_data
         .resource_needs
-        .get_effective_need(ResourceType::Complex(resource_type)) //getting needs of resources
+        .get_effective_need(ResourceType::Complex(resource_type), params) //getting needs of resources
         * (1.0 / resource_count as f32)  //less resource -> more needs
         * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
@@ -531,6 +477,7 @@ fn calculate_safety_score(
     explorer: &mut Explorer,
     planet_id: Option<ID>,
 ) -> Result<f32, &'static str> {
+    let params = explorer.ai_data.params.clone();
     let explorer_time = explorer.time; //getting explorer ai tick
     let planet_info = match planet_id {
         //getting planet info
@@ -540,10 +487,11 @@ fn calculate_safety_score(
         None => explorer.get_current_planet_info_mut()?,
     };
     // Predict current energy considering charge rate
-    let (predicted_energy, energy_confidence) = estimate_current_energy(planet_info, explorer_time);
+    let (predicted_energy, energy_confidence) =
+        estimate_current_energy(planet_info, explorer_time, &params);
 
     // Sustainability: planet can maintain or improve defense capability
-    let sustainability = if planet_info.charge_rate.unwrap_or(0.0) > MIN_ACTIVE_CHARGE_RATE {
+    let sustainability = if planet_info.charge_rate.unwrap_or(0.0) > params.min_active_charge_rate {
         1.0 // Actively charging
     } else if planet_info.charge_rate.unwrap_or(0.0) > 0.0 {
         0.7 // Slow charging
@@ -560,7 +508,7 @@ fn calculate_safety_score(
 
     // Physical safety scales with energy/max ratio
     let energy_ratio = (effective_energy / max_cells).clamp(0.0, 1.0);
-    let physical_safety = if effective_energy >= ENERGY_CELLS_DEFENSE_THRESHOLD as f32 {
+    let physical_safety = if effective_energy >= params.energy_cells_defense_threshold as f32 {
         0.6 + (energy_ratio * 0.4) // 0.6 to 1.0 for defended planets
     } else if effective_energy > 0.0 {
         0.3 + (energy_ratio * 0.3) // 0.3 to 0.6 for some energy
@@ -570,7 +518,7 @@ fn calculate_safety_score(
 
     //calculating reliability of the topology data
     let neighbors_reliability =
-        calculate_time_decay(planet_info.timestamp_neighbors, explorer_time);
+        calculate_time_decay(planet_info.timestamp_neighbors, explorer_time, &params);
     // Bonus for the connectivity
     let escape_factor = match planet_info.neighbors.as_ref() {
         None => 0.3, // Unknown neighbors = assume some exist
@@ -597,27 +545,29 @@ fn calculate_safety_score(
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
     //calculating safety score as sum of weighted factors
-    let safety_score =
-        ((sustainability * 0.15 + physical_safety * rocket * 0.7 + adjusted_escape_factor * 0.15)
-            * noise_factor)
-            .clamp(0.0, 1.0);
+    let safety_score = ((sustainability * params.safety_weight_sustainability
+        + physical_safety * rocket * params.safety_weight_physical
+        + adjusted_escape_factor * params.safety_weight_escape)
+        * noise_factor)
+        .clamp(0.0, 1.0);
     planet_info.safety_score = Some(safety_score);
     Ok(safety_score)
 }
 
 //calculating the utility of updating neighbors
 fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
+    let params = &explorer.ai_data.params;
     //getting planet info
     let planet_info = explorer.get_current_planet_info()?;
     //getting reliability of neighbors data
-    let reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer.time);
+    let reliability = calculate_time_decay(planet_info.timestamp_neighbors, explorer.time, params);
 
     // Base utility from staleness
     let staleness_component = (1.0 - reliability) * 0.7;
 
     // Small bonus if current planet is unsafe (want to know escape routes)
     let safety_bonus = if let Some(safety) = planet_info.safety_score {
-        if safety < SAFETY_WARNING {
+        if safety < params.safety_warning {
             0.2 // Moderate bonus when threatened
         } else {
             0.0
@@ -635,7 +585,7 @@ fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
 
     let base = 0.1 + staleness_component + safety_bonus + unknown_bonus;
     //adding some randomness
-    let noise = add_noise(1.0);
+    let noise = add_noise(1.0, params);
 
     Ok((base * noise).clamp(0.0, 1.0))
 }
@@ -643,15 +593,16 @@ fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
 // calculating the utility of updating energy cells
 #[allow(clippy::cast_precision_loss)]
 fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
+    let params = &explorer.ai_data.params;
     //getting planet info
     let planet_info = explorer.get_current_planet_info()?;
 
     // data reliability
-    let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time);
+    let reliability = calculate_time_decay(planet_info.timestamp_energy, explorer.time, params);
     let energy_age = explorer.time.saturating_sub(planet_info.timestamp_energy);
     //if charge_rate is high, old data is VERY unreliable
     let charge_rate_uncertainty =
-        if planet_info.charge_rate.unwrap_or(0.0) >= MIN_ACTIVE_CHARGE_RATE {
+        if planet_info.charge_rate.unwrap_or(0.0) >= params.min_active_charge_rate {
             // Fast charging planet: energy could have changed a lot
             let max_cells = calculate_max_number_cells(planet_info);
             let potential_change =
@@ -672,7 +623,8 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
     };
 
     //if current safety is low, knowing energy is critical
-    let threat_multiplier = if planet_info.safety_score.unwrap_or(SAFETY_WARNING) < SAFETY_WARNING
+    let threat_multiplier = if planet_info.safety_score.unwrap_or(params.safety_warning)
+        < params.safety_warning
         && planet_info
             .inferred_planet_type
             .as_ref()
@@ -686,7 +638,7 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
     let base =
         (0.15 + staleness_component + charge_rate_uncertainty + no_info_boost) * threat_multiplier;
     //adding some noise
-    let noise = add_noise(1.0);
+    let noise = add_noise(1.0, params);
 
     Ok((base * noise).clamp(0.0, 1.0))
 }
@@ -694,6 +646,7 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
 // calculating the utility to move to near planet
 // this need the run away factor to be already computed
 fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str> {
+    let params = &explorer.ai_data.params;
     //getting target planet info
     let target_info = explorer
         .get_planet_info(target_id)
@@ -701,14 +654,14 @@ fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str
     //getting current planet info
     let current_info = explorer.get_current_planet_info()?;
     //getting safety score
-    let current_safety = current_info.safety_score.unwrap_or(SAFETY_WARNING);
+    let current_safety = current_info.safety_score.unwrap_or(params.safety_warning);
     // Predict target energy
     let (predicted_target_energy, target_energy_confidence) =
-        estimate_current_energy(target_info, explorer.time);
+        estimate_current_energy(target_info, explorer.time, params);
 
-    if current_safety < SAFETY_WARNING {
+    if current_safety < params.safety_warning {
         // Emergency mode: move towards safer planets
-        let target_safety = target_info.safety_score.unwrap_or(SAFETY_WARNING);
+        let target_safety = target_info.safety_score.unwrap_or(params.safety_warning);
 
         // Bonus for planets with good predicted energy (can defend)
         let energy_bonus = if predicted_target_energy >= 1 {
@@ -718,52 +671,55 @@ fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str
         };
 
         // Bonus for actively charging planets (sustainable defense)
-        let charge_bonus = if target_info.charge_rate.unwrap_or(0.0) > MIN_ACTIVE_CHARGE_RATE {
+        let charge_bonus = if target_info.charge_rate.unwrap_or(0.0) > params.min_active_charge_rate
+        {
             0.1
         } else {
             0.0
         };
 
         let base_score = target_safety + energy_bonus + charge_bonus;
-        let noise = add_noise(1.0);
+        let noise = add_noise(1.0, params);
 
         Ok((base_score * noise).clamp(0.0, 1.0))
     } else {
         // Exploration mode: move towards less known planets
-        let data_reliability = calculate_time_decay(target_info.timestamp_neighbors, explorer.time);
+        let data_reliability =
+            calculate_time_decay(target_info.timestamp_neighbors, explorer.time, params);
         let exploration_value = 1.0 - data_reliability;
 
         // But still consider safety
-        let safety_factor = if target_info.safety_score.unwrap_or(SAFETY_WARNING) < SAFETY_CRITICAL
-        {
-            0.3 // Penalize very dangerous planets
-        } else if target_info.safety_score.unwrap_or(SAFETY_WARNING)
-            < explorer
-                .get_current_planet_info()?
-                .safety_score
-                .unwrap_or(SAFETY_WARNING)
-        {
-            //some penalization for less safe planets
-            0.6
-        } else {
-            0.8
-        };
+        let safety_factor =
+            if target_info.safety_score.unwrap_or(params.safety_warning) < params.safety_critical {
+                0.3 // Penalize very dangerous planets
+            } else if target_info.safety_score.unwrap_or(params.safety_warning)
+                < explorer
+                    .get_current_planet_info()?
+                    .safety_score
+                    .unwrap_or(params.safety_warning)
+            {
+                //some penalization for less safe planets
+                0.6
+            } else {
+                0.8
+            };
 
         let base_score = exploration_value * safety_factor;
-        let noise = add_noise(1.0);
+        let noise = add_noise(1.0, params);
 
         Ok((base_score * noise).clamp(0.0, 1.0))
     }
 }
 //used to check if the explorer can safely escape, or if it is even useful
 fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
+    let params = &explorer.ai_data.params;
     if actions.run_away <= 0.0 {
         return false;
     }
     let Ok(current_info) = explorer.get_current_planet_info() else {
         return false;
     };
-    let current_safety = current_info.safety_score.unwrap_or(SAFETY_WARNING);
+    let current_safety = current_info.safety_score.unwrap_or(params.safety_warning);
     let Some(neighbors) = &current_info.neighbors else {
         return false;
     };
@@ -771,10 +727,10 @@ fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
         let Some(planet_info) = explorer.topology_info.get(neighbor_id) else {
             continue;
         };
-        let planet_safety = planet_info.safety_score.unwrap_or(SAFETY_WARNING);
-        if planet_safety > current_safety + SAFETY_MIN_DIFF
+        let planet_safety = planet_info.safety_score.unwrap_or(params.safety_warning);
+        if planet_safety > current_safety + params.safety_min_diff
             || planet_info.inferred_planet_type.is_none()
-            || current_safety <= SAFETY_CRITICAL
+            || current_safety <= params.safety_critical
         {
             //if the destination planet is more safe or in some optimistic scenario or with panic
             return true;
@@ -817,6 +773,7 @@ fn find_best_action(
     last_action: Option<&AIActionType>,
     last_action_planet_id: Option<ID>,
 ) -> Option<AIActionType> {
+    let params = &explorer.ai_data.params;
     let mut max_val = -1.0;
     let mut best: Option<AIActionType> = None;
 
@@ -879,7 +836,7 @@ fn find_best_action(
         if best.is_none() {
             return Some(previous.clone());
         }
-        if previous_val + ACTION_HYSTERESIS_MARGIN >= max_val {
+        if previous_val + params.action_hysteresis_margin >= max_val {
             return Some(previous.clone());
         }
     }

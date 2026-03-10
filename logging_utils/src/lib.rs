@@ -894,6 +894,96 @@ macro_rules! log_message {
     }};
 }
 
+/// Shorthand for logging Explorer-to-Orchestrator messages.
+///
+/// Instead of writing:
+/// ```ignore
+/// log_message!(
+///     ActorType::Explorer, explorer_id,
+///     ActorType::Orchestrator, 0u32,
+///     EventType::MessageExplorerToOrchestrator,
+///     "MessageName",
+///     explorer_id
+/// );
+/// ```
+/// You can write:
+/// ```ignore
+/// log_explorer_to_orch!("MessageName", explorer_id);
+/// ```
+#[macro_export]
+macro_rules! log_explorer_to_orch {
+    (
+        $message:expr,
+        $explorer_id:expr
+        $(; $($key:expr => $val:expr),*)?
+        $(,)?
+    ) => {{
+        use $crate::{LogEvent, Participant};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("message".to_string(), $message.to_string());
+        p.insert("explorer_id".to_string(), format!("{:?}", $explorer_id));
+
+        $($(
+            p.insert($key.to_string(), $val.to_string());
+        )*)?
+
+        let event = LogEvent::new(
+            Some(Participant::new(common_game::logging::ActorType::Explorer, $explorer_id)),
+            Some(Participant::new(common_game::logging::ActorType::Orchestrator, 0u32)),
+            common_game::logging::EventType::MessageExplorerToOrchestrator,
+            common_game::logging::Channel::Debug,
+            p
+        );
+        event.emit();
+    }};
+}
+
+/// Shorthand for logging Planet-to-Orchestrator messages.
+///
+/// Instead of writing:
+/// ```ignore
+/// log_message!(
+///     ActorType::Planet, planet_id,
+///     ActorType::Orchestrator, 0u32,
+///     EventType::MessagePlanetToOrchestrator,
+///     "MessageName",
+///     planet_id
+/// );
+/// ```
+/// You can write:
+/// ```ignore
+/// log_planet_to_orch!("MessageName", planet_id);
+/// ```
+#[macro_export]
+macro_rules! log_planet_to_orch {
+    (
+        $message:expr,
+        $planet_id:expr
+        $(; $($key:expr => $val:expr),*)?
+        $(,)?
+    ) => {{
+        use $crate::{LogEvent, Participant};
+
+        let mut p = std::collections::BTreeMap::new();
+        p.insert("message".to_string(), $message.to_string());
+        p.insert("planet_id".to_string(), format!("{:?}", $planet_id));
+
+        $($(
+            p.insert($key.to_string(), $val.to_string());
+        )*)?
+
+        let event = LogEvent::new(
+            Some(Participant::new(common_game::logging::ActorType::Planet, $planet_id)),
+            Some(Participant::new(common_game::logging::ActorType::Orchestrator, 0u32)),
+            common_game::logging::EventType::MessagePlanetToOrchestrator,
+            common_game::logging::Channel::Debug,
+            p
+        );
+        event.emit();
+    }};
+}
+
 #[cfg(feature = "debug-prints")]
 #[macro_export]
 macro_rules! debug_println {

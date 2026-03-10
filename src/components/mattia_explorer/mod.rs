@@ -1,3 +1,4 @@
+pub mod ai_params;
 mod bag;
 mod buffers;
 mod explorer_ai;
@@ -8,9 +9,10 @@ mod resource_management;
 mod states;
 mod tests;
 
+use crate::components::mattia_explorer::ai_params::AiParams;
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
-use crate::components::mattia_explorer::explorer_ai::{AiData, ai_core_function};
+use crate::components::mattia_explorer::explorer_ai::{ai_core_function, AiData};
 use crate::components::mattia_explorer::handlers::{
     combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
     manage_combine_response, manage_generate_response, manage_supported_combination_response,
@@ -20,7 +22,7 @@ use crate::components::mattia_explorer::handlers::{
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::{
-    ExplorerState, orch_msg_match_state, planet_msg_match_state,
+    orch_msg_match_state, planet_msg_match_state, ExplorerState,
 };
 use common_game::components::resource::ResourceType;
 use common_game::protocols::orchestrator_explorer::{
@@ -28,7 +30,7 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
-use crossbeam_channel::{Receiver, Sender, select};
+use crossbeam_channel::{select, Receiver, Sender};
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::collections::{HashMap, VecDeque};
@@ -64,6 +66,26 @@ impl Explorer {
         ),
         explorer_to_planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
     ) -> Self {
+        Self::with_params(
+            explorer_id,
+            planet_id,
+            explorer_to_orchestrator_channels,
+            explorer_to_planet_channels,
+            AiParams::default(),
+        )
+    }
+
+    /// Creates an Explorer with custom AI parameters (for ML tuning)
+    pub fn with_params(
+        explorer_id: u32,
+        planet_id: u32,
+        explorer_to_orchestrator_channels: (
+            Receiver<OrchestratorToExplorer>,
+            Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
+        ),
+        explorer_to_planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
+        ai_params: AiParams,
+    ) -> Self {
         log_fn_call!(dir
             ActorType::Explorer,
             explorer_id,
@@ -86,7 +108,7 @@ impl Explorer {
             buffer_orchestrator_msg: VecDeque::new(),
             buffer_planet_msg: VecDeque::new(),
             time: 1,
-            ai_data: AiData::new(),
+            ai_data: AiData::new(ai_params),
             current_planet_neighbors_update: false,
             manual_mode: true,
         }
@@ -260,7 +282,7 @@ impl Explorer {
                                             ExplorerState::Surveying {resources,combinations,energy_cells:true,orch_resource,orch_combination}=>{
                                                 match self.topology_info.get_mut(&self.planet_id){
                                                     Some(planet_info) => {
-                                                        planet_info.update_charge_rate(available_cells, self.time);
+                                                        planet_info.update_charge_rate(available_cells, self.time, self.ai_data.params.charge_rate_alpha);
                                                     }
                                                     None => {
                                                         //this should not happen
@@ -372,8 +394,8 @@ impl Explorer {
 use crate::debug_println;
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use logging_utils::{
-    LoggableActor, get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message,
-    warning_payload,
+    get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message, warning_payload,
+    LoggableActor,
 };
 use std::fmt;
 use std::sync::mpsc::channel;

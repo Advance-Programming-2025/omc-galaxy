@@ -19,29 +19,18 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
-use crossbeam_channel::{Receiver, Sender, unbounded};
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use logging_utils::LoggableActor;
 use logging_utils::{log_fn_call, log_internal_op};
 use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 pub enum OrchestratorEvent {
-    PlanetDestroyed {
-        planet_id: u32,
-    },
-    SunraySent {
-        planet_id: u32,
-    },
-    SunrayReceived {
-        planet_id: u32,
-    },
-    AsteroidSent {
-        planet_id: u32,
-    },
-    ExplorerMoved {
-        explorer_id: u32,
-        destination: u32,
-    },
+    PlanetDestroyed { planet_id: u32 },
+    SunraySent { planet_id: u32 },
+    SunrayReceived { planet_id: u32 },
+    AsteroidSent { planet_id: u32 },
+    ExplorerMoved { explorer_id: u32, destination: u32 },
 }
 
 ///The core of the game.
@@ -67,9 +56,13 @@ pub struct Orchestrator {
     //Galaxy
     pub galaxy_topology: GalaxyTopology,
     /// `(planet_id, (planet index in the adj matrix, PlanetType))`
-    /// 
+    ///
     /// Indexed by the planet_id returns the couple: \[planet_idx, PlanetType]
     pub galaxy_lookup: FxHashMap<u32, (u32, PlanetType)>,
+    /// Reverse lookup: matrix_index -> planet_id
+    ///
+    /// Indexed by the matrix index, returns the real planet_id.
+    pub galaxy_reverse_lookup: FxHashMap<u32, u32>,
 
     //Status for each planet and explorers, BTreeMaps are useful for printing
     pub planets_info: PlanetInfoMap,
@@ -116,6 +109,7 @@ impl Orchestrator {
             forge: Forge::new()?,
             galaxy_topology: Self::new_gtop(),
             galaxy_lookup: FxHashMap::default(),
+            galaxy_reverse_lookup: FxHashMap::default(),
             planets_info: PlanetInfoMap::new(),
             explorers_info: ExplorerInfoMap::new(),
             planet_channels: HashMap::new(),

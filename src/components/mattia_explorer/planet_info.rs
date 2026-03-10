@@ -62,7 +62,12 @@ impl PlanetInfo {
             inferred_planet_type: None,
         }
     }
-    pub fn update_charge_rate(&mut self, current_energy: u32, current_time: u64) {
+    pub fn update_charge_rate(
+        &mut self,
+        current_energy: u32,
+        current_time: u64,
+        charge_rate_alpha: f32,
+    ) {
         //todo importare explorer_id per log
         log_fn_call!(dir
             ActorType::Explorer,
@@ -90,7 +95,7 @@ impl PlanetInfo {
         let instant_rate = (current_energy as f32 - previous_energy) / delta_t;
 
         // amortized average
-        let alpha = 0.3;
+        let alpha = charge_rate_alpha;
 
         let new_rate = match self.charge_rate {
             Some(old_rate) => (alpha * instant_rate) + ((1.0 - alpha) * old_rate),
