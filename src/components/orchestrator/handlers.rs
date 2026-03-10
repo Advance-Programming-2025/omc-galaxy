@@ -72,55 +72,48 @@ impl Orchestrator {
                 );
                 //LOG
 
-                match rocket {
-                    Some(_) => {
-                        info!("I'm planet {planet_id} and I got an asteroid. Got rocket!");
-                    }
-                    None => {
-                        info!("I'm planet {planet_id} and I got an asteroid. NO rocket!");
-                        //If you have the id then surely that planet exist so we can unwrap without worring
-                        //TODO it seems fine to me but just to be more precise we could add error handling
-                        let sender = &self.planet_channels.get(&planet_id).unwrap().0;
+                if let None=rocket {
+                    //If you have the id then surely that planet exists so we can unwrap without worrying
+                    let sender = &self.planet_channels.get(&planet_id).ok_or_else(
+                        || format!{"No channels found in the orchestrator for planet:{}", planet_id}
+                    )?.0;
 
-                        //Send KillPlanet message, if it returns Err then the planet it's already killed
-                        //TODO we could log this too
-                        let _log = sender
-                            .send(OrchestratorToPlanet::KillPlanet)
-                            .map_err(|_| "Unable to send to planet: {planet_id}");
+                    //Send KillPlanet message, if it returns Err then the planet it's already killed
+                    sender
+                        .send(OrchestratorToPlanet::KillPlanet)
+                        .map_err(|_| "Unable to send to planet: {planet_id}")?;
 
-                        //LOG
-                        log_message!(
-                            ActorType::Orchestrator, 0u32,
-                            ActorType::Planet, planet_id,
-                            EventType::MessageOrchestratorToPlanet,
-                            "KillPlanet",
-                            planet_id;
-                            "reason"=>"no rocket to deflect asteroid"
-                        );
-                        //LOG
+                    //LOG
+                    log_message!(
+                        ActorType::Orchestrator, 0u32,
+                        ActorType::Planet, planet_id,
+                        EventType::MessageOrchestratorToPlanet,
+                        "KillPlanet",
+                        planet_id;
+                        "reason"=>"no rocket to deflect asteroid"
+                    );
+                    //LOG
 
-                        self.destroy_topology_link(planet_id as usize)?;
+                    self.destroy_topology_link(planet_id as usize)?;
 
-                        //Update planet State
-                        match self.planets_info.update_status(planet_id, Status::Dead) {
-                            Ok(_) => {}
-                            Err(err) => {
-                                //todo logs
-                                debug_println!("planet status not updated: {}", err);
-                                return Err(err.to_string());
-                            }
+                    //Update planet State
+                    match self.planets_info.update_status(planet_id, Status::Dead) {
+                        Ok(_) => {}
+                        Err(err) => {
+                            debug_println!("planet status not updated: {}", err);
+                            return Err(err.to_string());
                         }
-                        //LOG
-                        log_internal_op!(
-                            self,
-                            "action"=>"planet status updated to Dead",
-                            "planet_id"=>planet_id,
-                            "planet status"=> format!("{:?}",self.planets_info.get_status(&planet_id))
-                        );
-                        //LOG
-                        //sending explorer kill
-                        self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                     }
+                    //LOG
+                    log_internal_op!(
+                        self,
+                        "action"=>"planet status updated to Dead",
+                        "planet_id"=>planet_id,
+                        "planet status"=> format!("{:?}",self.planets_info.get_status(&planet_id))
+                    );
+                    //LOG
+                    //sending explorer kill
+                    self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                 }
             }
             PlanetToOrchestrator::InternalStateResponse {
@@ -293,25 +286,26 @@ impl Orchestrator {
                 explorer_id,
                 res,
             } => {
-                match res {
-                    Ok(_) => {
-                        let dst_planet_id = match self.explorers_info.get(&explorer_id) {
-                            Some(explorer_info) => explorer_info.move_to_planet_id,
-                            None => {
-                                //todo logs
-                                return Err(format!("Planet not found: {}", planet_id));
-                            }
-                        };
-                        match self.send_move_to_planet(explorer_id, dst_planet_id as u32) {
-                            Ok(_) => {}
-                            Err(err) => {
-                                //todo logs
-                                return Err(format!("Failed to send explorer request: {}", err));
-                            }
+                log_message!(
+                    ActorType::Planet,
+                    planet_id,
+                    ActorType::Orchestrator,
+                    0u32,
+                    EventType::MessagePlanetToOrchestrator,
+                    "PlanetToOrchestrator::OutgoingExplorerResponse";
+                    "planet_id"=>planet_id,
+                    "explorer_id" => explorer_id,
+                    "Result"=> format!("{:?}", res)
+                );
+                if let Ok(_)=res{
+                    let dst_planet_id = match self.explorers_info.get(&explorer_id) {
+                        Some(explorer_info) => explorer_info.move_to_planet_id,
+                        None => {
+                            return Err(format!("Planet not found: {}", planet_id));
                         }
-                    }
-                    Err(err) => {
-                        //todo logs
+                    };
+                    if let Err(err)=self.send_move_to_planet(explorer_id, dst_planet_id as u32) {
+                        return Err(format!("Failed to send explorer request: {}", err));
                     }
                 }
             }
@@ -602,8 +596,7 @@ impl Orchestrator {
                 self.send_neighbours_response(explorer_id, current_planet_id)?;
             }
             ExplorerToOrchestrator::TravelToPlanetRequest {
-                //todo nel caso non sia possibile muoversi la funzione
-                explorer_id, //todo deve mandare un MoveToPlanet con il sender None
+                explorer_id,
                 current_planet_id,
                 dst_planet_id,
             } => {
@@ -620,7 +613,7 @@ impl Orchestrator {
                     "dst_planet_id" => dst_planet_id,
                 );
                 //LOG
-                //todo un explorer può andare su un pianeta che è stoppato?
+                //todo un explorer può andare su un pianeta che è stoppato? risposta: no
 
                 // verify that the planet exists and that the destination planet is a neighbour
                 let is_neighbour = {
@@ -634,39 +627,25 @@ impl Orchestrator {
                 };
 
                 // if not existing or not a neighbour of the current planet return and Err
-                //todo questa sarebbe da rimuovere in favore di un aggiornamento corretto della topologia
                 if !is_neighbour || self.planets_info.get_status(&dst_planet_id) != Status::Running
                 {
-                    match self.explorer_channels.get(&explorer_id).unwrap().0.send(
+                    self.explorer_channels.get(&explorer_id).ok_or_else(|| format!{"explorer id: {} not found", explorer_id}).unwrap().0.send(
                         OrchestratorToExplorer::MoveToPlanet {
                             sender_to_new_planet: None,
                             planet_id: dst_planet_id,
                         },
-                    ) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            //todo logs
-                        }
-                    }
-                    return Err("Planet id not found".to_string());
+                    ).map_err(|err| err.to_string())?;
                 }
-                //todo add incomingexplorerRequest and outgoingexplorerrequest
                 //updating move_to_planet_id
                 match self.explorers_info.get_mut(&explorer_id) {
                     Some(explorer_info) => {
                         explorer_info.move_to_planet_id = dst_planet_id as i32;
                     }
                     None => {
-                        //todo logs
                         return Err(format!("Explorer {} not found", explorer_id));
                     }
                 }
-                match self.send_incoming_explorer_request(dst_planet_id, explorer_id) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        //todo logs
-                    }
-                }
+                self.send_incoming_explorer_request(dst_planet_id, explorer_id)?
 
                 // else send the move to planet
                 //return self.send_move_to_planet(explorer_id, dst_planet_id);
@@ -691,7 +670,7 @@ impl Orchestrator {
                         Ok(res)=>res,
                         Err(e)=>{
                             //LOG
-                            let event=LogEvent::self_directed(
+                            LogEvent::self_directed(
                                 Participant::new(ActorType::Orchestrator, 0u32),
                                 EventType::InternalOrchestratorAction,
                                 Channel::Warning,
@@ -700,11 +679,9 @@ impl Orchestrator {
                                     e,
                                     "handle_game_messages()"
                                 )
-                            );
-                            event.emit();
+                            ).emit();
                             //LOG
-                            // TODO not using the "e" in Err(e), which version to use? this one or the one used below for explorer msg?
-                            return Err("Cannot receive message from planets".to_string())
+                            return Err(format!{"Cannot receive message from planets: {}", e})
                         },
                     };
                     self.handle_planet_message(msg_unwraped)?;
@@ -713,9 +690,6 @@ impl Orchestrator {
                     let msg_unwraped = match msg{
                         Ok(res)=>res,
                         Err(e)=>{
-                            //LOG
-                            // TODO
-                            //LOG
                             return Err(format!("Cannot receive message from explorers: {}", e));
                         },
                     };
