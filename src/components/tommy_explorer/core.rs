@@ -460,8 +460,7 @@ impl Explorer {
 
                     self.action_queue.push_back(action);
 
-                    let is_exploring = self.topology.find_path_to_nearest_frontier(self.planet_id).is_some();
-                    if self.energy_cells > 0 && !is_exploring {
+                    if self.energy_cells > 0 {
 
                         // println!("[EXPLORER TOMY DEBUG] GenerateOrCombine");
                         if let Some(resource) = self.decide_resource_action() {
@@ -554,17 +553,15 @@ impl Explorer {
                         next_planet = self.move_queue.next_move();
                     }
 
-                    // Wander instinct
+                    // Wander instinct UNIVERSAL
                     if next_planet.is_none() {
-                        let wants_to_craft = self.decide_resource_action().is_some();
+                        let can_craft_here = self.decide_resource_action().is_some();
 
-                        let is_map_done = self.topology.is_fully_discovered();
+                        let stuck_no_energy = can_craft_here && self.energy_cells == 0;
 
-                        let stuck_exploring = !is_map_done;
+                        let stuck_no_path = !can_craft_here;
 
-                        let stuck_crafting = is_map_done && wants_to_craft && self.energy_cells == 0;
-
-                        if stuck_exploring || stuck_crafting {
+                        if stuck_no_energy || stuck_no_path {
                             if let Some(info) = self.topology.get(self.planet_id) {
                                 if let Some(neighbours) = info.get_neighbours() {
                                     next_planet = neighbours.iter().next().copied();
@@ -666,7 +663,9 @@ impl Explorer {
                 return ResourceType::Basic(BasicResourceType::Hydrogen);
             }
             // if he has no hydrogen nor oxygen
-            return ResourceType::Basic(BasicResourceType::Oxygen);
+            if !has_o {
+                return ResourceType::Basic(BasicResourceType::Oxygen);
+            }
         }
 
         // this shouldn't happen (all possible cases should have been taken in consideration)
@@ -741,7 +740,10 @@ impl Explorer {
                 res.insert(ResourceType::Basic(BasicResourceType::Hydrogen));
             }
             // if he has no hydrogen nor oxygen
-            res.insert(ResourceType::Basic(BasicResourceType::Oxygen));
+            if !has_o {
+                // if he has no oxygen
+                res.insert(ResourceType::Basic(BasicResourceType::Oxygen));
+            }
         }
 
         res
