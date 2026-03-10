@@ -155,7 +155,7 @@ impl Orchestrator {
         log_fn_call!(self, "send_asteroid_to_all()");
         //LOG
 
-        //TODO unwrap cannot fail because every id is contained in the map
+        //unwrap cannot fail because every id is contained in the map
         //collect all of the senders in a vector
         let sender_asteroid: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
             .planet_channels
@@ -281,7 +281,6 @@ impl Orchestrator {
             planet_id,
             explorer_id,
         );
-        //todo logs
         let sender = match self.planet_channels.get(&planet_id) {
             Some(sender) => sender,
             None => {
@@ -322,7 +321,6 @@ impl Orchestrator {
                     ),
                 )
                 .emit();
-                //todo logs
                 return Err(err.to_string());
             }
         }

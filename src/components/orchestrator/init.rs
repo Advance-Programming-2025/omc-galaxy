@@ -288,15 +288,11 @@ impl Orchestrator {
 
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                match orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                if let Err(err) = orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
                     explorer_id,
                     new_sender: sender_planet.clone(),
                 }) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        //todo logs
-                        return Err(err.to_string());
-                    }
+                    return Err(err.to_string());
                 }
             }
             None => {}
@@ -304,7 +300,7 @@ impl Orchestrator {
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(move || -> Result<(), String> {
-            let _ = new_explorer.run().map_err(|_| "Error run"); //TODO implement a run function for explorer to interact with orchestrator
+            let _ = new_explorer.run().map_err(|_| "Error run");
             Ok(())
         });
         log_internal_op!(
@@ -383,15 +379,11 @@ impl Orchestrator {
         );
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                match orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                if let Err(err) =orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
                     explorer_id,
                     new_sender: sender_planet.clone(),
                 }) {
-                    Ok(_) => {}
-                    Err(err) => {
-                        //todo logs
-                        return Err(err.to_string());
-                    }
+                    return Err(err.to_string());
                 }
             }
             None => {}
@@ -400,7 +392,7 @@ impl Orchestrator {
         // self.explorers.push(explorer);
         //Spawn the corresponding thread for the explorer
         thread::spawn(move || -> Result<(), String> {
-            let _ = new_explorer.run().map_err(|_| "Error run"); //TODO implement a run function for explorer to interact with orchestrator
+            let _ = new_explorer.run().map_err(|_| "Error run");
             Ok(())
         });
         log_internal_op!(
@@ -633,7 +625,6 @@ impl Orchestrator {
         log_fn_call!(self, "initialize_planets_by_ids_list()", ids_list,);
         //LOG
         for planet_id in ids_list.iter() {
-            //TODO we need to initialize the other planets randomly or precisely
             match self.galaxy_lookup.get(&planet_id) {
                 None => {
                     //LOG
