@@ -9,16 +9,16 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use crossbeam_channel::{SendError, select};
+use crossbeam_channel::{select, SendError};
 use log::info;
 use logging_utils::{
-    LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_fn_call, log_internal_op, log_message,
-    payload, warning_payload,
+    debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload,
+    LoggableActor, LOG_ACTORS_ACTIVITY,
 };
 
 use crate::components::explorer::BagType;
 use crate::utils::ExplorerInfoMap;
-use crate::{components::orchestrator::Orchestrator, utils::Status};
+use crate::{components::orchestrator::Orchestrator, utils::Status, PlanetInfoMap};
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
 impl Orchestrator {
@@ -72,7 +72,7 @@ impl Orchestrator {
                 );
                 //LOG
 
-                if let None=rocket {
+                if let None = rocket {
                     //If you have the id then surely that planet exists so we can unwrap without worrying
                     let sender = &self.planet_channels.get(&planet_id).ok_or_else(
                         || format!{"No channels found in the orchestrator for planet:{}", planet_id}
@@ -188,6 +188,7 @@ impl Orchestrator {
                 );
                 event.emit();
                 //LOG
+                self.planets_info.update_status(planet_id, Status::Paused)?;
             }
             PlanetToOrchestrator::Stopped { planet_id } => {
                 log_message!(
@@ -297,14 +298,14 @@ impl Orchestrator {
                     "explorer_id" => explorer_id,
                     "Result"=> format!("{:?}", res)
                 );
-                if let Ok(_)=res{
+                if let Ok(_) = res {
                     let dst_planet_id = match self.explorers_info.get(&explorer_id) {
                         Some(explorer_info) => explorer_info.move_to_planet_id,
                         None => {
                             return Err(format!("Planet not found: {}", planet_id));
                         }
                     };
-                    if let Err(err)=self.send_move_to_planet(explorer_id, dst_planet_id as u32) {
+                    if let Err(err) = self.send_move_to_planet(explorer_id, dst_planet_id as u32) {
                         return Err(format!("Failed to send explorer request: {}", err));
                     }
                 }
@@ -613,28 +614,43 @@ impl Orchestrator {
                     "dst_planet_id" => dst_planet_id,
                 );
                 //LOG
-                //todo un explorer può andare su un pianeta che è stoppato? risposta: no
+                //un explorer può andare su un pianeta che è stoppato? risposta: no
 
                 // verify that the planet exists and that the destination planet is a neighbour
                 let is_neighbour = {
-                    let guard = &self.galaxy_topology;
+                    // Translate real planet_ids to matrix indices via the lookup table
+                    let current_idx = self
+                        .galaxy_lookup
+                        .get(&current_planet_id)
+                        .map(|(idx, _)| *idx as usize);
+                    let dst_idx = self
+                        .galaxy_lookup
+                        .get(&dst_planet_id)
+                        .map(|(idx, _)| *idx as usize);
 
-                    guard
-                        .get(current_planet_id as usize)
-                        .and_then(|row| row.get(dst_planet_id as usize))
-                        .copied()
-                        .unwrap_or(false)
+                    match (current_idx, dst_idx) {
+                        (Some(ci), Some(di)) => self
+                            .galaxy_topology
+                            .get(ci)
+                            .and_then(|row| row.get(di))
+                            .copied()
+                            .unwrap_or(false),
+                        _ => false,
+                    }
                 };
 
                 // if not existing or not a neighbour of the current planet return and Err
                 if !is_neighbour || self.planets_info.get_status(&dst_planet_id) != Status::Running
                 {
-                    self.explorer_channels.get(&explorer_id).ok_or_else(|| format!{"explorer id: {} not found", explorer_id}).unwrap().0.send(
-                        OrchestratorToExplorer::MoveToPlanet {
+                    self.explorer_channels
+                        .get(&explorer_id)
+                        .ok_or_else(|| format! {"explorer id: {} not found", explorer_id})?
+                        .0
+                        .send(OrchestratorToExplorer::MoveToPlanet {
                             sender_to_new_planet: None,
                             planet_id: dst_planet_id,
-                        },
-                    ).map_err(|err| err.to_string())?;
+                        })
+                        .map_err(|err| err.to_string())?;
                 }
                 //updating move_to_planet_id
                 match self.explorers_info.get_mut(&explorer_id) {
@@ -703,12 +719,12 @@ impl Orchestrator {
 
         Ok(())
     }
-    fn send_kill_to_explorers_on_dying_planet(&mut self, planet_id: &ID) ->Result<(), String>{
+    fn send_kill_to_explorers_on_dying_planet(&mut self, planet_id: &ID) -> Result<(), String> {
         let mut ris = "".to_string();
         for i in self
             .explorers_info
             .iter()
-            .filter(|x| x.1.current_planet_id == *planet_id&&x.1.status!=Status::Dead)
+            .filter(|x| x.1.current_planet_id == *planet_id && x.1.status != Status::Dead)
         {
             match self
                 .explorer_channels
@@ -728,4 +744,3 @@ impl Orchestrator {
         return if ris.is_empty() { Ok(()) } else { Err(ris) };
     }
 }
-

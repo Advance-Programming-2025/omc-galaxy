@@ -240,7 +240,6 @@ impl Orchestrator {
         log_fn_call!(self, "stop_all_planet_ais()");
         //LOG
 
-
         for (_id, (from_orch, _)) in &self.planet_channels {
             from_orch
                 .try_send(OrchestratorToPlanet::StopPlanetAI)
@@ -257,7 +256,6 @@ impl Orchestrator {
             //LOG
         }
         Ok(())
-
     }
 
     /// Starts the AI of every explorer.
@@ -328,7 +326,7 @@ impl Orchestrator {
         //             count += 1;
         //         }
         //         msg => {
-        //             self.handle_explorer_message(msg); //todo
+        //             self.handle_explorer_message(msg);
         //             //println!("ignoring explorer messages");
         //             debug_println!("ignoring explorer messages")
         //             // ignores other events

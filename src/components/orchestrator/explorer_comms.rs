@@ -233,7 +233,7 @@ impl Orchestrator {
 
     /// sends the GenerateResourceRequest message
     pub fn send_generate_resource_request(
-        & self,
+        &self,
         explorer_id: u32,
         to_generate: BasicResourceType,
     ) -> Result<(), String> {
@@ -321,24 +321,35 @@ impl Orchestrator {
 
     /// gets the neighbors and sends them with the NeighborsResponse message
     pub fn send_neighbours_response(
-        //todo modificare questa funzione in quanto gli id dei pianeti non sono più necessariamente consecutivi
         &mut self,
         explorer_id: u32,
         planet_id: u32,
     ) -> Result<(), String> {
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
+        // Translate the real planet_id to its matrix index via the lookup table
+        let matrix_idx = self
+            .galaxy_lookup
+            .get(&planet_id)
+            .map(|(idx, _)| *idx as usize)
+            .ok_or_else(|| format!("planet_id {} not found in galaxy_lookup", planet_id))?;
+
         // the neighbors are obtained from the galaxy_topology adjacent matrix
+        // and translated back to real planet_ids via the reverse lookup
         let neighbors: Vec<u32> = {
             let guard = &self.galaxy_topology;
 
             guard
-                .get(planet_id as usize)
-                .into_iter() // Handles the Option if the ID is out of bounds
+                .get(matrix_idx)
+                .into_iter() // Handles the Option if the index is out of bounds
                 .flat_map(|row| {
                     row.iter().enumerate().filter_map(|(i, &is_connected)| {
-                        // only return the index if the connection exists (true)
-                        if is_connected { Some(i as u32) } else { None }
+                        // only return the real planet_id if the connection exists (true)
+                        if is_connected {
+                            self.galaxy_reverse_lookup.get(&(i as u32)).copied()
+                        } else {
+                            None
+                        }
                     })
                 })
                 .collect()
