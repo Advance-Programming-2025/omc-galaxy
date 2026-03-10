@@ -11,10 +11,7 @@ use common_game::{
 };
 use crossbeam_channel::{select, SendError};
 use log::info;
-use logging_utils::{
-    debug_println, log_explorer_to_orch, log_fn_call, log_internal_op, log_message,
-    log_planet_to_orch, payload, warning_payload, LoggableActor, LOG_ACTORS_ACTIVITY,
-};
+use logging_utils::{debug_println, log_explorer_to_orch, log_fn_call, log_internal_op, log_message, log_orch_to_planet, log_planet_to_orch, payload, warning_payload, LoggableActor, LOG_ACTORS_ACTIVITY};
 
 use crate::components::explorer::BagType;
 use crate::utils::ExplorerInfoMap;

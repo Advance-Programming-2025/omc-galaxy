@@ -13,8 +13,8 @@ use crossbeam_channel::{Receiver, Sender};
 use logging_utils::{log_internal_op, LoggableActor};
 use rustrelli::planet;
 
-use crate::utils::Status;
 use crate::utils::registry::PlanetType;
+use crate::utils::Status;
 
 pub type PlanetFactory = Box<
     dyn Fn(
@@ -95,6 +95,9 @@ impl PlanetInfoMap {
 
     pub fn update_from_planet_state(&mut self, planet_id: u32, planet_state: DummyPlanetState) {
         if let Some(planet_info) = self.map.get_mut(&planet_id) {
+            log_internal_op!(dir ActorType::Planet, planet_id, "action"=>format!(
+                "updated planet info from DummyPlanetState, new energy_cells: {:?}, new charged_cells_count: {}, new has_rocket: {}",  planet_state.energy_cells, planet_state.charged_cells_count, planet_state.has_rocket
+            ));
             planet_info.energy_cells = planet_state.energy_cells;
             planet_info.charged_cells_count = planet_state.charged_cells_count;
             planet_info.rocket = planet_state.has_rocket;
@@ -221,22 +224,26 @@ impl ExplorerInfoMap {
 
     pub fn insert(&mut self, explorer_id: u32, info: ExplorerInfo) {
         self.map.insert(explorer_id, info);
+        log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("inserted new explorer in ExplorerInfoMap: {}", explorer_id));
     }
 
     pub fn insert_status(&mut self, explorer_id: u32, status: Status) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
             explorer_info.status = status;
+            log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} status updated to: {:?}", explorer_id, status));
         }
     }
 
     pub fn update_bag(&mut self, explorer_id: u32, bag: Vec<ResourceType>) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
+            log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} bag updated to: {:?}", explorer_id, bag));
             explorer_info.bag = bag;
         }
     }
 
     pub fn update_current_planet(&mut self, explorer_id: u32, planet_id: u32) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
+            log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} current planet updated to: {}", explorer_id, planet_id));
             explorer_info.current_planet_id = planet_id;
         }
     }

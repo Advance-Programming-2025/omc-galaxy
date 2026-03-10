@@ -3,7 +3,7 @@ use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::{ActorType, EventType};
 use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
 use crossbeam_channel::Sender;
-use logging_utils::log_message;
+use logging_utils::{log_fn_call, log_message, LoggableActor};
 
 impl Orchestrator {
     /// this method gets the sender used by all the "send methods" below
@@ -11,6 +11,11 @@ impl Orchestrator {
         &self,
         explorer_id: u32,
     ) -> Result<&Sender<OrchestratorToExplorer>, String> {
+        log_fn_call!(
+            self,
+            "get_sender_from_orchestrator_to_explorer()",
+            explorer_id,
+        );
         match self.explorer_channels.get(&explorer_id) {
             Some((sender, _)) => Ok(sender),
             None => Err(format!("No sender found for explorer {}", explorer_id)),
@@ -19,6 +24,7 @@ impl Orchestrator {
 
     /// sends the StartExplorerAI message
     pub fn send_start_explorer_ai(&mut self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_start_explorer_ai()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -45,6 +51,7 @@ impl Orchestrator {
 
     /// sends the ResetExplorerAI message
     pub fn send_reset_explorer_ai(&mut self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_reset_explorer_ai()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -71,6 +78,7 @@ impl Orchestrator {
 
     /// sends the StopExplorerAI message
     pub fn send_stop_explorer_ai(&mut self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_stop_explorer_ai()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -97,6 +105,7 @@ impl Orchestrator {
 
     /// sends the KillExplorer message
     pub fn send_kill_explorer_ai(&mut self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_kill_explorer_ai()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -118,6 +127,7 @@ impl Orchestrator {
 
     /// gets the sender to the planet (from the explorer) and sends it with the MoveToPlanet message
     pub fn send_move_to_planet(&mut self, explorer_id: u32, planet_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_move_to_planet()", explorer_id, planet_id,);
         // get the sender from orchestrator to explorer
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
@@ -155,6 +165,7 @@ impl Orchestrator {
 
     /// sends the CurrentPlanetRequest message
     pub fn send_current_planet_request(&mut self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_current_planet_request()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -181,6 +192,7 @@ impl Orchestrator {
 
     /// sends the SupportedResourceRequest message
     pub fn send_supported_resource_request(&mut self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_supported_resource_request()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -207,6 +219,7 @@ impl Orchestrator {
 
     /// sends the SupportedCombinationRequest message
     pub fn send_supported_combination_request(&mut self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_supported_combination_request()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -237,6 +250,12 @@ impl Orchestrator {
         explorer_id: u32,
         to_generate: BasicResourceType,
     ) -> Result<(), String> {
+        log_fn_call!(
+            self,
+            "send_generate_resource_request()",
+            explorer_id,
+            to_generate,
+        );
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -267,6 +286,12 @@ impl Orchestrator {
         explorer_id: u32,
         to_combine: ComplexResourceType,
     ) -> Result<(), String> {
+        log_fn_call!(
+            self,
+            "send_combine_resource_request()",
+            explorer_id,
+            to_combine,
+        );
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -295,6 +320,7 @@ impl Orchestrator {
 
     /// sends the BagContentRequest message
     pub fn send_bag_content_request(&self, explorer_id: u32) -> Result<(), String> {
+        log_fn_call!(self, "send_bag_content_request()", explorer_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         sender
@@ -325,6 +351,7 @@ impl Orchestrator {
         explorer_id: u32,
         planet_id: u32,
     ) -> Result<(), String> {
+        log_fn_call!(self, "send_neighbours_response()", explorer_id, planet_id,);
         let sender = self.get_sender_from_orchestrator_to_explorer(explorer_id)?;
 
         // Translate the real planet_id to its matrix index via the lookup table

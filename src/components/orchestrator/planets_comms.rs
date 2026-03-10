@@ -8,10 +8,11 @@ use common_game::{
 };
 use crossbeam_channel::Sender;
 use log::info;
-use logging_utils::{debug_println, log_fn_call, log_message, warning_payload, LoggableActor};
+use logging_utils::{debug_println, log_fn_call, log_message, log_orch_to_planet, warning_payload, LoggableActor};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
+        log_fn_call!(self, "send_sunray_or_asteroid()");
         // debug_println!("{:?}", self.ticker);
         match settings::pop_sunray_asteroid_sequence() {
             Some('S') => {
@@ -66,14 +67,7 @@ impl Orchestrator {
         self.send_internal_state_request(sender, planet_id)?;
 
         //LOG
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "Sunray",
-        );
+        log_orch_to_planet!(self, "sunray sent", planet_id);
         //LOG
         Ok(())
     }
@@ -134,14 +128,7 @@ impl Orchestrator {
         self.send_internal_state_request(sender, planet_id)?;
 
         //LOG
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "Asteroid",
-        );
+        log_orch_to_planet!(self, "asteroid sent", planet_id);
         //LOG
         Ok(())
     }
@@ -195,21 +182,11 @@ impl Orchestrator {
             "send_planet_kill()";
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
-
-        info!("killing planet {planet_id}");
         //LOG
         sender
             .send(OrchestratorToPlanet::KillPlanet)
             .map_err(|_| "Unable to send kill message to planet: {id}".to_string())?;
-
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "KillPlanet",
-        );
+        log_orch_to_planet!(self, "KillPlanet sent", planet_id);
         Ok(())
     }
 
@@ -258,15 +235,7 @@ impl Orchestrator {
         let handle_by_log = sender
             .send(OrchestratorToPlanet::InternalStateRequest)
             .map_err(|_| "Unable to send planet state request".to_string());
-
-        log_message!(
-            ActorType::Orchestrator,
-            0u32,
-            ActorType::Planet,
-            planet_id,
-            EventType::MessageOrchestratorToPlanet,
-            "RequestPlanetState",
-        );
+        log_orch_to_planet!(self, "RequestPlanetState sent", planet_id);
         Ok(())
     }
 
@@ -304,6 +273,7 @@ impl Orchestrator {
                 new_sender: new_planet_to_explorer_sender.1.clone(),
             }) {
             Ok(_) => {
+                log_orch_to_planet!(self, "IncomingExplorerRequest sent", planet_id);
                 debug_println!("IncomingExplorerRequest sent correctly")
             }
             Err(err) => {
