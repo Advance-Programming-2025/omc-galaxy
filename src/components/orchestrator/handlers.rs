@@ -40,7 +40,7 @@ impl Orchestrator {
             "handle_planet_message()";
             "message_type"=>format!("{:?}", msg)
         );
-        log_planet_to_orch!(format!{"{:?} received", msg});
+        log_planet_to_orch!(format!("{:?} received", msg), msg.planet_id());
         //LOG
 
         match msg {
@@ -243,7 +243,7 @@ impl Orchestrator {
         msg: ExplorerToOrchestrator<BagType>,
     ) -> Result<(), String> {
         log_internal_op!(self, "explorer message received");
-        log_explorer_to_orch!(format!{"{:?} received", msg});
+        log_explorer_to_orch!(format!("{:?} received", msg),msg.explorer_id());
         match msg {
             ExplorerToOrchestrator::StartExplorerAIResult { explorer_id } => {
                 //LOG
@@ -467,9 +467,11 @@ impl Orchestrator {
                         .map_err(|err| err.to_string())?;
                 }
                 //updating move_to_planet_id
+                if self.explorers_info.get(&explorer_id).is_some(){
+                    log_internal_op!(self, "updated move_to_planet_id");
+                }
                 match self.explorers_info.get_mut(&explorer_id) {
                     Some(explorer_info) => {
-                        log_internal_op!(self, "updated move_to_planet_id");
                         explorer_info.move_to_planet_id = dst_planet_id as i32;
                     }
                     None => {

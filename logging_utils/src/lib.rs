@@ -913,7 +913,8 @@ macro_rules! log_message {
 #[macro_export]
 macro_rules! log_explorer_to_orch {
     (
-        $message:expr
+        $message:expr,
+        $explorer_id:expr
         $(; $($key:expr => $val:expr),*)?
         $(,)?
     ) => {{
@@ -957,7 +958,8 @@ macro_rules! log_explorer_to_orch {
 #[macro_export]
 macro_rules! log_planet_to_orch {
     (
-        $message:expr
+        $message:expr,
+        $planet_id:expr
         $(; $($key:expr => $val:expr),*)?
         $(,)?
     ) => {{
