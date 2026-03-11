@@ -31,8 +31,7 @@ pub fn get_sunray_probability() -> u32 {
 /// Set a new Sunray spawn probability (0-100)%
 pub fn set_sunray_probability(new_probability: u32) {
     let mut prob = SUNRAY_SPAWN_PROBABILITY.write().unwrap();
-    if new_probability > 100 {
-        *prob = 100;
+    if new_probability<5 || new_probability > 100 {
         return;
     }
     *prob = new_probability;

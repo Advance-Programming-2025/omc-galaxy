@@ -149,7 +149,7 @@ impl PlanetInfoMap {
     pub(crate) fn get_list_id_alive(&self) -> Vec<u32> {
         let mut res = Vec::new();
         for (&id, info) in &self.map {
-            if info.status == Status::Running {
+            if info.status == Status::Running || info.status == Status::Paused {
                 res.push(id);
             }
         }

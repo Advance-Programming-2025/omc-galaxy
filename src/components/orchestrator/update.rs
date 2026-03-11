@@ -515,6 +515,29 @@ impl Orchestrator {
         Ok(())
     }
 
+    pub fn restart_all(&mut self)->Result<(), String>{
+        //LOG
+        log_fn_call!(self, "restart_all()");
+        //LOG
+
+        // 1. Start all planet AIs
+        self.start_all_planet_ais()?;
+
+        // 2. Wait 20ms for the planets to be fully ready
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        // 3. Start all explorer AIs
+        self.start_all_explorer_ais()?;
+
+        //LOG
+        log_internal_op!(
+            self,
+            "action"=>"all systems restarted",
+            "status"=>"success"
+        );
+        //LOG
+        Ok(())
+    }
     pub fn choose_random_action(&mut self) -> Result<(), String> {
         let mut rng = rand::rng();
         let living_things = self.planets_info.get_list_id_alive();
