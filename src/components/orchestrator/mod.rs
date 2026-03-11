@@ -19,7 +19,7 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use logging_utils::LoggableActor;
 use logging_utils::{log_fn_call, log_internal_op};
 use rand::Rng;

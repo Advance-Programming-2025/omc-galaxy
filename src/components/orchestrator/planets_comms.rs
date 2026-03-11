@@ -1,4 +1,4 @@
-use crate::{components::orchestrator::Orchestrator, log_orch_internal, settings, Status};
+use crate::{Status, components::orchestrator::Orchestrator, log_orch_internal, settings};
 use common_game::logging::{Channel, LogEvent, Participant};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
@@ -8,7 +8,7 @@ use common_game::{
 };
 use crossbeam_channel::Sender;
 use log::info;
-use logging_utils::{log_fn_call, log_message, log_orch_to_planet, warning_payload, LoggableActor};
+use logging_utils::{LoggableActor, log_fn_call, log_message, log_orch_to_planet, warning_payload};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {

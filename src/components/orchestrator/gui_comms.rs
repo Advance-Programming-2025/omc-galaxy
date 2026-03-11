@@ -1,4 +1,4 @@
-use crate::{utils::registry::PlanetType, PlanetInfoMap};
+use crate::{PlanetInfoMap, utils::registry::PlanetType};
 use std::sync::Arc;
 
 use common_game::components::resource::BasicResourceType;
@@ -7,12 +7,12 @@ use rustc_hash::FxHashMap;
 
 use crate::utils::ExplorerInfoMap;
 use crate::{
+    GalaxyTopology,
     components::orchestrator::{Orchestrator, OrchestratorEvent},
     utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
-    GalaxyTopology,
 };
-use logging_utils::log_fn_call;
 use logging_utils::LoggableActor;
+use logging_utils::log_fn_call;
 
 impl Orchestrator {
     /// Get a snapshot of the current galaxy topology
@@ -62,7 +62,9 @@ impl Orchestrator {
     }
     pub fn send_bag_content_request_from_ui(&self) -> Result<(), String> {
         for explorer_id in self.explorer_channels.keys() {
-            self.send_bag_content_request(*explorer_id)?;
+            if !self.explorers_info.is_dead(explorer_id) {
+                self.send_bag_content_request(*explorer_id)?;
+            }
         }
         Ok(())
     }
@@ -118,7 +120,9 @@ impl Orchestrator {
 
     pub(crate) fn emit_explorer_move(&mut self, explorer_id: u32, planet_id: u32) {
         info!("GUI event esplorer_move was triggered");
-        self.gui_messages
-            .push(OrchestratorEvent::ExplorerMoved { explorer_id, destination: planet_id });
+        self.gui_messages.push(OrchestratorEvent::ExplorerMoved {
+            explorer_id,
+            destination: planet_id,
+        });
     }
 }

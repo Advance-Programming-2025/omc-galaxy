@@ -2,6 +2,7 @@ use crossbeam_channel::{SendError, Sender};
 use std::collections::HashSet;
 
 use super::planet;
+use crate::components::tommy_explorer::ExplorerState::CombiningResources;
 use crate::components::tommy_explorer::actions::ActionQueue;
 use crate::components::tommy_explorer::bag::BagType;
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
@@ -13,7 +14,6 @@ use common_game::protocols::orchestrator_explorer::{
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use logging_utils::{debug_println, log_message, warning_payload};
 use one_million_crabs::planet::ToString2;
-use crate::components::tommy_explorer::ExplorerState::CombiningResources;
 
 /// Handles all messages from the orchestrator,
 /// returns Ok(true) if the explorer should terminate, Ok(false) otherwise.
@@ -236,12 +236,10 @@ fn move_to_planet(
             explorer.set_planet_sender(sender);
             explorer.set_planet_id(planet_id);
 
-            let _ = explorer.send_to_orchestrator(
-                ExplorerToOrchestrator::MovedToPlanetResult {
-                    explorer_id: explorer.id(),
-                    planet_id,
-                }
-            );
+            let _ = explorer.send_to_orchestrator(ExplorerToOrchestrator::MovedToPlanetResult {
+                explorer_id: explorer.id(),
+                planet_id,
+            });
 
             //LOG
             log_message!(
@@ -569,7 +567,7 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                 "to_generate" => to_generate.to_string_2(),
                 "planet_id"=>explorer.planet_id.to_string()
             )
-        },
+        }
         Err(err) => {
             LogEvent::new(
                 Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
@@ -733,7 +731,7 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                         "to_generate" => to_generate.to_string_2(),
                         "planet_id"=>explorer.planet_id.to_string()
                     )
-                },
+                }
                 Err(err) => {
                     LogEvent::new(
                         Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),

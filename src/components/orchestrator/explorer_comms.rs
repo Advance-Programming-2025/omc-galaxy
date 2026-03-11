@@ -3,7 +3,7 @@ use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::{ActorType, EventType};
 use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
 use crossbeam_channel::Sender;
-use logging_utils::{log_fn_call, log_message, LoggableActor};
+use logging_utils::{LoggableActor, log_fn_call, log_message};
 
 impl Orchestrator {
     /// this method gets the sender used by all the "send methods" below

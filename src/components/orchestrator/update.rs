@@ -8,10 +8,10 @@ use common_game::{
 };
 use log::info;
 use logging_utils::{
-    debug_println, log_fn_call, log_internal_op, log_message, payload, warning_payload,
-    LoggableActor, Sender, LOG_ACTORS_ACTIVITY,
+    LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op,
+    log_message, payload, warning_payload,
 };
-use rand::{random, seq::IndexedRandom, Rng};
+use rand::{Rng, random, seq::IndexedRandom};
 use std::collections::HashSet;
 use std::sync::LockResult;
 use std::time::Duration;
@@ -102,20 +102,22 @@ impl Orchestrator {
         // Collect all planet ids that we need to hear back from
         let mut pending_planets: HashSet<u32> = HashSet::new();
 
-        for (_id, (from_orch, _)) in &self.planet_channels {
-            from_orch
-                .try_send(OrchestratorToPlanet::StartPlanetAI)
-                .map_err(|_| format!("Cannot send message to {_id}"))?;
+        for (id, (from_orch, _)) in &self.planet_channels {
+            if !self.planets_info.is_dead(id) {
+                from_orch
+                    .try_send(OrchestratorToPlanet::StartPlanetAI)
+                    .map_err(|_| format!("Cannot send message to {id}"))?;
 
-            pending_planets.insert(*_id);
+                pending_planets.insert(*id);
+            }
 
             //LOG
             log_message!(
                 ActorType::Orchestrator, 0u32,
-                ActorType::Planet, *_id,
+                ActorType::Planet, *id,
                 EventType::MessageOrchestratorToPlanet,
                 "StartPlanetAI";
-                "planet_id"=>_id
+                "planet_id"=>id
             );
             //LOG
         }
@@ -240,20 +242,22 @@ impl Orchestrator {
         log_fn_call!(self, "stop_all_planet_ais()");
         //LOG
 
-        for (_id, (from_orch, _)) in &self.planet_channels {
-            from_orch
-                .try_send(OrchestratorToPlanet::StopPlanetAI)
-                .map_err(|_| format!("Cannot send message to {_id}"))?;
+        for (id, (from_orch, _)) in &self.planet_channels {
+            if !self.planets_info.is_dead(id) {
+                from_orch
+                    .try_send(OrchestratorToPlanet::StopPlanetAI)
+                    .map_err(|_| format!("Cannot send message to {id}"))?;
 
-            //LOG
-            log_message!(
-                ActorType::Orchestrator, 0u32,
-                ActorType::Planet, *_id,
-                EventType::MessageOrchestratorToPlanet,
-                "StopPlanetAI";
-                "planet_id"=>_id
-            );
-            //LOG
+                //LOG
+                log_message!(
+                    ActorType::Orchestrator, 0u32,
+                    ActorType::Planet, *id,
+                    EventType::MessageOrchestratorToPlanet,
+                    "StopPlanetAI";
+                    "planet_id"=>id
+                );
+                //LOG
+            }
         }
         Ok(())
     }
@@ -268,19 +272,22 @@ impl Orchestrator {
         log_fn_call!(self, "start_all_explorer_ais()");
         //LOG
 
-        for (_id, (from_orch, _)) in &self.explorer_channels {
-            from_orch
-                .try_send(OrchestratorToExplorer::StartExplorerAI)
-                .map_err(|_| format!("Cannot send message to explorer {}", _id))?;
+        for (id, (from_orch, _)) in &self.explorer_channels {
+            if !self.explorers_info.is_dead(id) {
+                from_orch
+                    .try_send(OrchestratorToExplorer::StartExplorerAI)
+                    .map_err(|_| format!("Cannot send message to explorer {}", id))?;
 
-            //LOG
-            log_message!(
-                ActorType::Orchestrator, 0u32,
-                ActorType::Explorer, *_id,
-                EventType::MessageOrchestratorToExplorer,
-                "StartExplorerAI";
-                "explorer_id"=>_id
-            );
+                //LOG
+                log_message!(
+                    ActorType::Orchestrator, 0u32,
+                    ActorType::Explorer, *id,
+                    EventType::MessageOrchestratorToExplorer,
+                    "StartExplorerAI";
+                    "explorer_id"=>id
+                );
+            }
+
             //LOG
         }
         //
@@ -347,20 +354,22 @@ impl Orchestrator {
         log_fn_call!(self, "stop_all_explorer_ais()");
         //LOG
 
-        for (_id, (from_orch, _)) in &self.explorer_channels {
-            from_orch
-                .try_send(OrchestratorToExplorer::StopExplorerAI)
-                .map_err(|_| format!("Cannot send message to explorer {}", _id))?;
+        for (id, (from_orch, _)) in &self.explorer_channels {
+            if !self.explorers_info.is_dead(id) {
+                from_orch
+                    .try_send(OrchestratorToExplorer::StopExplorerAI)
+                    .map_err(|_| format!("Cannot send message to explorer {}", id))?;
 
-            //LOG
-            log_message!(
-                ActorType::Orchestrator, 0u32,
-                ActorType::Explorer, *_id,
-                EventType::MessageOrchestratorToExplorer,
-                "StopExplorerAI";
-                "explorer_id"=>_id
-            );
-            //LOG
+                //LOG
+                log_message!(
+                    ActorType::Orchestrator, 0u32,
+                    ActorType::Explorer, *id,
+                    EventType::MessageOrchestratorToExplorer,
+                    "StopExplorerAI";
+                    "explorer_id"=>id
+                );
+                //LOG
+            }
         }
         //
         // //TODO this is probably not needed for the stop function
@@ -515,6 +524,29 @@ impl Orchestrator {
         Ok(())
     }
 
+    pub fn restart_all(&mut self) -> Result<(), String> {
+        //LOG
+        log_fn_call!(self, "restart_all()");
+        //LOG
+
+        // 1. Start all planet AIs
+        self.start_all_planet_ais()?;
+
+        // 2. Wait 20ms for the planets to be fully ready
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        // 3. Start all explorer AIs
+        self.start_all_explorer_ais()?;
+
+        //LOG
+        log_internal_op!(
+            self,
+            "action"=>"all systems restarted",
+            "status"=>"success"
+        );
+        //LOG
+        Ok(())
+    }
     pub fn choose_random_action(&mut self) -> Result<(), String> {
         let mut rng = rand::rng();
         let living_things = self.planets_info.get_list_id_alive();
@@ -584,7 +616,8 @@ impl Orchestrator {
     pub fn send_asteroid_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
         for planet_id in id_list {
             if !self.planets_info.get_list_id_alive().contains(&planet_id) {
-                return Err("Planet is either dead or not valid".to_string());
+                return Ok(());
+                // return Err("Planet is either dead or not valid".to_string());
             }
 
             let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
