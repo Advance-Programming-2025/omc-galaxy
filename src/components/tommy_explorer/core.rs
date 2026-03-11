@@ -39,6 +39,7 @@ pub struct Explorer {
     pub action_queue: ActionQueue, // actions that the explorer can perform (sorted in the correct order)
     pub move_queue: MoveQueue,
     manual_mode: bool,
+    accept_death: bool,
 }
 
 impl Explorer {
@@ -78,6 +79,7 @@ impl Explorer {
             action_queue: ActionQueue::new(),
             move_queue: MoveQueue::new(),
             manual_mode: true,
+            accept_death: false,
         }
     }
 
@@ -377,7 +379,7 @@ impl Explorer {
         // 5) special behaviours for some specific planets (if they have special features)
         // 6) repeat
 
-        if let Some(action) = self.action_queue.next_action() {
+        if let Some(action) = self.action_queue.next_action() && !self.accept_death {
             match action {
                 ExplorerAction::AskNeighbours => {
                     self.action_queue.push_back(action);
@@ -542,6 +544,8 @@ impl Explorer {
                     {
                         // else find the best path to reach the resource goal
                         self.move_queue.push_path(path)
+                    } else {
+                        self.accept_death = true;
                     }
 
                     // println!("[EXPLORER TOMY DEBUG] move queue {:?}", self.move_queue);

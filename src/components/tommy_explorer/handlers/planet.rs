@@ -44,7 +44,7 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
             Ok(())
         }
         PlanetToExplorer::Stopped => {
-            explorer.set_state(ExplorerState::WaitingToStartExplorerAI);
+            explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
     }

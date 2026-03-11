@@ -5,7 +5,6 @@ use common_game::protocols::planet_explorer::PlanetToExplorer;
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExplorerState {
     Idle,
-    WaitingToStartExplorerAI, // TODO rimuovere? con la manual mode diventa inutile...
     WaitingForNeighbours,
     Traveling,
     GeneratingResource,
@@ -19,27 +18,22 @@ pub enum ExplorerState {
 impl ExplorerState {
     /// Checks if the orchestrator message received is the one expected (based on the explorer state).
     pub fn matches_orchestrator_msg(&self, msg: &OrchestratorToExplorer) -> bool {
-        // TODO these GUI messages should always be accepted?
-        // match msg {
-        //     OrchestratorToExplorer::StartExplorerAI |
-        //     OrchestratorToExplorer::StopExplorerAI |
-        //     OrchestratorToExplorer::KillExplorer |
-        //     OrchestratorToExplorer::BagContentRequest |
-        //     OrchestratorToExplorer::CurrentPlanetRequest => return true,
-        //     _ => {}
-        // }
+        match msg {
+            OrchestratorToExplorer::StartExplorerAI |
+            OrchestratorToExplorer::StopExplorerAI |
+            OrchestratorToExplorer::KillExplorer |
+            OrchestratorToExplorer::BagContentRequest |
+            OrchestratorToExplorer::CurrentPlanetRequest => return true,
+            _ => {}
+        }
 
         match (self, msg) {
-            (ExplorerState::Idle, _) => true,
-            (_, OrchestratorToExplorer::KillExplorer) => true,
-            (ExplorerState::WaitingToStartExplorerAI, OrchestratorToExplorer::StartExplorerAI) => {
-                true
-            }
             (
                 ExplorerState::WaitingForNeighbours,
                 OrchestratorToExplorer::NeighborsResponse { .. },
             ) => true,
             (ExplorerState::Traveling, OrchestratorToExplorer::MoveToPlanet { .. }) => true,
+            (ExplorerState::Idle, _) => true,
             _ => false,
         }
     }

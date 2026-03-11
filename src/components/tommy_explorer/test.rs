@@ -230,13 +230,6 @@ mod tests {
         }
 
         #[test]
-        fn test_state_matches_orchestrator_msg_waiting_to_start() {
-            let state = ExplorerState::WaitingToStartExplorerAI;
-            let msg = OrchestratorToExplorer::StartExplorerAI;
-            assert!(state.matches_orchestrator_msg(&msg));
-        }
-
-        #[test]
         fn test_state_should_terminate() {
             assert!(ExplorerState::Killed.should_terminate());
             assert!(!ExplorerState::Idle.should_terminate());
@@ -1221,19 +1214,6 @@ mod explorer_full_tests {
             assert_eq!(h.explorer.get_bag_content().len(), 0);
         }
 
-        /// PlanetToExplorer::Stopped
-        /// -> Explorer should transition to WaitingToStartExplorerAI
-        #[test]
-        fn test_planet_stopped_transitions_state() {
-            let mut h = TestStruct::new();
-
-            // Simulate handler for PlanetToExplorer::Stopped
-            h.explorer
-                .set_state(ExplorerState::WaitingToStartExplorerAI);
-
-            assert_eq!(*h.explorer.state(), ExplorerState::WaitingToStartExplorerAI);
-        }
-
         /// PlanetToExplorer::SupportedResourceResponse sent over channel and received
         #[test]
         fn test_planet_resource_response_via_channel() {
@@ -1602,12 +1582,6 @@ mod explorer_full_tests {
                     state
                 );
             }
-
-            // StartExplorerAI -> only in WaitingToStartExplorerAI
-            assert!(
-                ExplorerState::WaitingToStartExplorerAI
-                    .matches_orchestrator_msg(&OrchestratorToExplorer::StartExplorerAI)
-            );
         }
 
         #[test]
@@ -1616,7 +1590,6 @@ mod explorer_full_tests {
             assert!(!ExplorerState::Idle.should_terminate());
             assert!(!ExplorerState::Traveling.should_terminate());
             assert!(!ExplorerState::WaitingForNeighbours.should_terminate());
-            assert!(!ExplorerState::WaitingToStartExplorerAI.should_terminate());
         }
 
         #[test]
