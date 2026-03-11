@@ -1,4 +1,4 @@
-use logging_utils::{get_receiver_id, get_sender_id, LoggableActor};
+use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
 use std::{
     fs,
     sync::{Arc, RwLock},
@@ -13,7 +13,7 @@ use common_game::{
         planet_explorer::{ExplorerToPlanet, PlanetToExplorer},
     },
 };
-use crossbeam_channel::{unbounded, Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use rustc_hash::FxHashMap;
 
 use super::Orchestrator;
@@ -22,13 +22,13 @@ use crate::utils::registry::PlanetType::{
     RustyCrab, TheCompilerStrikesBack,
 };
 use crate::{
+    GalaxyTopology,
     components::mattia_explorer::Explorer as MattiaExplorer,
     components::tommy_explorer::Explorer as TommyExplorer,
     utils::{
-        registry::{PlanetType, PLANET_REGISTRY},
         Status,
+        registry::{PLANET_REGISTRY, PlanetType},
     },
-    GalaxyTopology,
 };
 
 use crate::utils::{ExplorerInfo, PlanetInfo};
@@ -288,10 +288,12 @@ impl Orchestrator {
 
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                if let Err(err) = orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
-                    explorer_id,
-                    new_sender: sender_planet.clone(),
-                }) {
+                if let Err(err) =
+                    orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                        explorer_id,
+                        new_sender: sender_planet.clone(),
+                    })
+                {
                     return Err(err.to_string());
                 }
             }
@@ -379,10 +381,12 @@ impl Orchestrator {
         );
         match orch_to_planet {
             Some(orchestrator_sender) => {
-                if let Err(err) =orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
-                    explorer_id,
-                    new_sender: sender_planet.clone(),
-                }) {
+                if let Err(err) =
+                    orchestrator_sender.send(OrchestratorToPlanet::IncomingExplorerRequest {
+                        explorer_id,
+                        new_sender: sender_planet.clone(),
+                    })
+                {
                     return Err(err.to_string());
                 }
             }

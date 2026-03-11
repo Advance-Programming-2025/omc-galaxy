@@ -1,14 +1,14 @@
+use crate::components::mattia_explorer::ActorType;
+use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::ai_params::AiParams;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::ExplorerState;
-use crate::components::mattia_explorer::ActorType;
-use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
-use logging_utils::{log_fn_call, log_internal_op, LoggableActor};
+use logging_utils::{LoggableActor, log_fn_call, log_internal_op};
 use rand::Rng;
 use std::collections::HashMap;
 
@@ -419,7 +419,7 @@ fn score_basic_resource_production(
             0.8
         })
         * (reliability * 0.2 + 0.8); //in this case the reliability on the information about the energy cells it isn't very important
-                                     //adding some randomness
+    //adding some randomness
     let mut rng = rand::rng();
     let noise_factor: f32 = rng.random_range(0.95..=1.05);
 

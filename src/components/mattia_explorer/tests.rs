@@ -17,8 +17,8 @@
 
 mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -600,7 +600,7 @@ mod test_one_million_crabs_planet {
 
 mod game_simulation {
     use super::*;
-    use crate::{debug_println, Orchestrator};
+    use crate::{Orchestrator, debug_println};
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     #[test]
@@ -687,7 +687,7 @@ mod communication {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{utils::registry::PlanetType, Status};
+    use crate::{Status, utils::registry::PlanetType};
 
     use super::*;
 
@@ -779,7 +779,7 @@ mod communication {
         //stop_planet_ais
         orch.send_supported_resource_request(explorer_id).unwrap();
         sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
-                                           // 1. planet result, explorer result, combination result
+        // 1. planet result, explorer result, combination result
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
@@ -818,7 +818,7 @@ mod communication {
         orch.send_supported_combination_request(explorer_id)
             .unwrap();
         sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
-                                           // 1. planet result, explorer result, combination result
+        // 1. planet result, explorer result, combination result
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
         orch.handle_game_messages().unwrap();
@@ -889,8 +889,8 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::Status;
+    use crate::utils::registry::PlanetType;
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
@@ -1332,9 +1332,11 @@ mod generate_resource_tests {
         // after GenerateResourceResponse the orchestrator sends BagContentRequest automatically
         // so the bag should be updated
         let explorer_info = orch.explorers_info.get(&0).unwrap();
-        assert!(explorer_info
-            .bag
-            .contains(&ResourceType::Basic(BasicResourceType::Silicon)))
+        assert!(
+            explorer_info
+                .bag
+                .contains(&ResourceType::Basic(BasicResourceType::Silicon))
+        )
     }
     // ---- Generate multiple resources in sequence ----
 
@@ -1359,15 +1361,18 @@ mod generate_resource_tests {
         }
         drain_messages(&mut orch, 500);
         let info = orch.explorers_info.get(&0).unwrap();
-        assert!(info
-            .bag
-            .contains(&ResourceType::Basic(BasicResourceType::Hydrogen)));
-        assert!(info
-            .bag
-            .contains(&ResourceType::Basic(BasicResourceType::Carbon)));
-        assert!(info
-            .bag
-            .contains(&ResourceType::Basic(BasicResourceType::Oxygen)));
+        assert!(
+            info.bag
+                .contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
+        );
+        assert!(
+            info.bag
+                .contains(&ResourceType::Basic(BasicResourceType::Carbon))
+        );
+        assert!(
+            info.bag
+                .contains(&ResourceType::Basic(BasicResourceType::Oxygen))
+        );
     }
 
     // ---- Generate resource without energy (no sunrays) ----
@@ -1503,12 +1508,13 @@ mod combine_resource_tests {
             }
         }
         assert!(response, "GeneratedResourceResponse not received");
-        assert!(orch
-            .explorers_info
-            .get(&0)
-            .unwrap()
-            .bag
-            .contains(&ResourceType::Basic(BasicResourceType::Hydrogen)));
+        assert!(
+            orch.explorers_info
+                .get(&0)
+                .unwrap()
+                .bag
+                .contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
+        );
     }
 
     // ---- Generate resources then combine ----
@@ -1827,12 +1833,13 @@ mod resource_after_movement_tests {
         drain_messages(&mut orch, 200);
 
         // protocol completed
-        assert!(orch
-            .explorers_info
-            .get(&10)
-            .unwrap()
-            .bag
-            .contains(&ResourceType::Basic(BasicResourceType::Silicon)));
+        assert!(
+            orch.explorers_info
+                .get(&10)
+                .unwrap()
+                .bag
+                .contains(&ResourceType::Basic(BasicResourceType::Silicon))
+        );
     }
 }
 
@@ -1906,9 +1913,9 @@ mod end_to_end_tests {
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::utils::registry::PlanetType;
-    use crate::utils::ExplorerInfo;
     use crate::Status;
+    use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,

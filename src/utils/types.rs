@@ -10,11 +10,11 @@ use common_game::components::resource::{BasicResourceType, ComplexResourceType, 
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use crossbeam_channel::{Receiver, Sender};
-use logging_utils::{log_internal_op, LoggableActor};
+use logging_utils::{LoggableActor, log_internal_op};
 use rustrelli::planet;
 
-use crate::utils::registry::PlanetType;
 use crate::utils::Status;
+use crate::utils::registry::PlanetType;
 
 pub type PlanetFactory = Box<
     dyn Fn(

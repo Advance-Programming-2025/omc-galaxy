@@ -10,18 +10,17 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use crossbeam_channel::{select, SendError};
+use crossbeam_channel::{SendError, select};
 use log::info;
 use logging_utils::{
-    debug_println, log_explorer_to_orch, log_fn_call, log_internal_op, log_message,
-    log_orch_to_planet, log_planet_to_orch, payload, warning_payload, LoggableActor,
-    LOG_ACTORS_ACTIVITY,
+    LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_explorer_to_orch, log_fn_call,
+    log_internal_op, log_message, log_orch_to_planet, log_planet_to_orch, payload, warning_payload,
 };
 
 use crate::components::explorer::BagType;
 use crate::utils::ExplorerInfoMap;
 use crate::{
-    components::orchestrator::Orchestrator, log_orch_internal, utils::Status, PlanetInfoMap,
+    PlanetInfoMap, components::orchestrator::Orchestrator, log_orch_internal, utils::Status,
 };
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
@@ -408,8 +407,9 @@ impl Orchestrator {
                     payload!(
                         "message"=> "Explorer AI started",
                         "explorer_id"=>explorer_id,
-                    )
-                ).emit();
+                    ),
+                )
+                .emit();
                 //LOG
 
                 self.explorers_info
@@ -440,8 +440,9 @@ impl Orchestrator {
                     payload!(
                         "message"=> "Explorer killed",
                         "explorer_id"=>explorer_id,
-                    )
-                ).emit();
+                    ),
+                )
+                .emit();
                 log_internal_op!(
                     self,
                     "action" => "explorer status updated to Dead",
@@ -459,8 +460,9 @@ impl Orchestrator {
                     payload!(
                         "message"=> "Explorer AI reset",
                         "explorer_id"=>explorer_id,
-                    )
-                ).emit();
+                    ),
+                )
+                .emit();
                 //LOG
                 //the ai is started if it was in manual mode
                 self.explorers_info
@@ -487,8 +489,9 @@ impl Orchestrator {
                     payload!(
                         "message"=> "Explorer AI stopped ",
                         "explorer_id"=>explorer_id,
-                    )
-                ).emit();
+                    ),
+                )
+                .emit();
                 //LOG
                 self.explorers_info
                     .insert_status(explorer_id, Status::Paused);

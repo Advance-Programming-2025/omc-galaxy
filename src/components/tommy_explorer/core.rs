@@ -461,7 +461,6 @@ impl Explorer {
                     self.action_queue.push_back(action);
 
                     if self.energy_cells > 0 {
-
                         // println!("[EXPLORER TOMY DEBUG] GenerateOrCombine");
                         if let Some(resource) = self.decide_resource_action() {
                             match resource {
