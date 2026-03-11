@@ -1913,7 +1913,7 @@ mod explorer_planet_comms {
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
     };
-    use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
+    use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
     use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
     use crossbeam_channel::{select, tick};
     use std::thread::sleep;
@@ -2180,5 +2180,313 @@ mod explorer_planet_comms {
 
         // explorer should still be on the original planet
         assert_eq!(explorer.planet_id, original_planet_id);
+    }
+
+    // ========================================================================
+    // Edge Case Tests — Race Condition Guards
+    // ========================================================================
+
+    /// Helper: setup orchestrator with TWO connected planets (0 and 1) and a
+    /// manual explorer on planet 0, so we can test guards that require a
+    /// valid destination planet.
+    fn setup_manual_explorer_two_planets(
+        explorer_id: u32,
+    ) -> (Orchestrator, crate::components::mattia_explorer::Explorer) {
+        let mut orch = Orchestrator::new().unwrap();
+        let topology = "0,0,1\n1,0,0\n"; // planet 0 and 1, connected to each other
+        orch.initialize_galaxy_by_content(topology).unwrap();
+        orch.start_all(&[], &[]).unwrap();
+
+        let (sender_orch, receiver_orch, sender_planet, receiver_planet) =
+            Orchestrator::init_comms_explorers();
+
+        let expl_to_planet = orch
+            .planet_channels
+            .get(&0)
+            .expect("planet 0 should exist")
+            .1
+            .clone();
+
+        let orch_to_planet = orch
+            .planet_channels
+            .get(&0)
+            .expect("planet 0 should exist")
+            .0
+            .clone();
+
+        let new_explorer = crate::components::mattia_explorer::Explorer::new(
+            explorer_id,
+            0,
+            (receiver_orch, orch.sender_explorer_orch.clone()),
+            (receiver_planet, expl_to_planet),
+        );
+
+        orch.explorers_info.insert(
+            explorer_id,
+            ExplorerInfo::from(explorer_id, Status::Paused, Vec::new(), 0),
+        );
+        orch.explorer_channels
+            .insert(explorer_id, (sender_orch, sender_planet.clone()));
+
+        orch_to_planet
+            .send(OrchestratorToPlanet::IncomingExplorerRequest {
+                explorer_id,
+                new_sender: sender_planet.clone(),
+            })
+            .expect("testing expect");
+
+        (orch, new_explorer)
+    }
+
+    // ---- Edge Case: AsteroidAck on already-dead planet (Race #1) ----
+
+    #[test]
+    fn asteroid_ack_on_dead_planet_is_skipped() {
+        let (mut orch, _explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // Kill the planet first
+        orch.planets_info.update_status(0, Status::Dead).unwrap();
+
+        // Send AsteroidAck with no rocket — should be silently skipped
+        let result = orch.handle_planet_message(PlanetToOrchestrator::AsteroidAck {
+            planet_id: 0,
+            rocket: None,
+        });
+        assert!(
+            result.is_ok(),
+            "AsteroidAck on dead planet should return Ok, got: {:?}",
+            result
+        );
+    }
+
+    // ---- Edge Case: KillPlanetResult on already-dead planet (Race #1) ----
+
+    #[test]
+    fn kill_planet_result_on_dead_planet_is_skipped() {
+        let (mut orch, _explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // Kill the planet first
+        orch.planets_info.update_status(0, Status::Dead).unwrap();
+
+        // Send KillPlanetResult — should be silently skipped
+        let result =
+            orch.handle_planet_message(PlanetToOrchestrator::KillPlanetResult { planet_id: 0 });
+        assert!(
+            result.is_ok(),
+            "KillPlanetResult on dead planet should return Ok, got: {:?}",
+            result
+        );
+    }
+
+    // ---- Edge Case: message from dead explorer is dropped (Race #2) ----
+
+    #[test]
+    fn explorer_message_from_dead_explorer_is_dropped() {
+        let (mut orch, explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // Mark the explorer as dead
+        orch.explorers_info.insert_status(0, Status::Dead);
+
+        // Send a TravelToPlanetRequest from the "dead" explorer
+        explorer
+            .orchestrator_channels
+            .1
+            .send(ExplorerToOrchestrator::TravelToPlanetRequest {
+                explorer_id: 0,
+                current_planet_id: 0,
+                dst_planet_id: 0,
+            })
+            .unwrap();
+        drain_messages(&mut orch, 200);
+
+        // The explorer should NOT receive any response (message was silently dropped)
+        let timeout = tick(Duration::from_millis(200));
+        let mut got_response = false;
+        loop {
+            select! {
+                recv(explorer.orchestrator_channels.0) -> msg => {
+                    if let Ok(_) = msg {
+                        got_response = true;
+                    }
+                }
+                recv(timeout) -> _ => { break; }
+            }
+        }
+        assert!(
+            !got_response,
+            "Dead explorer should not receive any response"
+        );
+    }
+
+    // ---- Edge Case: IncomingExplorerResponse for dead explorer (Race #2) ----
+
+    #[test]
+    fn incoming_explorer_response_for_dead_explorer_is_skipped() {
+        let (mut orch, _explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // Mark the explorer as dead
+        orch.explorers_info.insert_status(0, Status::Dead);
+
+        // Simulate the planet accepting the (now dead) explorer
+        let result = orch.handle_planet_message(PlanetToOrchestrator::IncomingExplorerResponse {
+            planet_id: 0,
+            explorer_id: 0,
+            res: Ok(()),
+        });
+        assert!(
+            result.is_ok(),
+            "IncomingExplorerResponse for dead explorer should return Ok, got: {:?}",
+            result
+        );
+    }
+
+    // ---- Edge Case: IncomingExplorerResponse with dead/non-existent
+    //      destination planet sends rejection (Race #2) ----
+
+    #[test]
+    fn incoming_explorer_response_with_dead_destination_sends_rejection() {
+        let (mut orch, explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // Set move_to_planet_id to a planet that doesn't exist in planets_info,
+        // so is_running() returns false
+        orch.explorers_info.get_mut(&0).unwrap().move_to_planet_id = 77;
+
+        let result = orch.handle_planet_message(PlanetToOrchestrator::IncomingExplorerResponse {
+            planet_id: 0,
+            explorer_id: 0,
+            res: Ok(()),
+        });
+        assert!(result.is_ok());
+
+        // Explorer should receive MoveToPlanet { sender_to_new_planet: None, planet_id: 77 }
+        let timeout = tick(Duration::from_millis(200));
+        let mut got_rejection = false;
+        loop {
+            select! {
+                recv(explorer.orchestrator_channels.0) -> msg => {
+                    if let Ok(OrchestratorToExplorer::MoveToPlanet {
+                        ref sender_to_new_planet,
+                        planet_id,
+                    }) = msg
+                    {
+                        if planet_id == 77 && sender_to_new_planet.is_none() {
+                            got_rejection = true;
+                        }
+                    }
+                }
+                recv(timeout) -> _ => { break; }
+            }
+        }
+        assert!(
+            got_rejection,
+            "Explorer should receive MoveToPlanet rejection with planet_id 77"
+        );
+    }
+
+    // ---- Edge Case: IncomingExplorerResponse with dead current planet (Race #2) ----
+
+    #[test]
+    fn incoming_explorer_response_with_dead_current_planet_is_skipped() {
+        let (mut orch, _explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // move_to_planet_id stays at -1 (default): no travel in progress,
+        // so the dst planet check is skipped and the current planet guard runs
+        orch.planets_info.update_status(0, Status::Dead).unwrap();
+
+        let result = orch.handle_planet_message(PlanetToOrchestrator::IncomingExplorerResponse {
+            planet_id: 0,
+            explorer_id: 0,
+            res: Ok(()),
+        });
+        assert!(
+            result.is_ok(),
+            "IncomingExplorerResponse with dead current planet should return Ok, got: {:?}",
+            result
+        );
+    }
+
+    // ---- Edge Case: OutgoingExplorerResponse for dead explorer (Race #2) ----
+
+    #[test]
+    fn outgoing_explorer_response_for_dead_explorer_is_handled() {
+        let (mut orch, _explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // Set move_to_planet_id to an existing planet (0) so the channel lookup succeeds
+        orch.explorers_info.get_mut(&0).unwrap().move_to_planet_id = 0;
+
+        // Mark the explorer as dead
+        orch.explorers_info.insert_status(0, Status::Dead);
+
+        // Simulate OutgoingExplorerResponse from the current planet
+        let result = orch.handle_planet_message(PlanetToOrchestrator::OutgoingExplorerResponse {
+            planet_id: 0,
+            explorer_id: 0,
+            res: Ok(()),
+        });
+        assert!(
+            result.is_ok(),
+            "OutgoingExplorerResponse for dead explorer should return Ok, got: {:?}",
+            result
+        );
+    }
+
+    // ---- Edge Case: OutgoingExplorerResponse with dead destination planet
+    //      triggers recovery (Race #2) ----
+
+    #[test]
+    fn outgoing_explorer_response_with_dead_dst_planet_recovers() {
+        let (mut orch, _explorer) = setup_manual_explorer_two_planets(0);
+        drain_messages(&mut orch, 200);
+
+        // Set destination to planet 1
+        orch.explorers_info.get_mut(&0).unwrap().move_to_planet_id = 1;
+
+        // Kill destination planet 1
+        orch.planets_info.update_status(1, Status::Dead).unwrap();
+
+        // Simulate OutgoingExplorerResponse from current planet 0
+        let result = orch.handle_planet_message(PlanetToOrchestrator::OutgoingExplorerResponse {
+            planet_id: 0,
+            explorer_id: 0,
+            res: Ok(()),
+        });
+        assert!(
+            result.is_ok(),
+            "OutgoingExplorerResponse with dead dst planet should return Ok, got: {:?}",
+            result
+        );
+
+        // Recovery: move_to_planet_id should be redirected back to current planet (0)
+        let updated_dst = orch.explorers_info.get(&0).unwrap().move_to_planet_id;
+        assert_eq!(
+            updated_dst, 0,
+            "Explorer should be redirected back to current planet after dst planet dies"
+        );
+    }
+
+    // ---- Edge Case: send_incoming_explorer_request on dead planet (Race #2) ----
+
+    #[test]
+    fn send_incoming_explorer_request_on_dead_planet_is_skipped() {
+        let (mut orch, _explorer) = setup_manual_explorer(PlanetType::OneMillionCrabs, 0, 0);
+        drain_messages(&mut orch, 200);
+
+        // Kill the planet
+        orch.planets_info.update_status(0, Status::Dead).unwrap();
+
+        // send_incoming_explorer_request should silently skip the dead planet
+        let result = orch.send_incoming_explorer_request(0, 0);
+        assert!(
+            result.is_ok(),
+            "send_incoming_explorer_request on dead planet should return Ok, got: {:?}",
+            result
+        );
     }
 }

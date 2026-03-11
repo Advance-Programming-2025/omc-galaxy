@@ -26,21 +26,30 @@ mod tests_actor_management {
         let mut orch = Orchestrator::new().unwrap();
         let planet_id = 10;
 
-        orch.add_planet(planet_id, PlanetType::OneMillionCrabs)
-            .unwrap();
+        let content = format!("{},{}", planet_id, PlanetType::OneMillionCrabs as u32);
+        orch.initialize_galaxy_by_content(&content).unwrap();
 
         assert!(orch.planets_info.is_paused(&planet_id));
         assert!(orch.planet_channels.contains_key(&planet_id));
+        assert!(orch.galaxy_lookup.contains_key(&planet_id));
     }
 
     #[test]
     fn test_membership_add_explorer_creates_comms() {
         let mut orch = Orchestrator::new().unwrap();
-        orch.add_tommy_explorer(1, 10);
+        let planet_id = 10;
+        let explorer_id = 1;
 
-        assert!(orch.explorers_info.get(&1).is_some());
-        assert_eq!(orch.explorers_info.get_status(&1).unwrap(), Status::Paused);
-        assert!(orch.explorer_channels.contains_key(&1));
+        let content = format!("{},{}", planet_id, PlanetType::OneMillionCrabs as u32);
+        orch.initialize_galaxy_by_content(&content).unwrap();
+        orch.start_all(&[], &[(explorer_id, planet_id)]).unwrap();
+
+        assert!(orch.explorers_info.get(&explorer_id).is_some());
+        assert_eq!(
+            orch.explorers_info.get_status(&explorer_id).unwrap(),
+            Status::Paused
+        );
+        assert!(orch.explorer_channels.contains_key(&explorer_id));
     }
 }
 
@@ -52,9 +61,12 @@ mod tests_topology_logic {
     fn test_topology_adj_list_creates_symmetric_matrix() {
         let mut orch = Orchestrator::new().unwrap();
         // 0 -- 1
-        let adj_list = vec![vec![1], vec![0]];
-
-        orch.initialize_galaxy_by_adj_list(adj_list).unwrap();
+        let content = format!(
+            "0,{},1\n1,{},0",
+            PlanetType::OneMillionCrabs as u32,
+            PlanetType::OneMillionCrabs as u32
+        );
+        orch.initialize_galaxy_by_content(&content).unwrap();
 
         assert_eq!(orch.galaxy_topology[0][1], true);
         assert_eq!(orch.galaxy_topology[1][0], true);
@@ -64,8 +76,12 @@ mod tests_topology_logic {
     #[test]
     fn test_topology_destroy_link_updates_matrix() {
         let mut orch = Orchestrator::new().unwrap();
-        let adj_list = vec![vec![1], vec![0]];
-        orch.initialize_galaxy_by_adj_list(adj_list).unwrap();
+        let content = format!(
+            "0,{},1\n1,{},0",
+            PlanetType::OneMillionCrabs as u32,
+            PlanetType::OneMillionCrabs as u32
+        );
+        orch.initialize_galaxy_by_content(&content).unwrap();
 
         orch.destroy_topology_link(0).unwrap();
 
@@ -75,7 +91,8 @@ mod tests_topology_logic {
     #[test]
     fn test_topology_destroy_link_out_of_bounds_errors() {
         let mut orch = Orchestrator::new().unwrap();
-        orch.initialize_galaxy_by_adj_list(vec![vec![]]).unwrap();
+        let content = format!("0,{}", PlanetType::OneMillionCrabs as u32);
+        orch.initialize_galaxy_by_content(&content).unwrap();
 
         let result = orch.destroy_topology_link(5);
         assert!(result.is_err());
@@ -92,13 +109,15 @@ mod tests_messaging_protocol {
         let mut orch = Orchestrator::new().unwrap();
         let planet_id = 1;
 
-        let adj_list = vec![vec![1], vec![0]];
-        orch.initialize_galaxy_by_adj_list(adj_list).unwrap();
+        // Two planets connected: 0 (OneMillionCrabs) -- 1 (Ciuc)
+        let content = format!(
+            "0,{},1\n1,{},0",
+            PlanetType::OneMillionCrabs as u32,
+            PlanetType::Ciuc as u32
+        );
+        orch.initialize_galaxy_by_content(&content).unwrap();
 
         assert!(orch.galaxy_topology[1][0]); // we want the link to exist
-
-        // Setup a planet
-        orch.add_planet(planet_id, PlanetType::Ciuc).unwrap();
 
         // Simulate an Asteroid hitting with NO rocket (None means destruction)
         let msg = PlanetToOrchestrator::AsteroidAck {
@@ -113,7 +132,10 @@ mod tests_messaging_protocol {
     #[test]
     fn test_messaging_send_sunray_to_all_skips_dead_planets() {
         let mut orch = Orchestrator::new().unwrap();
-        orch.add_planet(1, PlanetType::OneMillionCrabs).unwrap();
+
+        let content = format!("1,{}", PlanetType::OneMillionCrabs as u32);
+        orch.initialize_galaxy_by_content(&content).unwrap();
+
         let update = orch.planets_info.update_status(1, Status::Dead); // Force dead
         assert!(update.is_ok());
 
@@ -166,9 +188,8 @@ mod test_One_million_crabs_planet {
         let mut orchestrator = Orchestrator::new().unwrap();
         let planet_id = 1;
         let explorer_id = 2;
-        orchestrator
-            .add_planet(planet_id, PlanetType::OneMillionCrabs)
-            .unwrap();
+        let content = "1,4";
+        orchestrator.initialize_galaxy_by_content(content).unwrap();
         orchestrator
             .start_all(&[(explorer_id, planet_id)], &[])
             .unwrap();
@@ -192,6 +213,7 @@ mod test_One_million_crabs_planet {
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        sleep(Duration::from_millis(100));
         orchestrator.send_sunray(planet_id, &planet_channel);
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_secs(1));
@@ -254,9 +276,9 @@ mod test_One_million_crabs_planet {
         let mut orchestrator = Orchestrator::new().unwrap();
         let planet_id = 1;
         let explorer_id = 2;
-        orchestrator
-            .add_planet(planet_id, PlanetType::OneMillionCrabs)
-            .unwrap();
+
+        let content = format!("{},{}", planet_id, PlanetType::OneMillionCrabs as u32);
+        orchestrator.initialize_galaxy_by_content(&content).unwrap();
         orchestrator
             .start_all(&[(explorer_id, planet_id)], &[])
             .unwrap();
@@ -347,15 +369,22 @@ mod tests {
         fn test_orchestrator_mixed_survival_logic() {
             let mut orch = Orchestrator::new().unwrap();
 
-            // Type A (Ciuc) - Can build rockets
+            // Type A (HoustonWeHaveABorrow) - Can build rockets
             let p_id_a = 1;
-            orch.add_planet(p_id_a, PlanetType::HoustonWeHaveABorrow)
-                .unwrap();
-
             // Type B (BlackAdidasShoe) - Cannot build rockets
             let p_id_b = 2;
-            orch.add_planet(p_id_b, PlanetType::BlackAdidasShoe)
-                .unwrap();
+
+            // Initialize galaxy with both planets connected
+            let content = format!(
+                "{},{},{}\n{},{},{}",
+                p_id_a,
+                PlanetType::HoustonWeHaveABorrow as u32,
+                p_id_b,
+                p_id_b,
+                PlanetType::BlackAdidasShoe as u32,
+                p_id_a
+            );
+            orch.initialize_galaxy_by_content(&content).unwrap();
 
             orch.start_all(&[], &[]).unwrap();
 
@@ -413,19 +442,25 @@ mod tests {
     // --- MACRO CATEGORY: PLANET INTEGRATION (ALL TYPES) ---
     // Testing one of every single planet in the registry simultaneously.
     mod planet_integration {
+        use std::process::id;
         use super::*;
         use strum::IntoEnumIterator;
 
         #[test]
         fn test_orchestrator_integration_all_planet_types_behavior() {
             let mut orch = Orchestrator::new().unwrap();
-            let mut id_counter = 0;
 
-            // Add one of every planet type
-            for p_type in PlanetType::iter() {
-                orch.add_planet(id_counter, p_type).unwrap();
-                id_counter += 1;
-            }
+            // Build content string dynamically from all planet types
+            let planet_types: Vec<PlanetType> = PlanetType::iter().collect();
+            let id_counter = planet_types.len() as u32;
+
+            let content: String = planet_types
+                .iter()
+                .enumerate()
+                .map(|(i, p)| format!("{},{}", i, *p as u32))
+                .collect::<Vec<_>>()
+                .join("\n");
+            orch.initialize_galaxy_by_content(&content).unwrap();
 
             orch.start_all(&[], &[]).unwrap();
 
@@ -459,13 +494,18 @@ mod tests {
         #[test]
         fn sunray_flood_all_planets() {
             let mut orch = Orchestrator::new().unwrap();
-            let mut id_counter = 0;
 
-            // Add one of every planet type
-            for p_type in PlanetType::iter() {
-                orch.add_planet(id_counter, p_type).unwrap();
-                id_counter += 1;
-            }
+            // Build content string dynamically from all planet types
+            let planet_types: Vec<PlanetType> = PlanetType::iter().collect();
+            let id_counter = planet_types.len() as u32;
+
+            let content: String = planet_types
+                .iter()
+                .enumerate()
+                .map(|(i, p)| format!("{},{}", i, *p as u32))
+                .collect::<Vec<_>>()
+                .join("\n");
+            orch.initialize_galaxy_by_content(&content).unwrap();
 
             orch.start_all(&[], &[]).unwrap();
 
@@ -479,6 +519,10 @@ mod tests {
             }
 
             std::thread::sleep(Duration::from_secs(1));
+            for id in 0..id_counter{
+                orch.send_internal_state_request(&orch.planet_channels.get(&id).unwrap().0.clone(), id).expect("failed sending internal state request");
+            }
+            std::thread::sleep(Duration::from_millis(100));
             orch.handle_game_messages().unwrap();
 
             //used to see all the charging statuses, even
@@ -515,12 +559,14 @@ mod tests {
         #[test]
         fn test_orchestrator_heavy_load_mass_extinction() {
             let mut orch = Orchestrator::new().unwrap();
-            let n_planets = 50;
+            let n_planets = 50u32;
 
-            // Fill the galaxy with 50 random planets
-            for i in 0..n_planets {
-                orch.add_planet(i, PlanetType::random()).unwrap();
-            }
+            // Build content string with random planet types
+            let content: String = (0..n_planets)
+                .map(|i| format!("{},{}", i, PlanetType::random() as u32))
+                .collect::<Vec<_>>()
+                .join("\n");
+            orch.initialize_galaxy_by_content(&content).unwrap();
 
             orch.start_all(&[], &[]).unwrap();
 
@@ -550,7 +596,10 @@ mod tests {
         #[test]
         fn test_orchestrator_heavy_channel_congestion() {
             let mut orch = Orchestrator::new().unwrap();
-            orch.add_planet(0, PlanetType::Ciuc).unwrap();
+
+            let content = format!("0,{}", PlanetType::Ciuc as u32);
+            orch.initialize_galaxy_by_content(&content).unwrap();
+
             orch.start_all(&[], &[]).unwrap();
 
             // Spam 1000 sunrays to a single planet to test channel capacity/backpressure
@@ -564,7 +613,6 @@ mod tests {
         }
     }
 
-
     #[cfg(test)]
     mod tests_bag_content_request {
         use super::*;
@@ -577,9 +625,9 @@ mod tests {
             let planet_id = 1;
             let explorer_id = 100;
 
-            orch.add_planet(planet_id, PlanetType::OneMillionCrabs).unwrap();
-
-            orch.add_tommy_explorer(explorer_id, planet_id).unwrap();
+            let content = format!("{},{}", planet_id, PlanetType::OneMillionCrabs as u32);
+            orch.initialize_galaxy_by_content(&content).unwrap();
+            orch.start_all(&[], &[(explorer_id, planet_id)]).unwrap();
 
             let result = orch.send_bag_content_request(explorer_id);
 
@@ -611,8 +659,9 @@ mod tests {
             let planet_id = 2;
             let explorer_id = 200;
 
-            orch.add_planet(planet_id, PlanetType::Ciuc).unwrap();
-            orch.add_tommy_explorer(explorer_id, planet_id).unwrap();
+            let content = format!("{},{}", planet_id, PlanetType::Ciuc as u32);
+            orch.initialize_galaxy_by_content(&content).unwrap();
+            orch.start_all(&[], &[(explorer_id, planet_id)]).unwrap();
 
             let (dead_sender, dead_receiver) = crossbeam_channel::unbounded();
             drop(dead_receiver);
