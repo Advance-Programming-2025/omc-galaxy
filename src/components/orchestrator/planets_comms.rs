@@ -1,4 +1,4 @@
-use crate::{components::orchestrator::Orchestrator, settings, Status};
+use crate::{components::orchestrator::Orchestrator, log_orch_internal, settings, Status};
 use common_game::logging::{Channel, LogEvent, Participant};
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
@@ -8,9 +8,7 @@ use common_game::{
 };
 use crossbeam_channel::Sender;
 use log::info;
-use logging_utils::{
-    debug_println, log_fn_call, log_message, log_orch_to_planet, warning_payload, LoggableActor,
-};
+use logging_utils::{log_fn_call, log_message, log_orch_to_planet, warning_payload, LoggableActor};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
@@ -256,17 +254,17 @@ impl Orchestrator {
         // Guard: if the destination planet is dead its channel is disconnected,
         // so skip the send instead of returning an error.
         if self.planets_info.is_dead(&planet_id) {
-            debug_println!( //todo cambiarlo in un vero log
+            log_orch_internal!(format!(
                 "send_incoming_explorer_request: planet {} is dead, skipping",
                 planet_id
-            );
+            ));
             return Ok(());
         }
 
         let sender = match self.planet_channels.get(&planet_id) {
             Some(sender) => sender,
             None => {
-                debug_println!("Unknown planet: {}", planet_id);
+                log_orch_internal!(format!("Unknown planet: {}", planet_id));
                 return Err(format!("Unknown planet: {}", planet_id));
             }
         };
@@ -274,7 +272,7 @@ impl Orchestrator {
         let new_planet_to_explorer_sender = match self.explorer_channels.get(&explorer_id) {
             Some(sender) => sender,
             None => {
-                debug_println!("Unknown planet: {}", planet_id);
+                log_orch_internal!(format!("Unknown explorer: {}", explorer_id));
                 return Err(format!("Unknown explorer: {}", explorer_id));
             }
         };
@@ -287,7 +285,6 @@ impl Orchestrator {
             }) {
             Ok(_) => {
                 log_orch_to_planet!(self, "IncomingExplorerRequest sent", planet_id);
-                debug_println!("IncomingExplorerRequest sent correctly")
             }
             Err(err) => {
                 LogEvent::new(
