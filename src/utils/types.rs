@@ -303,6 +303,16 @@ impl ExplorerInfoMap {
     pub fn get_mut(&mut self, explorer_id: &u32) -> Option<&mut ExplorerInfo> {
         self.map.get_mut(explorer_id)
     }
+
+    pub fn get_bag(&self, explorer_id: &u32) -> Option<&Vec<ResourceType>> {
+        self.map.get(explorer_id).map(|a| &a.bag)
+    }
+    pub fn get_planet(&self, explorer_id: &u32) -> Option<u32> {
+        self.map.get(explorer_id).map(|a| a.current_planet_id)
+    }
+    pub fn get_id(&self, explorer_id: &u32) -> Option<u32> {
+        self.map.get(explorer_id).map(|a| a.id)
+    }
 }
 
 impl Clone for ExplorerInfoMap {
