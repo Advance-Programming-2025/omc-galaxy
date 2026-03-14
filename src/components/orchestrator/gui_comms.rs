@@ -1,7 +1,10 @@
 use crate::{PlanetInfoMap, utils::registry::PlanetType};
 use std::sync::Arc;
 
+use black_adidas_shoe::planet;
 use common_game::components::resource::BasicResourceType;
+use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
+use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
 use log::info;
 use rustc_hash::FxHashMap;
 
@@ -11,7 +14,7 @@ use crate::{
     components::orchestrator::{Orchestrator, OrchestratorEvent},
     utils::{ExplorerStatusNotLock, GalaxySnapshot, PlanetStatusNotLock},
 };
-use logging_utils::LoggableActor;
+use logging_utils::{ActorType, EventType, LoggableActor, log_message};
 use logging_utils::log_fn_call;
 
 impl Orchestrator {
@@ -54,11 +57,50 @@ impl Orchestrator {
 
     // Getter functions necessary for Ratatui-gui
 
-    pub fn get_planets_info(&self) -> PlanetInfoMap {
+    pub fn get_planets_info(&mut self) -> PlanetInfoMap {
         //LOG
         log_fn_call!(self, "planet_states()");
         //LOG
         self.planets_info.clone()
+    }
+    pub fn send_stop_explorer_from_gui(&mut self, explorer_id: u32) -> Result<(), String> {
+        let explorer_channel = self
+            .explorer_channels
+            .get(&explorer_id)
+            .ok_or_else(|| format!("Explorer {explorer_id} not found"))?;
+        let from_orch = &explorer_channel.0;
+
+        from_orch
+            .try_send(OrchestratorToExplorer::StopExplorerAI)
+            .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
+
+        //LOG
+
+        //LOG
+
+        Ok(())
+    }
+    pub fn send_move_explorer_from_gui(&mut self, explorer_id: u32, destination_planet_id: u32) -> Result<(), String> {
+        self.send_stop_explorer_from_gui(explorer_id)?;
+        let explorer_channel = self
+            .explorer_channels
+            .get(&explorer_id)
+            .ok_or_else(|| format!("Explorer {explorer_id} not found"))?;
+        let from_orch = &explorer_channel.0;
+
+        let planet_channel = self.planet_channels.get(&destination_planet_id).ok_or_else(|| format!("Planet {destination_planet_id} not found"))?;
+        let sender_to_new_planet = planet_channel.1.clone();
+
+        if !self.planets_info.is_dead(&destination_planet_id) {
+                from_orch
+                    .try_send(OrchestratorToExplorer::MoveToPlanet { sender_to_new_planet:Some(sender_to_new_planet), planet_id: destination_planet_id })
+                    .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
+
+                //LOG
+
+                //LOG
+            }
+            Ok(())
     }
     pub fn send_bag_content_request_from_ui(&self) -> Result<(), String> {
         for explorer_id in self.explorer_channels.keys() {
@@ -71,18 +113,6 @@ impl Orchestrator {
     pub fn get_explorer_states(&self) -> ExplorerInfoMap {
         self.explorers_info.clone()
     }
-    // pub fn get_explorer_states(&self) -> Result<ExplorerInfoMap, String> {
-    //     //LOG
-    //     log_fn_call!(self, "explorer_states()");
-    //
-    //
-    // self.send_bag_content_request(0)?;
-    //     self.send_bag_content_request(1)?;
-    //
-    //     // self.send_generate_resource_request(0, BasicResourceType::Carbon)?; // we ask the orchestrator to generate a resource to update the info about the resources in the galaxy, this is needed to update the info about the resources in the planets
-    //
-    //     Ok(self.explorers_info.clone())
-    // }
     pub fn get_galaxy_topology(&self) -> Vec<Vec<bool>> {
         self.galaxy_topology.clone()
     }
