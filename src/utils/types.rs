@@ -211,7 +211,7 @@ impl PlanetInfo {
     }
 }
 
-pub(crate) struct ExplorerInfoMap {
+pub struct ExplorerInfoMap {
     pub(crate) map: BTreeMap<u32, ExplorerInfo>,
 }
 
