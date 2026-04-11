@@ -1,17 +1,13 @@
 use common_game::logging::ActorType;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt::Debug;
-use std::path::Iter;
-use std::sync::{Arc, RwLock};
 
-use common_game::components::energy_cell::EnergyCell;
 use common_game::components::planet::{DummyPlanetState, Planet};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use common_game::protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator};
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use crossbeam_channel::{Receiver, Sender};
-use logging_utils::{LoggableActor, log_internal_op};
-use rustrelli::planet;
+use logging_utils::log_internal_op;
 
 use crate::utils::Status;
 use crate::utils::registry::PlanetType;
@@ -51,8 +47,8 @@ impl PlanetInfoMap {
     }
 
     ///Warning! this function overwrite the old value if there is
-    pub fn insert_status(&mut self, planet_id: u32, name: PlanetType, status: Status) {
-        let new_info = PlanetInfo::from(name, status, vec![], 0, false, None, None);
+    pub fn insert_status(&mut self, planet_id: u32, name: PlanetType, status: Status, basic: Option<HashSet<BasicResourceType>>, complex: Option<HashSet<ComplexResourceType>>) {
+        let new_info = PlanetInfo::from(name, status, vec![], 0, false, basic, complex);
         log_internal_op!(dir ActorType::Planet, planet_id, "action"=>format!("new status inserted in PlanetInfoMap, planet_id:{}, planet_info:{:?}", planet_id, new_info));
         self.map.insert(planet_id, new_info);
     }

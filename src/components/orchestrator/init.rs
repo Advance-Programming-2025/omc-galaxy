@@ -1,7 +1,6 @@
 use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
 use std::{
     fs,
-    sync::{Arc, RwLock},
     thread,
 };
 
@@ -31,7 +30,7 @@ use crate::{
     },
 };
 
-use crate::utils::{ExplorerInfo, PlanetInfo};
+use crate::utils::ExplorerInfo;
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
 
 //Initialization game functions
@@ -190,11 +189,14 @@ impl Orchestrator {
         );
         //LOG
 
+        let basic = new_planet.generator().all_available_recipes();
+        let complex = new_planet.combinator().all_available_recipes();
+
         //Update HashMaps
         self.planets_info
-            .insert_status(new_planet.id(), type_id, Status::Paused);
+            .insert_status(new_planet.id(), type_id, Status::Paused, Some(basic), Some(complex));
         self.planet_channels
-            .insert(new_planet.id(), (sender_orchestrator, sender_explorer));
+            .insert(new_planet.id(), (sender_orchestrator, sender_explorer)); 
 
         debug_println!("Start planet{id} thread");
         thread::spawn(move || -> Result<(), String> { new_planet.run() });
