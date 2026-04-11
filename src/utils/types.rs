@@ -53,6 +53,10 @@ impl PlanetInfoMap {
         self.map.insert(planet_id, new_info);
     }
 
+    pub fn contains(&self, explorer_id: &u32) -> bool {
+        self.map.contains_key(explorer_id)
+    }
+
     pub fn update_status(&mut self, planet_id: u32, status: Status) -> Result<(), String> {
         if let Some(planet_info) = self.map.get_mut(&planet_id) {
             planet_info.status = status;
@@ -230,6 +234,7 @@ impl ExplorerInfoMap {
         }
     }
 
+   
     pub fn update_bag(&mut self, explorer_id: u32, bag: Vec<ResourceType>) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
             log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} bag updated to: {:?}", explorer_id, bag));
