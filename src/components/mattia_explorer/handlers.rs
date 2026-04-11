@@ -11,7 +11,7 @@ use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
 use crossbeam_channel::Sender;
-use logging_utils::{LoggableActor, log_internal_op, log_message, payload, warning_payload};
+use logging_utils::{LoggableActor, log_internal_op, log_message, warning_payload};
 use one_million_crabs::planet::ToString2;
 use std::collections::HashSet;
 
@@ -185,7 +185,7 @@ pub fn move_to_planet(
         "planet_id"=>planet_id.to_string()
     );
     //LOG
-    let mut ris;
+    let ris;
     match sender_to_new_planet {
         //in case the planet dies there are 2 cases:
         // the orchestrator refuses the move operation
@@ -974,7 +974,7 @@ pub fn manage_combine_response(
                         orch_res = Ok(());
                     }
                 }
-                Err((err, r1, r2)) => {
+                Err((_, r1, r2)) => {
                     explorer.bag.insert(r1);
                     explorer.bag.insert(r2);
                     if orchestrator_response {

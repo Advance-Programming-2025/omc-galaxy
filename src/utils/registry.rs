@@ -2,10 +2,6 @@ use common_game::components::resource::BasicResourceType;
 use once_cell::sync::Lazy;
 
 use super::types::PlanetFactory;
-use crate::utils::registry::PlanetType::{
-    BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
-    RustyCrab, TheCompilerStrikesBack,
-};
 use rand::seq::IndexedRandom;
 use std::collections::HashMap;
 // Importiamo il trait per poter usare .iter()

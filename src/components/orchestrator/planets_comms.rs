@@ -1,14 +1,12 @@
 use crate::{Status, components::orchestrator::Orchestrator, log_orch_internal, settings};
 use common_game::logging::{Channel, LogEvent, Participant};
-use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
 use common_game::{
     logging::{ActorType, EventType},
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
 use crossbeam_channel::Sender;
-use log::info;
-use logging_utils::{LoggableActor, log_fn_call, log_message, log_orch_to_planet, warning_payload};
+use logging_utils::{LoggableActor, log_fn_call, log_orch_to_planet, warning_payload};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
@@ -21,7 +19,7 @@ impl Orchestrator {
             Some('A') => {
                 self.send_asteroid_to_all()?;
             }
-            msg => {
+            _msg => {
                 // Probability mode
 
                 // Get a random planet
@@ -58,7 +56,8 @@ impl Orchestrator {
         );
         //LOG if the planet is dead we do not send the sunray
         //send sunray
-        let handle_by_log = sender
+        // REVIEW we should consider logging this result
+        let _handle_by_log = sender
             .send(OrchestratorToPlanet::Sunray(self.forge.generate_sunray()))
             .map_err(|_| "Unable to send a sunray to planet: {id}".to_string());
         self.emit_sunray_send(planet_id);
@@ -118,7 +117,8 @@ impl Orchestrator {
         );
         //LOG
         //send asteroid LOG if the asteroid wasn't sent we still log it because the attempt was made
-        let handle_by_log = sender
+        // REVIEW we should consider logging this result
+        let _handle_by_log = sender
             .send(OrchestratorToPlanet::Asteroid(
                 self.forge.generate_asteroid(),
             ))
@@ -190,6 +190,7 @@ impl Orchestrator {
         Ok(())
     }
 
+    // TODO safe to delete?
     /// Sends a Kill message to all planets.
     ///
     /// See [`send_planet_kill`](`Self::send_planet_kill`) for more details on how a
@@ -232,7 +233,7 @@ impl Orchestrator {
             "sender"=>"Sender<OrchestratorToPlanet>"
         );
         //LOG if the planet is dead we do not send the request
-        let handle_by_log = sender
+        let _handle_by_log = sender
             .send(OrchestratorToPlanet::InternalStateRequest)
             .map_err(|_| "Unable to send planet state request".to_string());
         log_orch_to_planet!(self, "RequestPlanetState sent", planet_id);

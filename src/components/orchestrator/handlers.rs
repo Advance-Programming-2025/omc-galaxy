@@ -1,7 +1,4 @@
 use std::time::{Duration, Instant};
-
-use common_game::logging::ActorType::Explorer;
-use common_game::logging::EventType::MessageOrchestratorToExplorer;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
@@ -10,17 +7,15 @@ use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use crossbeam_channel::{SendError, select};
-use log::info;
+use crossbeam_channel::select;
 use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_explorer_to_orch, log_fn_call,
-    log_internal_op, log_message, log_orch_to_planet, log_planet_to_orch, payload, warning_payload,
+    log_internal_op, log_message, log_planet_to_orch, payload, warning_payload,
 };
 
 use crate::components::explorer::BagType;
-use crate::utils::ExplorerInfoMap;
 use crate::{
-    PlanetInfoMap, components::orchestrator::Orchestrator, log_orch_internal, utils::Status,
+    components::orchestrator::Orchestrator, log_orch_internal, utils::Status,
 };
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
@@ -195,7 +190,7 @@ impl Orchestrator {
                 //LOG
                 self.planets_info.update_status(planet_id, Status::Paused)?;
             }
-            PlanetToOrchestrator::Stopped { planet_id } => {}
+            PlanetToOrchestrator::Stopped { planet_id: _ } => {}
             PlanetToOrchestrator::IncomingExplorerResponse {
                 planet_id,
                 explorer_id,

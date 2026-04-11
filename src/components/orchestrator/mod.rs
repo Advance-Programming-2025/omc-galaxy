@@ -12,7 +12,6 @@ use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
 use crate::utils::{ExplorerInfoMap, PlanetInfoMap};
 use common_game::components::forge::Forge;
-use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::ActorType;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,

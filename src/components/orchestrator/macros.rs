@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use common_game::logging::Channel;
 
 pub const LOG_FN_CALL_CHNL: Channel = Channel::Debug;
