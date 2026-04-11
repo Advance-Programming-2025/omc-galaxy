@@ -1,8 +1,5 @@
 use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
-use std::{
-    fs,
-    thread,
-};
+use std::{fs, thread};
 
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
@@ -193,10 +190,15 @@ impl Orchestrator {
         let complex = new_planet.combinator().all_available_recipes();
 
         //Update HashMaps
-        self.planets_info
-            .insert_status(new_planet.id(), type_id, Status::Paused, Some(basic), Some(complex));
+        self.planets_info.insert_status(
+            new_planet.id(),
+            type_id,
+            Status::Paused,
+            Some(basic),
+            Some(complex),
+        );
         self.planet_channels
-            .insert(new_planet.id(), (sender_orchestrator, sender_explorer)); 
+            .insert(new_planet.id(), (sender_orchestrator, sender_explorer));
 
         debug_println!("Start planet{id} thread");
         thread::spawn(move || -> Result<(), String> { new_planet.run() });

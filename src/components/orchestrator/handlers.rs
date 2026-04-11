@@ -1,4 +1,3 @@
-use std::time::{Duration, Instant};
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
@@ -12,11 +11,10 @@ use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, debug_println, log_explorer_to_orch, log_fn_call,
     log_internal_op, log_message, log_planet_to_orch, payload, warning_payload,
 };
+use std::time::{Duration, Instant};
 
 use crate::components::explorer::BagType;
-use crate::{
-    components::orchestrator::Orchestrator, log_orch_internal, utils::Status,
-};
+use crate::{components::orchestrator::Orchestrator, log_orch_internal, utils::Status};
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
 impl Orchestrator {

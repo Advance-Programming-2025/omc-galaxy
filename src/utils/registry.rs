@@ -69,8 +69,8 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
                 Duration::new(1, 0),
                 Duration::new(1, 0),
                 planet_id,
-                (rx_o,tx_o),
-                rx_e    
+                (rx_o, tx_o),
+                rx_e,
             )
         }),
     );

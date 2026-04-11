@@ -1,3 +1,4 @@
+use crate::{components::orchestrator::Orchestrator, utils::Status};
 use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
@@ -10,20 +11,6 @@ use logging_utils::{
 use rand::{Rng, random, seq::IndexedRandom};
 use std::collections::HashSet;
 use std::time::Duration;
-use crate::{components::orchestrator::Orchestrator, utils::Status};
-
-/// regulates the chance that the orchestrator decides to do anything
-/// that might change the state of the galaxy (i.e. send either an
-/// asteroid or a sunray). Ideally this should be pretty high but not 1
-pub const RANDOM_ACTION_CHANCE: f64 = 0.8;
-
-/// regulates the chance that the orchestrator, when asked to launch
-/// a celestial body, launches either a sunray or an asteroid.
-///
-/// A lower setting skews the balance towards sunrays, which makes
-/// for longer games, while a value over 0.6 is pretty much
-/// intergalactic nuclear war.
-pub const SUNRAY_ASTEROID_CHANCE: f64 = 0.2;
 
 impl Orchestrator {
     /// Removes the link between two planets if one of them explodes.
@@ -491,7 +478,23 @@ impl Orchestrator {
         //LOG
         Ok(())
     }
-    pub fn choose_random_action(&mut self) -> Result<(), String> {
+
+    /// Choose whether to create a celestial body (and which one).
+    ///
+    /// The function chooses randomly whether to do anything at all in a given
+    /// turn and, if needed, also decides on whether it should send an
+    /// asteroid or a sunray. The probability of these two actions are regulated
+    /// by the two input variables:
+    /// * `p_action` regulates the chance that the orchestrator decides to do anything
+    /// that might change the state of the galaxy (i.e. send either an
+    /// asteroid or a sunray). Ideally this should be pretty high but not 1;
+    /// * `p_asteroid` regulates the chance that the orchestrator, when asked to launch
+    /// a celestial body, launches either an asteroid or a sunray.
+    /// A lower setting skews the balance towards sunrays, which makes
+    /// for longer games, while a value over 0.5 is pretty much
+    /// intergalactic nuclear war.
+
+    pub fn choose_random_action(&mut self, p_action: f64, p_asteroid: f64) -> Result<(), String> {
         let mut rng = rand::rng();
         let living_things = self.planets_info.get_list_id_alive();
 
@@ -517,9 +520,9 @@ impl Orchestrator {
             // if there is at least one living planet...
             if let Some((id, channel)) = params {
                 // ...choose whether to do anything at all (probably will)
-                if rng.random_bool(RANDOM_ACTION_CHANCE) {
+                if rng.random_bool(p_action) {
                     // chooses between sunray or asteroid
-                    if rng.random_bool(SUNRAY_ASTEROID_CHANCE) {
+                    if rng.random_bool(p_asteroid) {
                         self.send_asteroid(id, &channel)?;
                     } else {
                         self.send_sunray(id, &channel)?;
@@ -531,7 +534,11 @@ impl Orchestrator {
         Ok(())
     }
 
-    pub fn send_celestial_from_gui(&mut self, id_list: Vec<u32>, is_asteroid: bool) -> Result<(), String> {
+    pub fn send_celestial_from_gui(
+        &mut self,
+        id_list: Vec<u32>,
+        is_asteroid: bool,
+    ) -> Result<(), String> {
         let alive = self.planets_info.get_list_id_alive();
 
         for planet_id in id_list {
@@ -555,10 +562,12 @@ impl Orchestrator {
                     } else {
                         self.send_sunray(valid.0, &valid.1)?
                     }
-                },
+                }
                 None => {
-                    return Err("send_celestial_from_gui: no valid planet parameters found".to_string());
-                },
+                    return Err(
+                        "send_celestial_from_gui: no valid planet parameters found".to_string()
+                    );
+                }
             }
         }
         Ok(())

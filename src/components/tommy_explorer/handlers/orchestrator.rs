@@ -620,8 +620,7 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
                 "planet_id"=>explorer.planet_id.to_string()
             );
         }
-        Ok(_) =>
-        {
+        Ok(_) => {
             debug_println!("Explorer received an unexpected message from planet")
         }
         Err(err) => {
@@ -827,19 +826,19 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
         }
         Err(err) => {
             LogEvent::new(
-                    Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-                    Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                    EventType::MessagePlanetToExplorer,
-                    Channel::Error,
-                    warning_payload!(
-                        "CombineResourceResponse not sent",
-                        err,
-                        "combine_resource_request()";
-                        "to_generate" => to_generate.to_string_2(),
-                        "explorer data"=>format!("{:?}", explorer)
-                    ),
-                )
-                .emit();
+                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                EventType::MessagePlanetToExplorer,
+                Channel::Error,
+                warning_payload!(
+                    "CombineResourceResponse not sent",
+                    err,
+                    "combine_resource_request()";
+                    "to_generate" => to_generate.to_string_2(),
+                    "explorer data"=>format!("{:?}", explorer)
+                ),
+            )
+            .emit();
         }
     }
 }

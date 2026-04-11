@@ -47,7 +47,14 @@ impl PlanetInfoMap {
     }
 
     ///Warning! this function overwrite the old value if there is
-    pub fn insert_status(&mut self, planet_id: u32, name: PlanetType, status: Status, basic: Option<HashSet<BasicResourceType>>, complex: Option<HashSet<ComplexResourceType>>) {
+    pub fn insert_status(
+        &mut self,
+        planet_id: u32,
+        name: PlanetType,
+        status: Status,
+        basic: Option<HashSet<BasicResourceType>>,
+        complex: Option<HashSet<ComplexResourceType>>,
+    ) {
         let new_info = PlanetInfo::from(name, status, vec![], 0, false, basic, complex);
         log_internal_op!(dir ActorType::Planet, planet_id, "action"=>format!("new status inserted in PlanetInfoMap, planet_id:{}, planet_info:{:?}", planet_id, new_info));
         self.map.insert(planet_id, new_info);
@@ -234,7 +241,6 @@ impl ExplorerInfoMap {
         }
     }
 
-   
     pub fn update_bag(&mut self, explorer_id: u32, bag: Vec<ResourceType>) {
         if let Some(explorer_info) = self.map.get_mut(&explorer_id) {
             log_internal_op!(dir ActorType::Explorer, explorer_id, "action"=>format!("explorer: {} bag updated to: {:?}", explorer_id, bag));
