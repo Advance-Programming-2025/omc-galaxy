@@ -66,11 +66,11 @@ impl PlanetInfo {
         current_energy: u32,
         current_time: u64,
         charge_rate_alpha: f32,
+        explorer_id: u32
     ) {
-        //todo importare explorer_id per log
         log_fn_call!(dir
             ActorType::Explorer,
-            0u32,
+            explorer_id,
             "update_charge_rate()",
             current_energy,
             current_time

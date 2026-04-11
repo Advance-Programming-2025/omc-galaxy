@@ -153,7 +153,6 @@ fn stop_explorer_ai(explorer: &mut Explorer) {
         explorer_id: explorer.id(),
     }) {
         Ok(_) => {
-            // explorer.set_state(ExplorerState::WaitingToStartExplorerAI); // TODO rimuovere il waiting to start explorer ai?
             explorer.manual_mode_on();
             log_message!(
                 ActorType::Orchestrator,
@@ -622,7 +621,6 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
             );
         }
         Ok(_) =>
-        // shouldn't happen // TODO log  the message even if it's the wrong one?
         {
             debug_println!("Explorer received an unexpected message from planet")
         }

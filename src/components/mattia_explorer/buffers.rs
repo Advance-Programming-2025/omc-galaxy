@@ -114,6 +114,7 @@ pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
                                     available_cells,
                                     explorer.time,
                                     explorer.ai_data.params.charge_rate_alpha,
+                                    explorer.explorer_id
                                 );
                             }
                             if !resources && !combinations {

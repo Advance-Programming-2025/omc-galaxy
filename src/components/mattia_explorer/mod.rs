@@ -279,7 +279,7 @@ impl Explorer {
                                             ExplorerState::Surveying {resources,combinations,energy_cells:true,orch_resource,orch_combination}=>{
                                                 match self.topology_info.get_mut(&self.planet_id){
                                                     Some(planet_info) => {
-                                                        planet_info.update_charge_rate(available_cells, self.time, self.ai_data.params.charge_rate_alpha);
+                                                        planet_info.update_charge_rate(available_cells, self.time, self.ai_data.params.charge_rate_alpha,self.explorer_id);
                                                     }
                                                     None => {
                                                         //this should not happen

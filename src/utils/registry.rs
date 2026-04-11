@@ -3,7 +3,7 @@ use once_cell::sync::Lazy;
 
 use super::types::PlanetFactory;
 use rand::seq::IndexedRandom;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 // Importiamo il trait per poter usare .iter()
 use strum::IntoEnumIterator;
 // Importiamo la macro per il derive
@@ -62,8 +62,16 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
     map.insert(
         PlanetType::ImmutableCosmicBorrow,
         Box::new(|rx_o, tx_o, rx_e, planet_id| {
-            one_million_crabs::planet::create_planet(rx_o, tx_o, rx_e, planet_id) //TODO change this with immutable cosmic borrow
-            //immutable_cosmic_borrow::create_planet()
+            immutable_cosmic_borrow::create_planet(
+                false,
+                0.5,
+                0.5,
+                Duration::new(1, 0),
+                Duration::new(1, 0),
+                planet_id,
+                (rx_o,tx_o),
+                rx_e    
+            )
         }),
     );
     map.insert(

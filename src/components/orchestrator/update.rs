@@ -364,55 +364,6 @@ impl Orchestrator {
                 //LOG
             }
         }
-        //
-        // //TODO this is probably not needed for the stop function
-        // // also check the stop_all_planet_ais func
-        // let mut count = 0;
-        // loop {
-        //     if count == self.explorer_channels.len() {
-        //         //LOG
-        //         log_internal_op!(
-        //             self,
-        //             "action"=>"all explorers stopped",
-        //             "count"=>count
-        //         );
-        //         //LOG
-        //         break;
-        //     }
-        //
-        //     let receive_channel = self
-        //         .receiver_orch_explorer
-        //         .recv()
-        //         .map_err(|_| "Cannot receive message from explorers".to_string())?;
-        //
-        //     match receive_channel {
-        //         ExplorerToOrchestrator::StopExplorerAIResult { explorer_id } => {
-        //             debug_println!("Stopped Explorer AI: {}", explorer_id);
-        //
-        //             //LOG
-        //             let event = LogEvent::new(
-        //                 Some(Participant::new(ActorType::Explorer, explorer_id)),
-        //                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
-        //                 EventType::MessageExplorerToOrchestrator,
-        //                 LOG_ACTORS_ACTIVITY,
-        //                 payload!(
-        //                     "message"=>"StoppedExplorerAIResult",
-        //                     "explorer_id"=>explorer_id,
-        //                     "status"=>"Paused"
-        //                 ),
-        //             );
-        //             event.emit();
-        //             //LOG
-        //
-        //             self.explorers_info
-        //                 .insert_status(explorer_id, Status::Paused);
-        //             count += 1;
-        //         }
-        //         _ => {
-        //             // ignores other events
-        //         }
-        //     }
-        // }
 
         Ok(())
     }
@@ -580,8 +531,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    // TODO unify this function and the next one in send_celestial_from_gui
-    pub fn send_sunray_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
+    pub fn send_celestial_from_gui(&mut self, id_list: Vec<u32>, is_asteroid: bool) -> Result<(), String> {
         let alive = self.planets_info.get_list_id_alive();
 
         for planet_id in id_list {
@@ -599,32 +549,16 @@ impl Orchestrator {
                 });
 
             match parameters {
-                Some(valid) => self.send_sunray(valid.0, &valid.1)?,
-                None => todo!(),
-            }
-        }
-        Ok(())
-    }
-
-    pub fn send_asteroid_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
-        for planet_id in id_list {
-            if !self.planets_info.get_list_id_alive().contains(&planet_id) {
-                return Ok(());
-                // return Err("Planet is either dead or not valid".to_string());
-            }
-
-            let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
-                self.planet_channels.iter().find_map(|(&id, (sender, _))| {
-                    if id == planet_id {
-                        Some((id, sender.clone()))
+                Some(valid) => {
+                    if is_asteroid {
+                        self.send_asteroid(valid.0, &valid.1)?
                     } else {
-                        None
+                        self.send_sunray(valid.0, &valid.1)?
                     }
-                });
-
-            match parameters {
-                Some(valid) => self.send_asteroid(valid.0, &valid.1)?,
-                None => {}
+                },
+                None => {
+                    return Err("send_celestial_from_gui: no valid planet parameters found".to_string());
+                },
             }
         }
         Ok(())
