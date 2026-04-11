@@ -1,12 +1,9 @@
-use crossbeam_channel::{SendError, Sender};
+use crossbeam_channel::Sender;
 use std::collections::HashSet;
 
 use super::planet;
-use crate::components::tommy_explorer::ExplorerState::CombiningResources;
-use crate::components::tommy_explorer::actions::ActionQueue;
-use crate::components::tommy_explorer::bag::BagType;
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
-use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResourceType};
+use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -831,7 +828,20 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
             }
         }
         Err(err) => {
-            // TODO log this error
+            LogEvent::new(
+                    Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+                    Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                    EventType::MessagePlanetToExplorer,
+                    Channel::Error,
+                    warning_payload!(
+                        "CombineResourceResponse not sent",
+                        err,
+                        "combine_resource_request()";
+                        "to_generate" => to_generate.to_string_2(),
+                        "explorer data"=>format!("{:?}", explorer)
+                    ),
+                )
+                .emit();
         }
     }
 }

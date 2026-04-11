@@ -1,3 +1,7 @@
+//TODO this file is mostly legacy code (nothing before line 692 is ever constructed or read,
+// apart from the BagType).
+// we should delete it unless something is needed.
+
 use common_game::components::resource::{
     BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType,
     GenericResource, ResourceType,

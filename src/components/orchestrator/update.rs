@@ -1,22 +1,15 @@
-use common_game::protocols::orchestrator_explorer::{
-    ExplorerToOrchestrator, OrchestratorToExplorer,
-};
-use common_game::utils::ID;
+use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
 use common_game::{
     logging::{ActorType, Channel, EventType, LogEvent, Participant},
     protocols::orchestrator_planet::{OrchestratorToPlanet, PlanetToOrchestrator},
 };
-use log::info;
 use logging_utils::{
     LOG_ACTORS_ACTIVITY, LoggableActor, Sender, debug_println, log_fn_call, log_internal_op,
     log_message, payload, warning_payload,
 };
 use rand::{Rng, random, seq::IndexedRandom};
 use std::collections::HashSet;
-use std::sync::LockResult;
 use std::time::Duration;
-
-use crate::utils::registry::PlanetType;
 use crate::{components::orchestrator::Orchestrator, utils::Status};
 
 /// regulates the chance that the orchestrator decides to do anything

@@ -304,6 +304,7 @@ pub fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
     }
 }
 
+//TODO does this need to be public?
 /// this function sends the basic resources supported by the current planet to the orchestrator
 /// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
 /// response and then send it back to the orchestrator)
