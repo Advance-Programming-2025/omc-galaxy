@@ -1,7 +1,7 @@
 #[cfg(test)]
 use crate::components::orchestrator::Orchestrator;
-use crate::utils::registry::PlanetType;
 use crate::utils::Status;
+use crate::utils::registry::PlanetType;
 
 #[cfg(test)]
 mod tests_core_lifecycle {
@@ -173,8 +173,8 @@ mod tests_file_integration {
 }
 #[cfg(test)]
 mod test_One_million_crabs_planet {
-    use crate::utils::registry::*;
     use crate::utils::ExplorerInfo;
+    use crate::utils::registry::*;
     use crate::*;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -218,8 +218,10 @@ mod test_One_million_crabs_planet {
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_secs(1));
         orchestrator.send_bag_content_request(explorer_id);
-        orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id);
+        orchestrator.send_internal_state_request(
+            &orchestrator.planet_channels.get(&planet_id).unwrap().0,
+            planet_id,
+        );
         let timeout = tick(Duration::from_millis(1000));
         loop {
             select! {
@@ -314,8 +316,10 @@ mod test_One_million_crabs_planet {
         orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_secs(1));
         orchestrator.send_bag_content_request(explorer_id);
-        orchestrator
-            .send_internal_state_request(&orchestrator.planet_channels.get(&planet_id).unwrap().0, planet_id);
+        orchestrator.send_internal_state_request(
+            &orchestrator.planet_channels.get(&planet_id).unwrap().0,
+            planet_id,
+        );
         let timeout = tick(Duration::from_millis(1000));
         loop {
             select! {
@@ -442,8 +446,8 @@ mod tests {
     // --- MACRO CATEGORY: PLANET INTEGRATION (ALL TYPES) ---
     // Testing one of every single planet in the registry simultaneously.
     mod planet_integration {
-        use std::process::id;
         use super::*;
+        use std::process::id;
         use strum::IntoEnumIterator;
 
         #[test]
@@ -519,8 +523,12 @@ mod tests {
             }
 
             std::thread::sleep(Duration::from_secs(1));
-            for id in 0..id_counter{
-                orch.send_internal_state_request(&orch.planet_channels.get(&id).unwrap().0.clone(), id).expect("failed sending internal state request");
+            for id in 0..id_counter {
+                orch.send_internal_state_request(
+                    &orch.planet_channels.get(&id).unwrap().0.clone(),
+                    id,
+                )
+                .expect("failed sending internal state request");
             }
             std::thread::sleep(Duration::from_millis(100));
             orch.handle_game_messages().unwrap();
@@ -646,7 +654,10 @@ mod tests {
 
             let result = orch.send_bag_content_request(invalid_explorer_id);
 
-            assert!(result.is_err(), "L'invio doveva fallire per un explorer inesistente");
+            assert!(
+                result.is_err(),
+                "L'invio doveva fallire per un explorer inesistente"
+            );
             assert_eq!(
                 result.unwrap_err(),
                 format!("No sender found for explorer {}", invalid_explorer_id)
@@ -667,7 +678,8 @@ mod tests {
             drop(dead_receiver);
 
             let (_, planet_sender) = orch.explorer_channels.get(&explorer_id).unwrap().clone();
-            orch.explorer_channels.insert(explorer_id, (dead_sender, planet_sender));
+            orch.explorer_channels
+                .insert(explorer_id, (dead_sender, planet_sender));
 
             let result = orch.send_bag_content_request(explorer_id);
 

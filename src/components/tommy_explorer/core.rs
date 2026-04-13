@@ -379,7 +379,9 @@ impl Explorer {
         // 5) special behaviours for some specific planets (if they have special features)
         // 6) repeat
 
-        if let Some(action) = self.action_queue.next_action() && !self.accept_death {
+        if let Some(action) = self.action_queue.next_action()
+            && !self.accept_death
+        {
             match action {
                 ExplorerAction::AskNeighbours => {
                     self.action_queue.push_back(action);

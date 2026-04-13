@@ -1,5 +1,7 @@
 use crate::PlanetInfoMap;
+use crossbeam_channel::Sender;
 use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
+use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
 use log::info;
 
 use crate::utils::ExplorerInfoMap;
@@ -11,6 +13,56 @@ use logging_utils::LoggableActor;
 use logging_utils::log_fn_call;
 
 impl Orchestrator {
+    // TODO unify this function and the next one in send_celestial_from_gui
+    pub fn send_sunray_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
+        let alive = self.planets_info.get_list_id_alive();
+
+        for planet_id in id_list {
+            if !alive.contains(&planet_id) {
+                continue;
+            }
+
+            let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
+                self.planet_channels.iter().find_map(|(&id, (sender, _))| {
+                    if id == planet_id {
+                        Some((id, sender.clone()))
+                    } else {
+                        None
+                    }
+                });
+
+            match parameters {
+                Some(valid) => self.send_sunray(valid.0, &valid.1)?,
+                None => todo!(),
+            }
+        }
+        Ok(())
+    }
+
+    pub fn send_asteroid_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
+        for planet_id in id_list {
+            if !self.planets_info.get_list_id_alive().contains(&planet_id) {
+                return Ok(());
+                // return Err("Planet is either dead or not valid".to_string());
+            }
+
+            let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
+                self.planet_channels.iter().find_map(|(&id, (sender, _))| {
+                    if id == planet_id {
+                        Some((id, sender.clone()))
+                    } else {
+                        None
+                    }
+                });
+
+            match parameters {
+                Some(valid) => self.send_asteroid(valid.0, &valid.1)?,
+                None => {}
+            }
+        }
+        Ok(())
+    }
+
     /// Get a snapshot of the current galaxy topology
     ///
     /// Returns an atomic reference of the current
@@ -73,7 +125,11 @@ impl Orchestrator {
 
         Ok(())
     }
-    pub fn send_move_explorer_from_gui(&mut self, explorer_id: u32, destination_planet_id: u32) -> Result<(), String> {
+    pub fn send_move_explorer_from_gui(
+        &mut self,
+        explorer_id: u32,
+        destination_planet_id: u32,
+    ) -> Result<(), String> {
         self.send_stop_explorer_from_gui(explorer_id)?;
         let explorer_channel = self
             .explorer_channels
@@ -81,19 +137,25 @@ impl Orchestrator {
             .ok_or_else(|| format!("Explorer {explorer_id} not found"))?;
         let from_orch = &explorer_channel.0;
 
-        let planet_channel = self.planet_channels.get(&destination_planet_id).ok_or_else(|| format!("Planet {destination_planet_id} not found"))?;
+        let planet_channel = self
+            .planet_channels
+            .get(&destination_planet_id)
+            .ok_or_else(|| format!("Planet {destination_planet_id} not found"))?;
         let sender_to_new_planet = planet_channel.1.clone();
 
         if !self.planets_info.is_dead(&destination_planet_id) {
-                from_orch
-                    .try_send(OrchestratorToExplorer::MoveToPlanet { sender_to_new_planet:Some(sender_to_new_planet), planet_id: destination_planet_id })
-                    .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
+            from_orch
+                .try_send(OrchestratorToExplorer::MoveToPlanet {
+                    sender_to_new_planet: Some(sender_to_new_planet),
+                    planet_id: destination_planet_id,
+                })
+                .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
 
-                //LOG
+            //LOG
 
-                //LOG
-            }
-            Ok(())
+            //LOG
+        }
+        Ok(())
     }
     pub fn send_bag_content_request_from_ui(&self) -> Result<(), String> {
         for explorer_id in self.explorer_channels.keys() {

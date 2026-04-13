@@ -66,7 +66,7 @@ impl PlanetInfo {
         current_energy: u32,
         current_time: u64,
         charge_rate_alpha: f32,
-        explorer_id: u32
+        explorer_id: u32,
     ) {
         log_fn_call!(dir
             ActorType::Explorer,

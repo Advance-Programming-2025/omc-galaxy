@@ -19,11 +19,11 @@ impl ExplorerState {
     /// Checks if the orchestrator message received is the one expected (based on the explorer state).
     pub fn matches_orchestrator_msg(&self, msg: &OrchestratorToExplorer) -> bool {
         match msg {
-            OrchestratorToExplorer::StartExplorerAI |
-            OrchestratorToExplorer::StopExplorerAI |
-            OrchestratorToExplorer::KillExplorer |
-            OrchestratorToExplorer::BagContentRequest |
-            OrchestratorToExplorer::CurrentPlanetRequest => return true,
+            OrchestratorToExplorer::StartExplorerAI
+            | OrchestratorToExplorer::StopExplorerAI
+            | OrchestratorToExplorer::KillExplorer
+            | OrchestratorToExplorer::BagContentRequest
+            | OrchestratorToExplorer::CurrentPlanetRequest => return true,
             _ => {}
         }
 
