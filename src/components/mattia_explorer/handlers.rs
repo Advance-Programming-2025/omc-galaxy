@@ -89,6 +89,7 @@ pub fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
 /// this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
 /// it is called when the explorer receives the StopExplorerAI message
 pub fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
+    explorer.state = ExplorerState::Idle;
     explorer.manual_mode = true;
     log_message!(
         ActorType::Orchestrator,
@@ -646,7 +647,7 @@ pub fn combine_resource_request(
                 .orchestrator_channels
                 .1
                 .send(ExplorerToOrchestrator::CombineResourceResponse {
-                    explorer_id: 0,
+                    explorer_id: explorer.explorer_id,
                     generated: Err("Not enough basic resource".to_string()),
                 })
                 .map_err(|err| err.to_string())?;

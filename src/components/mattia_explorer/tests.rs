@@ -650,7 +650,7 @@ mod game_simulation {
                         break;
                     }
                     else{
-                        orchestrator.choose_random_action().expect("testing expect");
+                        orchestrator.choose_random_action(0.8, 0.1).expect("testing expect");
                     }
                 }
             }

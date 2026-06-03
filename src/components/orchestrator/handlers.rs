@@ -13,7 +13,7 @@ use logging_utils::{
 };
 use std::time::{Duration, Instant};
 
-use crate::components::explorer::BagType;
+use crate::components::manual_explorer::BagType;
 use crate::{components::orchestrator::Orchestrator, log_orch_internal, utils::Status};
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 

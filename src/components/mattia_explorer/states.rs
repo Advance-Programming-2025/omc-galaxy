@@ -31,6 +31,7 @@ pub fn orch_msg_match_state(explorer_state: &ExplorerState, msg: &OrchestratorTo
             true
         }
         (ExplorerState::Traveling, OrchestratorToExplorer::MoveToPlanet { .. }) => true,
+        (_, OrchestratorToExplorer::StopExplorerAI) => true,
         (_, OrchestratorToExplorer::KillExplorer) => true,
         _ => false,
     }
