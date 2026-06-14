@@ -13,7 +13,8 @@ use rand::Rng;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-enum AIActionType {
+/// enum of actions that the ai can take
+pub (super) enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
     MoveTo(ID),
@@ -23,6 +24,7 @@ enum AIActionType {
     RunAway,
 }
 #[derive(Debug)]
+/// struct containing the points of every action
 pub (super) struct AIAction {
     pub produce_resource: HashMap<BasicResourceType, f32>, //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
     pub combine_resource: HashMap<ComplexResourceType, f32>,
@@ -33,6 +35,7 @@ pub (super) struct AIAction {
     pub run_away: f32,
 }
 impl AIAction {
+    /// create a new struct
     fn new() -> Self {
         let mut produce_resource: HashMap<BasicResourceType, f32> = HashMap::new();
         let mut combine_resource: HashMap<ComplexResourceType, f32> = HashMap::new();
@@ -62,8 +65,9 @@ impl AIAction {
 
 //this is because just in case i need it but at the moment the ai will not have any
 //benefit from producing any resources
+/// struct containing the needs of every resource
 #[derive(Debug)]
-struct ResourceNeeds {
+pub (super) struct ResourceNeeds {
     oxygen: f32,
     carbon: f32,
     silicon: f32,
@@ -90,7 +94,7 @@ impl ResourceNeeds {
             dolphin: 0.0,
         }
     }
-    // return the total need of a resource
+    /// return the total need of a resource recursively
     fn get_effective_need(&self, resource: ResourceType, params: &AiParams) -> f32 {
         let pf = params.propagation_factor;
         match resource {
@@ -166,11 +170,11 @@ impl ResourceNeeds {
 }
 #[derive(Debug)]
 pub (super) struct AiData {
-    pub resource_needs: ResourceNeeds,
-    pub ai_action: AIAction,
-    pub last_action: Option<AIActionType>,
-    pub last_action_planet_id: Option<ID>,
-    pub params: AiParams,
+    pub (super) resource_needs: ResourceNeeds,
+    pub (super) ai_action: AIAction,
+    pub (super) last_action: Option<AIActionType>,
+    pub (super) last_action_planet_id: Option<ID>,
+    pub (super) params: AiParams,
 }
 impl AiData {
     pub (super) fn new(params: AiParams) -> Self {

@@ -8,6 +8,7 @@ use common_game::logging::ActorType;
 use logging_utils::log_internal_op;
 
 #[derive(Debug)]
+/// explorer bag
 pub (super) struct Bag {
     oxygen: Vec<Oxygen>,
     hydrogen: Vec<Hydrogen>,
@@ -22,7 +23,7 @@ pub (super) struct Bag {
 }
 
 impl Bag {
-    // creates an empty bag
+    /// creates an empty bag
     pub (super) fn new() -> Self {
         Self {
             oxygen: vec![],
@@ -43,28 +44,20 @@ impl Bag {
         match res {
             // base
             GenericResource::BasicResources(BasicResource::Oxygen(val)) => self.oxygen.push(val),
-            GenericResource::BasicResources(BasicResource::Hydrogen(val)) => {
-                self.hydrogen.push(val)
-            }
+            GenericResource::BasicResources(BasicResource::Hydrogen(val)) => self.hydrogen.push(val),
             GenericResource::BasicResources(BasicResource::Carbon(val)) => self.carbon.push(val),
             GenericResource::BasicResources(BasicResource::Silicon(val)) => self.silicon.push(val),
             //complex
-            GenericResource::ComplexResources(ComplexResource::Diamond(val)) => {
-                self.diamond.push(val)
-            }
+            GenericResource::ComplexResources(ComplexResource::Diamond(val)) => self.diamond.push(val),
             GenericResource::ComplexResources(ComplexResource::Water(val)) => self.water.push(val),
             GenericResource::ComplexResources(ComplexResource::Life(val)) => self.life.push(val),
             GenericResource::ComplexResources(ComplexResource::Robot(val)) => self.robot.push(val),
-            GenericResource::ComplexResources(ComplexResource::Dolphin(val)) => {
-                self.dolphin.push(val)
-            }
-            GenericResource::ComplexResources(ComplexResource::AIPartner(val)) => {
-                self.ai_partner.push(val)
-            }
+            GenericResource::ComplexResources(ComplexResource::Dolphin(val)) => self.dolphin.push(val),
+            GenericResource::ComplexResources(ComplexResource::AIPartner(val)) => self.ai_partner.push(val),
         }
     }
 
-    /// takes a resource from the bag if it exists
+    /// takes and returns a resource from the bag if it exists
     pub (super) fn take_resource(&mut self, ty: ResourceType) -> Option<GenericResource> {
         match ty {
             // Basic Resources
@@ -148,7 +141,19 @@ impl Bag {
             ResourceType::Complex(ComplexResourceType::AIPartner) => self.ai_partner.len(),
         }
     }
-    ///this function checks if the explorer has the necessary resource to craft a complex resource
+    ///this function checks if the explorer has the necessary resource to craft a complex resource.
+    ///
+    /// Returns `(bool, ResourceType, bool, ResourceType, bool)`:
+    ///
+    /// - `bool`: if true the explorer can craft the complex resource
+    ///
+    /// - `ResourceType`: the first resource type needed
+    ///
+    /// - `bool`: states if the explorer has the first resource type needed
+    ///
+    /// - `ResourceType`: the second resource type needed
+    ///
+    /// - `bool`: states if the explorer has the second resource type needed
     pub (super) fn can_craft(
         &self,
         complex_type: ComplexResourceType,
@@ -217,6 +222,8 @@ impl Bag {
         }
     }
     /// this is needed because the bag cannot give his ownership to the orchestrator and cannot be passed as a reference
+    ///
+    /// construct an array of resource types to give to the orchestrator when requested
     pub (super) fn to_resource_types(&self) -> Vec<ResourceType> {
         let total_size = self.oxygen.len()
             + self.hydrogen.len()
@@ -268,8 +275,10 @@ impl Bag {
         types
     }
 
-    /// the following methods are the ones to combine resources
-    ///they are all used in order to avoid code duplication
+    /// the following methods are the ones to combine resources.
+    /// They are all used in order to avoid code duplication.
+    /// Returns an error if basic resources are missing, otherwise it returns a
+    /// `ComplexResourceRequest` containing the basic resource needed
     pub (super) fn make_diamond_request(&mut self) -> Result<ComplexResourceRequest, String> {
         if !self.can_craft(ComplexResourceType::Diamond).0 {
             return Err("Missing resources for Diamond".to_string());

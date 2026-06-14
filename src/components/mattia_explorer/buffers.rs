@@ -23,7 +23,7 @@ pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> 
     log_fn_call!(explorer, "manage_buffer_msg",);
     //LOG
     if !explorer.buffer_orchestrator_msg.is_empty() {
-        //this should never panic
+        //this should never panic (pop protected by the previus check)
         if orch_msg_match_state(
             &explorer.state,
             explorer.buffer_orchestrator_msg.front().unwrap(),
@@ -40,7 +40,8 @@ pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> 
                     stop_explorer_ai(explorer)?;
                 }
                 OrchestratorToExplorer::KillExplorer => {
-                    // I don't think it is possible to arrive here
+                    // I don't think it is possible to arrive here. the kill message should never
+                    // be in the buffer
                     kill_explorer(explorer)?;
                 }
                 OrchestratorToExplorer::MoveToPlanet {
@@ -65,7 +66,7 @@ pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> 
                     combine_resource_request(explorer, to_generate, true)?;
                 }
                 OrchestratorToExplorer::BagContentRequest => {
-                    // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se
+                    // returns a vector of resource types
                     explorer
                         .orchestrator_channels
                         .1
@@ -82,7 +83,7 @@ pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> 
         }
     }
     if !explorer.buffer_planet_msg.is_empty() {
-        //this should not panic
+        //this should not panic (pop protected by the previus check)
         if planet_msg_match_state(&explorer.state, explorer.buffer_planet_msg.front().unwrap()) {
             let msg = explorer.buffer_planet_msg.pop_front().unwrap();
             match msg {
@@ -99,6 +100,7 @@ pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> 
                     manage_combine_response(explorer, complex_response)?;
                 }
                 PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {
+                    // updating energy cells data
                     match explorer.state {
                         ExplorerState::Surveying {
                             resources,

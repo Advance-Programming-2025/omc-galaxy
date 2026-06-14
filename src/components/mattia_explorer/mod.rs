@@ -32,29 +32,29 @@ use common_game::utils::ID;
 use crossbeam_channel::{Receiver, Sender, select};
 use std::collections::{HashMap, VecDeque};
 
-// this is the struct of the explorer
-pub struct Explorer {
-    explorer_id: ID,
-    planet_id: ID,
-    orchestrator_channels: (
+/// struct of the explorer data
+pub (super) struct Explorer {
+    explorer_id: ID, //explorer id
+    planet_id: ID,   //current planet id
+    orchestrator_channels: (  // orchestrator channels
         Receiver<OrchestratorToExplorer>,
         Sender<ExplorerToOrchestrator<Vec<ResourceType>>>,
     ),
-    planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),
-    topology_info: HashMap<ID, PlanetInfo>,
+    planet_channels: (Receiver<PlanetToExplorer>, Sender<ExplorerToPlanet>),  //planet channels
+    topology_info: HashMap<ID, PlanetInfo>, //hashmap containing the information of every planet
     state: ExplorerState,
     bag: Bag,
     buffer_orchestrator_msg: VecDeque<OrchestratorToExplorer>, // orchestrator messages that the explorer cannot respond to immediately
     buffer_planet_msg: VecDeque<PlanetToExplorer>, // planet messages that the explorer cannot respond to immediately
-    time: u64,
-    ai_data: AiData,
-    current_planet_neighbors_update: bool,
-    manual_mode: bool,
+    time: u64,  // time measured in tick used by the explorer ai
+    ai_data: AiData,  // data needed by the explorer ai
+    current_planet_neighbors_update: bool,  //flag that states if the neighbors need update
+    manual_mode: bool,  //flag that states if the explorer is in manual mode
 }
 
 impl Explorer {
     // at creation, an Explorer should be connected to Orchestrator and the starting Planet
-    pub fn new(
+    pub (super) fn new(
         explorer_id: u32,
         planet_id: u32,
         explorer_to_orchestrator_channels: (
@@ -73,7 +73,7 @@ impl Explorer {
     }
 
     /// Creates an Explorer with custom AI parameters (for ML tuning)
-    pub fn with_params(
+    pub (super) fn with_params(
         explorer_id: u32,
         planet_id: u32,
         explorer_to_orchestrator_channels: (
@@ -107,50 +107,54 @@ impl Explorer {
             time: 1,
             ai_data: AiData::new(ai_params),
             current_planet_neighbors_update: false,
-            manual_mode: true,
+            manual_mode: false,
         }
     }
 
-    // getter function for the id
+    /// getter function for the id
     pub fn id(&self) -> u32 {
         self.explorer_id
     }
 
-    //generic getters for planet_info
-    pub fn get_planet_info(&self, planet_id: ID) -> Option<&PlanetInfo> {
+    ///generic getters for planet_info
+    fn get_planet_info(&self, planet_id: ID) -> Option<&PlanetInfo> {
         self.topology_info.get(&planet_id)
     }
-    pub fn get_planet_info_mut(&mut self, planet_id: ID) -> Option<&mut PlanetInfo> {
+    fn get_planet_info_mut(&mut self, planet_id: ID) -> Option<&mut PlanetInfo> {
         self.topology_info.get_mut(&planet_id)
     }
-    //current planet getters
-    pub fn get_current_planet_info(&self) -> Result<&PlanetInfo, &'static str> {
+    /// current planet getters
+    fn get_current_planet_info(&self) -> Result<&PlanetInfo, &'static str> {
         match self.get_planet_info(self.planet_id) {
             Some(info) => Ok(info),
             None => Err("Planet not found"),
         }
     }
-    pub fn get_current_planet_info_mut(&mut self) -> Result<&mut PlanetInfo, &'static str> {
+    fn get_current_planet_info_mut(&mut self) -> Result<&mut PlanetInfo, &'static str> {
         match self.get_planet_info_mut(self.planet_id) {
             Some(info) => Ok(info),
             None => Err("Planet not found"),
         }
     }
 
-    // the explorer main loop
+    /// the explorer main loop
+    ///
+    /// every iteration the explorer receives messages from both planet and orchestrator channels,
+    /// then it behaves based on the message received, if the message received and the explorer state
+    /// do not match together the message is pushed into the corresponding buffer, and it will be read
+    /// when the explorer will be in an "Idle" state
     pub fn run(&mut self) -> Result<(), String> {
-        // every iteration the explorer receives messages from both planet and orchestrator channels,
-        // then it behaves based on the message received, if the message received and the explorer state
-        // do not match together the message is pushed into the corresponding buffer, and it will be read
-        // when the explorer will be in an "Idle" state
         loop {
-            //this way should not panic
+            // this way should not panic
+            // counter of the time elapsed
             self.time = self.time.wrapping_add(1);
 
             select! {
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
+                    // receiving from orchestrator channel
                     match msg_orchestrator {
                         Ok(msg) => {
+                            //LOG
                             log_message!(
                                 ActorType::Orchestrator,
                                 0u32,
@@ -161,7 +165,9 @@ impl Explorer {
                                 "msg"=>format!("{:?}", msg),
                                 "explorer data"=>format!("{:?}", self)
                             );
+                            //LOG
                             if orch_msg_match_state(&self.state, &msg) {
+                                // in this state the explorer can process the command
                                 let ris = match msg {
                                     OrchestratorToExplorer::StartExplorerAI => {
                                         start_explorer_ai(self)
@@ -186,6 +192,7 @@ impl Explorer {
                                                 )
                                             ).emit();
                                         }
+                                        // exiting the loop
                                         return Ok(())
                                     }
                                     OrchestratorToExplorer::MoveToPlanet{ sender_to_new_planet, planet_id } => {
@@ -207,12 +214,12 @@ impl Explorer {
                                         combine_resource_request(self, to_generate, true)
                                     }
                                     OrchestratorToExplorer::BagContentRequest => {
-                                        // IMPORTANTE restituisce un vettore contenente i resource type e non gli item in se
+                                        // return a vector of resource types
                                         self.orchestrator_channels.1.send(ExplorerToOrchestrator::BagContentResponse {explorer_id: self.explorer_id, bag_content: self.bag.to_resource_types()}).map_err(|e| e.to_string())
                                     }
                                     OrchestratorToExplorer::NeighborsResponse{ neighbors } => {
                                         neighbours_response(self, neighbors);
-                                        Ok(())
+                                        Ok(()) //todo fare che neighbours response restituisca un risultato?
                                     }
                                 };
                                 if let Err(err)=ris{
@@ -228,6 +235,7 @@ impl Explorer {
                                     ).emit();
                                 }
                             } else {
+                                // if the explorer can't process the command now it pushes it in the buffer
                                 self.buffer_orchestrator_msg.push_back(msg);
                             }
                         }
@@ -250,6 +258,7 @@ impl Explorer {
                 recv(self.planet_channels.0) -> msg_planet => {
                     match msg_planet {
                         Ok(msg) => {
+                            //LOG
                             log_message!(
                                 ActorType::Planet,
                                 self.planet_id,
@@ -260,7 +269,9 @@ impl Explorer {
                                 "msg"=>format!("{:?}", msg),
                                 "explorer data"=>format!("{:?}", self)
                             );
+                            //LOG
                             if planet_msg_match_state(&self.state, &msg) {
+                                // the message can be processed now
                                 let ris = match msg {
                                     PlanetToExplorer::SupportedResourceResponse{ resource_list } => {
                                         manage_supported_resource_response(self, resource_list)
@@ -274,17 +285,12 @@ impl Explorer {
                                     PlanetToExplorer::CombineResourceResponse{ complex_response } => {
                                         manage_combine_response(self, complex_response)
                                     }
-                                    PlanetToExplorer::AvailableEnergyCellResponse{ available_cells } => {
+                                    PlanetToExplorer::AvailableEnergyCellResponse{ available_cells } => { //todo aggiungere un handler specifico?
                                         match self.state{
                                             ExplorerState::Surveying {resources,combinations,energy_cells:true,orch_resource,orch_combination}=>{
-                                                match self.topology_info.get_mut(&self.planet_id){
-                                                    Some(planet_info) => {
-                                                        planet_info.update_charge_rate(available_cells, self.time, self.ai_data.params.charge_rate_alpha,self.explorer_id);
-                                                    }
-                                                    None => {
-                                                        //this should not happen
-                                                    }
-                                                }
+                                                if let Some(planet_info)=self.topology_info.get_mut(&self.planet_id){
+                                                    planet_info.update_charge_rate(available_cells, self.time, self.ai_data.params.charge_rate_alpha,self.explorer_id);
+                                                } // it is impossible that the explorer doesn't have the planet in its topoplogy
                                                 if !resources && !combinations{
                                                     self.state = ExplorerState::Idle;
                                                 }
@@ -335,10 +341,12 @@ impl Explorer {
                                     ).emit();
                                 }
                             } else {
+                                // the explorer is not in a state that can process messages
                                 self.buffer_planet_msg.push_back(msg);
                             }
                         }
                         Err(err) => {
+                            // in this case the explorer probably will receive a kill message
                             LogEvent::new(
                                 Some(Participant::new(ActorType::Planet, self.planet_id)),
                                 Some(Participant::new(ActorType::Explorer, self.explorer_id)),
@@ -360,6 +368,7 @@ impl Explorer {
                         "explorer_state"=>format!("{:?}", self.state)
                     );
                     if !self.buffer_planet_msg.is_empty() || !self.buffer_orchestrator_msg.is_empty() {
+                        // processing buffered messages
                         if let Err(err)=manage_buffer_msg(self){
                             LogEvent::self_directed(
                                 Participant::new(ActorType::Explorer, self.explorer_id),
@@ -378,6 +387,7 @@ impl Explorer {
                         }
                     }
                     else if !self.manual_mode && self.state==ExplorerState::Idle{
+                        //running the ai if the explorer is not in manual mode
                         ai_core_function(self).map_err(|e| e.to_string())?;
                     }
                 }
