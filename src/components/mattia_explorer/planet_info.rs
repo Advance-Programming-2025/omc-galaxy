@@ -4,14 +4,14 @@ use logging_utils::log_fn_call;
 use std::collections::HashSet;
 
 #[derive(Debug)]
-pub enum PlanetClassType {
+pub (super) enum PlanetClassType {
     A,
     B,
     C,
     D,
 }
 impl PlanetClassType {
-    pub fn can_have_rocket(&self) -> bool {
+    pub (super) fn can_have_rocket(&self) -> bool {
         match self {
             PlanetClassType::A => true,
             PlanetClassType::B => false,
@@ -19,7 +19,7 @@ impl PlanetClassType {
             PlanetClassType::D => false,
         }
     }
-    pub fn max_energy_cells(&self) -> u32 {
+    pub (super) fn max_energy_cells(&self) -> u32 {
         match self {
             PlanetClassType::A => 5,
             PlanetClassType::B => 1,
@@ -30,7 +30,7 @@ impl PlanetClassType {
 }
 
 #[derive(Debug)]
-pub struct PlanetInfo {
+pub (super) struct PlanetInfo {
     pub basic_resources: Option<HashSet<BasicResourceType>>,
     pub complex_resources: Option<HashSet<ComplexResourceType>>,
     pub neighbors: Option<HashSet<ID>>,
@@ -42,7 +42,7 @@ pub struct PlanetInfo {
     pub inferred_planet_type: Option<PlanetClassType>,
 }
 impl PlanetInfo {
-    pub fn new(time: u64) -> Self {
+    pub (super) fn new(time: u64) -> Self {
         log_fn_call!(
             dir
             ActorType::Explorer,
@@ -61,7 +61,7 @@ impl PlanetInfo {
             inferred_planet_type: None,
         }
     }
-    pub fn update_charge_rate(
+    pub (super) fn update_charge_rate(
         &mut self,
         current_energy: u32,
         current_time: u64,
@@ -106,7 +106,7 @@ impl PlanetInfo {
         self.energy_cells = Some(current_energy);
         self.timestamp_energy = current_time;
     }
-    pub fn calculate_planet_type(&mut self) -> Result<(), String> {
+    pub (super) fn calculate_planet_type(&mut self) -> Result<(), String> {
         log_fn_call!(
             dir
             ActorType::Explorer,

@@ -18,7 +18,7 @@ use logging_utils::{LoggableActor, warning_payload};
 
 /// this function manages all the messages that were put in the buffers
 /// (in the same way the explorer usually manages them)
-pub fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
+pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
     //LOG
     log_fn_call!(explorer, "manage_buffer_msg",);
     //LOG

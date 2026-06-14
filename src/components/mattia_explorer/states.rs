@@ -3,7 +3,7 @@ use common_game::protocols::planet_explorer::PlanetToExplorer;
 
 /// these are the states of the explorer state machine
 #[derive(PartialEq, Debug)]
-pub enum ExplorerState {
+pub (super) enum ExplorerState {
     Idle,
     WaitingForNeighbours,
     Traveling,
@@ -24,7 +24,7 @@ pub enum ExplorerState {
 }
 
 /// this function checks if the orchestrator message received is the one expected (based on the explorer state)
-pub fn orch_msg_match_state(explorer_state: &ExplorerState, msg: &OrchestratorToExplorer) -> bool {
+pub (super) fn orch_msg_match_state(explorer_state: &ExplorerState, msg: &OrchestratorToExplorer) -> bool {
     match (explorer_state, msg) {
         (ExplorerState::Idle, _) => true,
         (ExplorerState::WaitingForNeighbours, OrchestratorToExplorer::NeighborsResponse { .. }) => {
@@ -38,7 +38,7 @@ pub fn orch_msg_match_state(explorer_state: &ExplorerState, msg: &OrchestratorTo
 }
 
 /// this function checks if the planet message received is the one expected (based on the explorer state)
-pub fn planet_msg_match_state(explorer_state: &ExplorerState, msg: &PlanetToExplorer) -> bool {
+pub (super) fn planet_msg_match_state(explorer_state: &ExplorerState, msg: &PlanetToExplorer) -> bool {
     match (explorer_state, msg) {
         (ExplorerState::Idle, _) => true,
         (

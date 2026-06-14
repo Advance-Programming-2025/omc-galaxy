@@ -13,7 +13,7 @@ use rand::Rng;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum AIActionType {
+enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
     MoveTo(ID),
@@ -23,7 +23,7 @@ pub(crate) enum AIActionType {
     RunAway,
 }
 #[derive(Debug)]
-pub struct AIAction {
+pub (super) struct AIAction {
     pub produce_resource: HashMap<BasicResourceType, f32>, //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
     pub combine_resource: HashMap<ComplexResourceType, f32>,
     pub move_to: HashMap<ID, f32>,
@@ -33,7 +33,7 @@ pub struct AIAction {
     pub run_away: f32,
 }
 impl AIAction {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut produce_resource: HashMap<BasicResourceType, f32> = HashMap::new();
         let mut combine_resource: HashMap<ComplexResourceType, f32> = HashMap::new();
         //basic
@@ -63,7 +63,7 @@ impl AIAction {
 //this is because just in case i need it but at the moment the ai will not have any
 //benefit from producing any resources
 #[derive(Debug)]
-pub struct ResourceNeeds {
+struct ResourceNeeds {
     oxygen: f32,
     carbon: f32,
     silicon: f32,
@@ -76,7 +76,7 @@ pub struct ResourceNeeds {
     dolphin: f32,
 }
 impl ResourceNeeds {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             oxygen: 0.0,
             carbon: 0.0,
@@ -91,7 +91,7 @@ impl ResourceNeeds {
         }
     }
     // return the total need of a resource
-    pub fn get_effective_need(&self, resource: ResourceType, params: &AiParams) -> f32 {
+    fn get_effective_need(&self, resource: ResourceType, params: &AiParams) -> f32 {
         let pf = params.propagation_factor;
         match resource {
             //level 4
@@ -165,7 +165,7 @@ impl ResourceNeeds {
     }
 }
 #[derive(Debug)]
-pub struct AiData {
+pub (super) struct AiData {
     pub resource_needs: ResourceNeeds,
     pub ai_action: AIAction,
     pub last_action: Option<AIActionType>,
@@ -173,7 +173,7 @@ pub struct AiData {
     pub params: AiParams,
 }
 impl AiData {
-    pub fn new(params: AiParams) -> Self {
+    pub (super) fn new(params: AiParams) -> Self {
         Self {
             resource_needs: ResourceNeeds::new(),
             ai_action: AIAction::new(),
@@ -274,7 +274,7 @@ fn estimate_current_energy(
     (predicted_energy, confidence)
 }
 
-pub fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
+fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
     // updating planet safety score for every known ids
     let known_ids: Vec<ID> = explorer.topology_info.keys().copied().collect();
     for id in known_ids {
@@ -846,7 +846,7 @@ fn find_best_action(
 
 // ai core function that is called at every explorer cycle
 #[allow(clippy::too_many_lines)]
-pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub (super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     //LOG
     log_fn_call!(explorer, "ai_core_function", explorer,);
     //LOG

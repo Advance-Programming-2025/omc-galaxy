@@ -2,7 +2,7 @@
 /// These were previously hardcoded as `const` values in `explorer_ai.rs`.
 /// Extracting them into a struct allows runtime configuration and ML-based tuning.
 #[derive(Debug, Clone)]
-pub struct AiParams {
+pub (super) struct AiParams {
     // --- NOISE ---
     /// Noise level for utility calculations (multiplier range: [1-val, 1+val])
     pub randomness_range: f64,

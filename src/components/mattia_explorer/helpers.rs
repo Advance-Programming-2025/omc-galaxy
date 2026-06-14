@@ -8,7 +8,7 @@ use logging_utils::{log_internal_op, warning_payload};
 /// this function takes the explorer, and based on its state sends the
 /// correct messages to the planet in order to survey the amount of energy cells,
 /// the supported resource and the supported combination
-pub fn gather_info_from_planet(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub (super) fn gather_info_from_planet(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     match explorer.state {
         ExplorerState::Surveying {
             resources,
