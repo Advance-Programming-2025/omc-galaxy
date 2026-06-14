@@ -11,13 +11,13 @@ use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
 use crossbeam_channel::Sender;
-use logging_utils::{LoggableActor, log_internal_op, log_message, warning_payload};
+use logging_utils::{log_internal_op, log_message, warning_payload, LoggableActor};
 use one_million_crabs::planet::ToString2;
 use std::collections::HashSet;
 
 /// this function put the explorer in the condition to receive messages (idle state),
 /// it is called when the explorer receives the StartExplorerAI message
-pub (super) fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     explorer.manual_mode = false;
     log_message!(
@@ -41,7 +41,7 @@ pub (super) fn start_explorer_ai(explorer: &mut Explorer) -> Result<(), String> 
 
 /// this function resets the topology known by the explorer and its AiData,
 /// it is called when the explorer receives the ResetExplorerAI message
-pub (super) fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     //clearing all the information stored in the explorer
     explorer.topology_info.clear();
@@ -88,7 +88,7 @@ pub (super) fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> 
 
 /// this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
 /// it is called when the explorer receives the StopExplorerAI message
-pub (super) fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     explorer.manual_mode = true;
     log_message!(
@@ -128,7 +128,7 @@ pub (super) fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
 }
 
 /// this function puts the explorer in the Killed state waiting for the thread to be terminated
-pub (super) fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Killed;
     log_message!(
         ActorType::Orchestrator,
@@ -167,7 +167,7 @@ pub (super) fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
 }
 
 /// this function sets the sender_to_planet of the explorer struct
-pub (super) fn move_to_planet(
+pub(super) fn move_to_planet(
     explorer: &mut Explorer,
     sender_to_new_planet: Option<Sender<ExplorerToPlanet>>,
     planet_id: ID,
@@ -196,7 +196,7 @@ pub (super) fn move_to_planet(
             match explorer.topology_info.get(&planet_id) {
                 Some(planet_info) => {
                     if !explorer.manual_mode {
-                        //in the case the explorer it is not in manual mode it 
+                        //in the case the explorer it is not in manual mode it
                         //automatically surveys vital information
                         explorer.state = ExplorerState::Surveying {
                             resources: planet_info.basic_resources.is_none(),
@@ -223,7 +223,7 @@ pub (super) fn move_to_planet(
                     //inserting the planet in the explorer topology if there wasn't
                     explorer.topology_info.insert(planet_id, PlanetInfo::new(0));
                     if !explorer.manual_mode {
-                        //in the case the explorer it is not in manual mode it 
+                        //in the case the explorer it is not in manual mode it
                         //automatically surveys vital information
                         explorer.current_planet_neighbors_update = true;
                         explorer.state = ExplorerState::Surveying {
@@ -272,7 +272,7 @@ pub (super) fn move_to_planet(
 }
 
 /// this function sends the current planet id to the orchestrator
-pub (super) fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn current_planet_request(explorer: &mut Explorer) -> Result<(), String> {
     explorer.state = ExplorerState::Idle;
     log_message!(
         ActorType::Orchestrator,
@@ -314,7 +314,7 @@ pub (super) fn current_planet_request(explorer: &mut Explorer) -> Result<(), Str
 /// this function sends the basic resources supported by the current planet to the orchestrator
 /// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
 /// response and then send it back to the orchestrator)
-pub (super) fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn supported_resource_request(explorer: &mut Explorer) -> Result<(), String> {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -392,7 +392,7 @@ pub (super) fn supported_resource_request(explorer: &mut Explorer) -> Result<(),
 /// this function sends the complex resources supported by the current planet to the orchestrator
 /// (if the explorer doesn't know the supported resources, it asks for them to the planet, wait for the
 /// response and then send it back to the orchestrator)
-pub (super) fn supported_combination_request(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn supported_combination_request(explorer: &mut Explorer) -> Result<(), String> {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -471,7 +471,7 @@ pub (super) fn supported_combination_request(explorer: &mut Explorer) -> Result<
 
 /// this function sends the GenerateResourceRequest, then the explorer state is updated and,
 /// when the explorer will receive the response, it will put the resource in the bag
-pub (super) fn generate_resource_request(
+pub(super) fn generate_resource_request(
     explorer: &mut Explorer,
     to_generate: BasicResourceType,
     to_orchestrator: bool,
@@ -525,7 +525,7 @@ pub (super) fn generate_resource_request(
 /// this function sends the GenerateResourceRequest, then the explorer state is updated and,
 /// when the explorer will receive the response, if the result is positivi it will put the
 /// resource in the bag
-pub (super) fn combine_resource_request(
+pub(super) fn combine_resource_request(
     explorer: &mut Explorer,
     to_generate: ComplexResourceType,
     to_orchestrator: bool,
@@ -618,7 +618,7 @@ pub (super) fn combine_resource_request(
 }
 
 /// this function processes the response of current planet neighbors updating the current planet data
-pub (super) fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
+pub(super) fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) {
     explorer.state = ExplorerState::Idle;
     //insert new planets in the topology if they are missing
     for &neighbour in &neighbors {
@@ -664,7 +664,7 @@ pub (super) fn neighbours_response(explorer: &mut Explorer, neighbors: Vec<ID>) 
 /// this function takes a basic resource list and updates the explorer topology data,
 /// also if the orchestrator requested the supported resource this function will send it
 /// to the orchestrator
-pub (super) fn manage_supported_resource_response(
+pub(super) fn manage_supported_resource_response(
     explorer: &mut Explorer,
     resource_list: HashSet<BasicResourceType>,
 ) -> Result<(), String> {
@@ -744,7 +744,7 @@ pub (super) fn manage_supported_resource_response(
 /// this function takes a complex resource list and updates the explorer topology data,
 /// also if the orchestrator requested the supported combination this function will send it
 /// to the orchestrator
-pub (super) fn manage_supported_combination_response(
+pub(super) fn manage_supported_combination_response(
     explorer: &mut Explorer,
     combination_list: HashSet<ComplexResourceType>,
 ) -> Result<(), String> {
@@ -822,7 +822,7 @@ pub (super) fn manage_supported_combination_response(
 }
 /// this function takes the generated resource from the planet and puts it in the bag of the explorer
 /// also if this action was started by the orchestrator it sends back the response
-pub (super) fn manage_generate_response(
+pub(super) fn manage_generate_response(
     explorer: &mut Explorer,
     resource: Option<BasicResource>,
 ) -> Result<(), String> {
@@ -879,7 +879,7 @@ pub (super) fn manage_generate_response(
 }
 /// this function takes the combined resource from the planet and puts it in the bag of the explorer
 /// also if this action was started by the orchestrator it sends back the response
-pub (super) fn manage_combine_response(
+pub(super) fn manage_combine_response(
     explorer: &mut Explorer,
     complex_response: Result<ComplexResource, (String, GenericResource, GenericResource)>,
 ) -> Result<(), String> {
@@ -933,6 +933,68 @@ pub (super) fn manage_combine_response(
             return Err(
                 "tried to manage complex resource response while not in Idle state".to_string(),
             );
+        }
+    }
+    Ok(())
+}
+
+/// this function updates energy cell information received from the planet
+pub(super) fn manage_available_energy_cell_response(
+    explorer: &mut Explorer,
+    available_cells: u32,
+) -> Result<(), String> {
+    log_message!(
+        ActorType::Planet,
+        explorer.planet_id,
+        ActorType::Explorer,
+        explorer.explorer_id,
+        EventType::MessagePlanetToExplorer,
+        "available energy cells received";
+        "available_cells" => format!("{:?}", available_cells)
+    );
+
+    match explorer.state {
+        ExplorerState::Surveying {
+            resources,
+            combinations,
+            energy_cells: true,
+            orch_resource,
+            orch_combination,
+        } => {
+            if let Some(planet_info) = explorer.topology_info.get_mut(&explorer.planet_id) {
+                planet_info.update_charge_rate(
+                    available_cells,
+                    explorer.time,
+                    explorer.ai_data.params.charge_rate_alpha,
+                    explorer.explorer_id,
+                );
+            }
+            if !resources && !combinations {
+                explorer.state = ExplorerState::Idle;
+            } else {
+                explorer.state = ExplorerState::Surveying {
+                    resources,
+                    combinations,
+                    energy_cells: false,
+                    orch_resource,
+                    orch_combination,
+                };
+            }
+        }
+        _ => {
+            LogEvent::new(
+                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                EventType::MessagePlanetToExplorer,
+                Channel::Warning,
+                warning_payload!(
+                    "received AvailableEnergyCellResponse while not in Surveying state — this should not happen",
+                    "",
+                    "manage_available_energy_cell_response()";
+                    "explorer state" => format!("{:?}", explorer.state)
+                ),
+            )
+            .emit();
         }
     }
     Ok(())

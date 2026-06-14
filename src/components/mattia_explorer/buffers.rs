@@ -1,24 +1,24 @@
-use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::handlers::{
     combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
-    manage_combine_response, manage_generate_response, manage_supported_combination_response,
-    manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai,
-    start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request,
+    manage_available_energy_cell_response, manage_combine_response, manage_generate_response,
+    manage_supported_combination_response, manage_supported_resource_response, move_to_planet,
+    neighbours_response, reset_explorer_ai, start_explorer_ai, stop_explorer_ai,
+    supported_combination_request, supported_resource_request,
 };
 use crate::components::mattia_explorer::states::{
-    ExplorerState, orch_msg_match_state, planet_msg_match_state,
+    orch_msg_match_state, planet_msg_match_state, ExplorerState,
 };
-use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
+use crate::components::mattia_explorer::Explorer;
 use common_game::protocols::orchestrator_explorer::{
     ExplorerToOrchestrator, OrchestratorToExplorer,
 };
 use common_game::protocols::planet_explorer::PlanetToExplorer;
 use logging_utils::log_fn_call;
-use logging_utils::{LoggableActor, warning_payload};
+use logging_utils::LoggableActor;
 
 /// this function manages all the messages that were put in the buffers
 /// (in the same way the explorer usually manages them)
-pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
+pub(super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
     //LOG
     log_fn_call!(explorer, "manage_buffer_msg",);
     //LOG
@@ -100,52 +100,7 @@ pub (super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> 
                     manage_combine_response(explorer, complex_response)?;
                 }
                 PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {
-                    // updating energy cells data
-                    match explorer.state {
-                        ExplorerState::Surveying {
-                            resources,
-                            combinations,
-                            energy_cells: true,
-                            orch_resource,
-                            orch_combination,
-                        } => {
-                            if let Some(planet_info) =
-                                explorer.topology_info.get_mut(&explorer.planet_id)
-                            {
-                                planet_info.update_charge_rate(
-                                    available_cells,
-                                    explorer.time,
-                                    explorer.ai_data.params.charge_rate_alpha,
-                                    explorer.explorer_id,
-                                );
-                            }
-                            if !resources && !combinations {
-                                explorer.state = ExplorerState::Idle;
-                            } else {
-                                explorer.state = ExplorerState::Surveying {
-                                    resources,
-                                    combinations,
-                                    energy_cells: false,
-                                    orch_resource,
-                                    orch_combination,
-                                };
-                            }
-                        }
-                        _ => LogEvent::new(
-                            Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                            EventType::MessagePlanetToExplorer,
-                            Channel::Warning,
-                            warning_payload!(
-                                "received AvailableEnergyCellResponse while not in Surveying state\
-                                this should not happen",
-                                "",
-                                "Explorer::run()";
-                                "explorer state"=>format!("{:?}", explorer.state)
-                            ),
-                        )
-                        .emit(),
-                    }
+                    manage_available_energy_cell_response(explorer, available_cells)?;
                 }
                 PlanetToExplorer::Stopped => {
                     explorer.state = ExplorerState::Idle;

@@ -13,12 +13,7 @@ use crate::components::mattia_explorer::ai_params::AiParams;
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
 use crate::components::mattia_explorer::explorer_ai::{AiData, ai_core_function};
-use crate::components::mattia_explorer::handlers::{
-    combine_resource_request, current_planet_request, generate_resource_request, kill_explorer,
-    manage_combine_response, manage_generate_response, manage_supported_combination_response,
-    manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai,
-    start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request,
-};
+use crate::components::mattia_explorer::handlers::{combine_resource_request, current_planet_request, generate_resource_request, kill_explorer, manage_available_energy_cell_response, manage_combine_response, manage_generate_response, manage_supported_combination_response, manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai, start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request};
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::{
     ExplorerState, orch_msg_match_state, planet_msg_match_state,
@@ -29,7 +24,7 @@ use common_game::protocols::orchestrator_explorer::{
 };
 use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
 use common_game::utils::ID;
-use crossbeam_channel::{Receiver, Sender, select};
+use crossbeam_channel::{Receiver, Sender};
 use std::collections::{HashMap, VecDeque};
 
 /// struct of the explorer data
@@ -187,6 +182,7 @@ impl Explorer {
             // processing the new message
             match selected {
                 Selected::None => {
+                    // processing buffed messages
                     log_internal_op!(
                     self,
                     "action"   => "no message in the channels",
@@ -211,12 +207,14 @@ impl Explorer {
                             return Ok(());
                         }
                     } else if !self.manual_mode && self.state == ExplorerState::Idle {
+                        //buffers empty and not in manual mode => running ai
                         ai_core_function(self).map_err(|e| e.to_string())?;
                     }
                 }
 
                 Selected::Orchestrator(msg_result) => {
                     match msg_result {
+                        //processing orchestrator message
                         Ok(msg) => {
                             log_message!(
                             ActorType::Orchestrator, 0u32,
@@ -250,9 +248,9 @@ impl Explorer {
                                                 err,
                                                 "mattia_explorer::run()"
                                             ),
-                                            )
-                                                .emit();
+                                            ).emit();
                                         }
+                                        // exiting the loop
                                         return Ok(());
                                     }
                                     OrchestratorToExplorer::MoveToPlanet { sender_to_new_planet, planet_id } => {
@@ -352,54 +350,7 @@ impl Explorer {
                                         manage_combine_response(self, complex_response)
                                     }
                                     PlanetToExplorer::AvailableEnergyCellResponse { available_cells } => {
-                                        match self.state {
-                                            ExplorerState::Surveying {
-                                                resources,
-                                                combinations,
-                                                energy_cells: true,
-                                                orch_resource,
-                                                orch_combination,
-                                            } => {
-                                                if let Some(planet_info) =
-                                                    self.topology_info.get_mut(&self.planet_id)
-                                                {
-                                                    planet_info.update_charge_rate(
-                                                        available_cells,
-                                                        self.time,
-                                                        self.ai_data.params.charge_rate_alpha,
-                                                        self.explorer_id,
-                                                    );
-                                                }
-                                                if !resources && !combinations {
-                                                    self.state = ExplorerState::Idle;
-                                                } else {
-                                                    self.state = ExplorerState::Surveying {
-                                                        resources,
-                                                        combinations,
-                                                        energy_cells: false,
-                                                        orch_resource,
-                                                        orch_combination,
-                                                    };
-                                                }
-                                            }
-                                            _ => {
-                                                LogEvent::new(
-                                                    Some(Participant::new(ActorType::Planet, self.planet_id)),
-                                                    Some(Participant::new(ActorType::Explorer, self.explorer_id)),
-                                                    EventType::MessagePlanetToExplorer,
-                                                    Channel::Warning,
-                                                    warning_payload!(
-                                                    "received AvailableEnergyCellResponse while not \
-                                                     in Surveying state — this should not happen",
-                                                    "",
-                                                    "Explorer::run()";
-                                                    "explorer state" => format!("{:?}", self.state)
-                                                ),
-                                                )
-                                                    .emit();
-                                            }
-                                        }
-                                        Ok(())
+                                        manage_available_energy_cell_response(self, available_cells)
                                     }
                                     PlanetToExplorer::Stopped => {
                                         self.state = ExplorerState::Idle;
