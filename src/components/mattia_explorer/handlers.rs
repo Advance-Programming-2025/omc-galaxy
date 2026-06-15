@@ -14,6 +14,7 @@ use crossbeam_channel::Sender;
 use logging_utils::{log_internal_op, log_message, warning_payload, LoggableActor};
 use one_million_crabs::planet::ToString2;
 use std::collections::HashSet;
+use crate::components::mattia_explorer::states::ExplorerState::Surveying;
 
 /// this function put the explorer in the condition to receive messages (idle state),
 /// it is called when the explorer receives the StartExplorerAI message
@@ -840,6 +841,7 @@ pub(super) fn manage_generate_response(
             orchestrator_response,
         } => {
             let mut orc_res = Ok(());
+            let mut survey_energy_cells = false;
             match resource {
                 Some(resource) => {
                     //inserting the resource in the bag
@@ -850,6 +852,7 @@ pub(super) fn manage_generate_response(
                     }
                 }
                 None => {
+                    survey_energy_cells = true;
                     if orchestrator_response {
                         //responding to the orchestrator if it was requested
                         orc_res = Err("Cannot generate resource".to_string());
@@ -867,7 +870,19 @@ pub(super) fn manage_generate_response(
                     })
                     .map_err(|err| err.to_string())?;
             }
-            explorer.state = ExplorerState::Idle;
+            if survey_energy_cells {
+                explorer.state=Surveying {
+                    resources: false,
+                    combinations: false,
+                    energy_cells: true,
+                    orch_resource: false,
+                    orch_combination: false,
+                };
+                gather_info_from_planet(explorer).map_err(|e| e.to_string())?;
+            }
+            else{
+                explorer.state = ExplorerState::Idle;
+            }
         }
         _ => {
             return Err(

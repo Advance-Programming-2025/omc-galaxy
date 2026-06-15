@@ -445,7 +445,7 @@ fn score_basic_resource_production(
         .ai_data
         .resource_needs
         .get_effective_need(ResourceType::Basic(resource_type), params)
-        * (1.0 / resource_count as f32) //less resource -> more needs
+        * (1.0 / (resource_count*2) as f32) //less resource -> more needs
         * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
             1.0
@@ -486,7 +486,7 @@ fn score_complex_resource_production(
         .resource_needs
         .get_effective_need(ResourceType::Complex(resource_type), params) //getting needs of resources
         * (1.0 / resource_count as f32)  //less resource -> more needs
-        * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
+        * (1.0 - (0.5 / energy_cells as f32)) //less energy cells -> more conservative
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
             1.0
         } else {
@@ -863,19 +863,28 @@ fn find_best_action(
         max_val = actions.survey_energy_cells;
         best = Some(AIActionType::SurveyEnergy);
     }
-
-    // Production
-    for (res, val) in &actions.produce_resource {
-        if *val > max_val {
-            max_val = *val;
-            best = Some(AIActionType::Produce(*res));
+    let current_planet_info=explorer.topology_info.get(&explorer.planet_id);
+    //guard in order to check if the planet has energy cells
+    if current_planet_info.is_some_and(|x| x.energy_cells.is_some_and(|y| y>0)) {
+        // Production
+        for (res, val) in &actions.produce_resource {
+            if current_planet_info.is_some_and(|x| x.basic_resources.as_ref().is_some_and(|y| y.contains(res))) {
+                if *val > max_val {
+                    max_val = *val;
+                    best = Some(AIActionType::Produce(*res));
+                }
+            }
         }
-    }
-    // combination
-    for (res, val) in &actions.combine_resource {
-        if *val > max_val {
-            max_val = *val;
-            best = Some(AIActionType::Combine(*res));
+        // combination
+        for (res, val) in &actions.combine_resource {
+            if explorer.bag.can_craft(*res).0 {
+                if current_planet_info.is_some_and(|x| x.complex_resources.as_ref().is_some_and(|y| y.contains(res))) {
+                    if *val > max_val {
+                        max_val = *val;
+                        best = Some(AIActionType::Combine(*res));
+                    }
+                }
+            }
         }
     }
 
@@ -1066,6 +1075,11 @@ pub (super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn s
                     explorer.state = ExplorerState::GeneratingResource {
                         orchestrator_response: false,
                     };
+                    if let Some(planet_info)= explorer.topology_info.get_mut(&explorer.planet_id){
+                        if planet_info.energy_cells.is_some() {
+                            planet_info.energy_cells=Some(planet_info.energy_cells.unwrap()-1u32);
+                        }
+                    }
 
                     log_internal_op!(explorer, "sending GenerateResourceRequest");
                     match explorer.planet_channels.1.send(
@@ -1099,6 +1113,11 @@ pub (super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn s
                     match complex_resource_req {
                         Ok(complex_resource_req) => {
                             log_internal_op!(explorer, "sending CombineResourceRequest");
+                            if let Some(planet_info)= explorer.topology_info.get_mut(&explorer.planet_id){
+                                if planet_info.energy_cells.is_some() {
+                                    planet_info.energy_cells=Some(planet_info.energy_cells.unwrap()-1u32);
+                                }
+                            }
                             match explorer.planet_channels.1.send(
                                 ExplorerToPlanet::CombineResourceRequest {
                                     explorer_id: explorer.explorer_id,
