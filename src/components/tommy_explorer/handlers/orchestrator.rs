@@ -153,6 +153,7 @@ fn stop_explorer_ai(explorer: &mut Explorer) {
         explorer_id: explorer.id(),
     }) {
         Ok(_) => {
+            explorer.set_state(ExplorerState::Idle);
             explorer.manual_mode_on();
             log_message!(
                 ActorType::Orchestrator,

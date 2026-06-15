@@ -7,7 +7,7 @@ pub mod macros;
 pub mod planets_comms;
 pub mod update;
 
-use crate::components::explorer::BagType;
+use crate::components::manual_explorer::BagType;
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
 use crate::utils::{ExplorerInfoMap, PlanetInfoMap};

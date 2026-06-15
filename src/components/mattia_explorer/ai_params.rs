@@ -63,6 +63,7 @@ pub struct AiParams {
 }
 
 impl Default for AiParams {
+    /// default AiParams values
     fn default() -> Self {
         Self {
             randomness_range: 0.1,

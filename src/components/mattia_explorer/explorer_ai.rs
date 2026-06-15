@@ -13,7 +13,8 @@ use rand::Rng;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum AIActionType {
+/// enum of actions that the ai can take
+pub (super) enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
     MoveTo(ID),
@@ -23,7 +24,8 @@ pub(crate) enum AIActionType {
     RunAway,
 }
 #[derive(Debug)]
-pub struct AIAction {
+/// struct containing the points of every action
+pub (super) struct AIAction {
     pub produce_resource: HashMap<BasicResourceType, f32>, //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
     pub combine_resource: HashMap<ComplexResourceType, f32>,
     pub move_to: HashMap<ID, f32>,
@@ -33,7 +35,10 @@ pub struct AIAction {
     pub run_away: f32,
 }
 impl AIAction {
-    pub fn new() -> Self {
+    /// Creates a new `AIAction` with all scores initialized to 0.0,
+    /// except `wait` which starts at 0.15. All resource types are registered
+    /// in their respective HashMaps with an initial score of 0.0.
+    fn new() -> Self {
         let mut produce_resource: HashMap<BasicResourceType, f32> = HashMap::new();
         let mut combine_resource: HashMap<ComplexResourceType, f32> = HashMap::new();
         //basic
@@ -62,8 +67,9 @@ impl AIAction {
 
 //this is because just in case i need it but at the moment the ai will not have any
 //benefit from producing any resources
+/// struct containing the needs of every resource
 #[derive(Debug)]
-pub struct ResourceNeeds {
+pub (super) struct ResourceNeeds {
     oxygen: f32,
     carbon: f32,
     silicon: f32,
@@ -76,7 +82,8 @@ pub struct ResourceNeeds {
     dolphin: f32,
 }
 impl ResourceNeeds {
-    pub fn new() -> Self {
+    /// Creates a new `ResourceNeeds` with all resource needs initialized to 0.0.
+    fn new() -> Self {
         Self {
             oxygen: 0.0,
             carbon: 0.0,
@@ -90,8 +97,11 @@ impl ResourceNeeds {
             dolphin: 0.0,
         }
     }
-    // return the total need of a resource
-    pub fn get_effective_need(&self, resource: ResourceType, params: &AiParams) -> f32 {
+    /// Recursively computes the effective need of a resource by propagating
+    /// needs through the dependency hierarchy using the given `propagation_factor`.
+    /// Needs cascade from higher-level resources down to lower-level ones.
+    /// The result is clamped between 0.0 and 1.0.
+    fn get_effective_need(&self, resource: ResourceType, params: &AiParams) -> f32 {
         let pf = params.propagation_factor;
         match resource {
             //level 4
@@ -165,15 +175,15 @@ impl ResourceNeeds {
     }
 }
 #[derive(Debug)]
-pub struct AiData {
-    pub resource_needs: ResourceNeeds,
-    pub ai_action: AIAction,
-    pub last_action: Option<AIActionType>,
-    pub last_action_planet_id: Option<ID>,
-    pub params: AiParams,
+pub (super) struct AiData {
+    pub (super) resource_needs: ResourceNeeds,
+    pub (super) ai_action: AIAction,
+    pub (super) last_action: Option<AIActionType>,
+    pub (super) last_action_planet_id: Option<ID>,
+    pub (super) params: AiParams,
 }
 impl AiData {
-    pub fn new(params: AiParams) -> Self {
+    pub (super) fn new(params: AiParams) -> Self {
         Self {
             resource_needs: ResourceNeeds::new(),
             ai_action: AIAction::new(),
@@ -184,6 +194,9 @@ impl AiData {
     }
 }
 
+/// Computes an exponential time-decay factor based on the age of information.
+/// Returns 0.0 if `planet_timestamp` is 0 (never visited), otherwise returns
+/// `e^(-lambda * delta_t)` where `delta_t = current_time - planet_timestamp`.
 fn calculate_time_decay(planet_timestamp: u64, current_time: u64, params: &AiParams) -> f32 {
     if planet_timestamp == 0 {
         //planet never visited
@@ -197,6 +210,8 @@ fn calculate_time_decay(planet_timestamp: u64, current_time: u64, params: &AiPar
     }
 }
 
+/// Returns the maximum energy cell capacity for a planet.
+/// Uses the inferred planet type if available, otherwise defaults to 3.
 fn calculate_max_number_cells(planet_info: &PlanetInfo) -> u32 {
     // Use inferred planet type if available
     if let Some(planet_type) = &planet_info.inferred_planet_type {
@@ -207,6 +222,9 @@ fn calculate_max_number_cells(planet_info: &PlanetInfo) -> u32 {
     }
 }
 
+/// Adds random noise to a value by multiplying it with a random factor
+/// in the range `[1.0 - params.randomness_range, 1.0 + params.randomness_range]`,
+/// then clamping the result to `[0.0, 1.0]`.
 fn add_noise(value: f32, params: &AiParams) -> f32 {
     let mut rng = rand::rng();
     let noise = rng.random_range((1.0 - params.randomness_range)..=(1.0 + params.randomness_range));
@@ -214,6 +232,10 @@ fn add_noise(value: f32, params: &AiParams) -> f32 {
     (value * noise as f32).clamp(0.0, 1.0)
 }
 
+/// Predicts the number of energy cells on a planet at a given time,
+/// using the current energy level, charge rate, and elapsed time.
+/// Caps the prediction horizon to `params.max_prediction_horizon` to avoid over-optimism.
+/// Defaults to 1 energy cell if current energy is unknown.
 fn predict_energy_cells(
     current_energy: Option<u32>,
     charge_rate: Option<f32>,
@@ -238,6 +260,10 @@ fn predict_energy_cells(
     result
 }
 
+/// Estimates the current energy level and confidence on a planet at the given time.
+/// Returns a tuple `(predicted_energy, confidence)` where:
+/// - `predicted_energy` is computed using the charge rate and elapsed time since last update
+/// - `confidence` decreases as the data gets older: 1.0 (perfect) → 0.5 → 0.3 (minimum 0.1)
 fn estimate_current_energy(
     planet_info: &PlanetInfo,
     current_time: u64,
@@ -274,7 +300,11 @@ fn estimate_current_energy(
     (predicted_energy, confidence)
 }
 
-pub fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
+/// Calculates the utility score for every possible AI action and stores the results
+/// in `explorer.ai_data.ai_action`. Updates safety scores for all known planets.
+/// Computes scores for: resource production, resource combination, movement, survey energy,
+/// survey neighbors, wait, and run_away.
+fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
     // updating planet safety score for every known ids
     let known_ids: Vec<ID> = explorer.topology_info.keys().copied().collect();
     for id in known_ids {
@@ -390,6 +420,10 @@ pub fn calc_utility(explorer: &mut Explorer) -> Result<(), String> {
 }
 
 #[allow(clippy::cast_precision_loss)]
+/// Computes the utility score for producing a basic resource on the current planet.
+/// The score depends on the effective need for the resource, current bag count,
+/// available energy cells, charge rate, and data reliability. A small random noise
+/// factor (0.95–1.05) is applied for variety.
 fn score_basic_resource_production(
     explorer: &Explorer,
     resource_type: BasicResourceType,
@@ -411,7 +445,7 @@ fn score_basic_resource_production(
         .ai_data
         .resource_needs
         .get_effective_need(ResourceType::Basic(resource_type), params)
-        * (1.0 / resource_count as f32) //less resource -> more needs
+        * (1.0 / (resource_count*2) as f32) //less resource -> more needs
         * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
             1.0
@@ -427,6 +461,9 @@ fn score_basic_resource_production(
 }
 
 #[allow(clippy::cast_precision_loss)]
+/// Computes the utility score for combining a complex resource on the current planet.
+/// Similar to `score_basic_resource_production` but also considers a readiness factor
+/// based on whether the explorer already possesses the required ingredients (1.0, 0.666, or 0.333).
 fn score_complex_resource_production(
     explorer: &Explorer,
     resource_type: ComplexResourceType,
@@ -449,7 +486,7 @@ fn score_complex_resource_production(
         .resource_needs
         .get_effective_need(ResourceType::Complex(resource_type), params) //getting needs of resources
         * (1.0 / resource_count as f32)  //less resource -> more needs
-        * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
+        * (1.0 - (0.5 / energy_cells as f32)) //less energy cells -> more conservative
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
             1.0
         } else {
@@ -473,6 +510,10 @@ fn score_complex_resource_production(
 }
 //very important
 #[allow(clippy::cast_precision_loss)]
+/// Calculates and updates the safety score for a given planet (or the current planet
+/// if `planet_id` is `None`). The score is a weighted sum of sustainability (charge rate),
+/// physical safety (predicted energy vs max capacity), escape factor (number of neighbors),
+/// and whether the planet can host a rocket. A small random noise factor (0.95–1.05) is applied.
 fn calculate_safety_score(
     explorer: &mut Explorer,
     planet_id: Option<ID>,
@@ -555,6 +596,9 @@ fn calculate_safety_score(
 }
 
 //calculating the utility of updating neighbors
+/// Computes the utility score for surveying neighbors on the current planet.
+/// The score is driven by data staleness, safety bonus (higher when planet is unsafe),
+/// and an unknown bonus (when neighbors are completely unknown).
 fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
     let params = &explorer.ai_data.params;
     //getting planet info
@@ -592,6 +636,10 @@ fn score_survey_neighbors(explorer: &Explorer) -> Result<f32, &'static str> {
 
 // calculating the utility of updating energy cells
 #[allow(clippy::cast_precision_loss)]
+/// Computes the utility score for surveying energy cells on the current planet.
+/// Factors include data staleness, charge-rate uncertainty (higher for fast-charging planets),
+/// no-info boost, and a threat multiplier (higher when current safety is low and the planet
+/// can host a rocket).
 fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
     let params = &explorer.ai_data.params;
     //getting planet info
@@ -645,6 +693,10 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
 
 // calculating the utility to move to near planet
 // this need the run away factor to be already computed
+/// Computes the utility score for moving to a neighboring planet.
+/// In emergency mode (current planet unsafe), favors safer planets with good predicted energy
+/// and active charging. In exploration mode, favors less-known planets while still considering
+/// the target's safety score.
 fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str> {
     let params = &explorer.ai_data.params;
     //getting target planet info
@@ -711,6 +763,9 @@ fn score_move_to(explorer: &Explorer, target_id: ID) -> Result<f32, &'static str
     }
 }
 //used to check if the explorer can safely escape, or if it is even useful
+/// Checks whether the explorer can safely escape the current planet by finding
+/// at least one neighboring planet with a higher safety score (above the configured
+/// minimum difference). Returns false if the current planet is safe or has no known neighbors.
 fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
     let params = &explorer.ai_data.params;
     if actions.run_away <= 0.0 {
@@ -740,6 +795,9 @@ fn can_run_away(actions: &AIAction, explorer: &Explorer) -> bool {
 }
 //this function uses the previus action taken in order to check the utility value now
 //to see if it is still useful
+/// Returns the current utility value of a given action, if the explorer is still
+/// on the same planet where the action was originally last taken. Returns `None`
+/// if the explorer has moved to a different planet.
 fn action_utility(
     actions: &AIAction,
     action: &AIActionType,
@@ -767,6 +825,10 @@ fn action_utility(
 }
 
 //function used to take the best action
+/// Finds the best action to take by comparing the utility scores of all possible actions
+/// (move to, survey, produce, combine, wait, run away). Applies a hysteresis margin to
+/// prefer the last action when scores are close, reducing ping-pong behavior.
+/// Also prevents the explorer from bouncing back and forth between two planets.
 fn find_best_action(
     actions: &AIAction,
     explorer: &Explorer,
@@ -801,19 +863,28 @@ fn find_best_action(
         max_val = actions.survey_energy_cells;
         best = Some(AIActionType::SurveyEnergy);
     }
-
-    // Production
-    for (res, val) in &actions.produce_resource {
-        if *val > max_val {
-            max_val = *val;
-            best = Some(AIActionType::Produce(*res));
+    let current_planet_info=explorer.topology_info.get(&explorer.planet_id);
+    //guard in order to check if the planet has energy cells
+    if current_planet_info.is_some_and(|x| x.energy_cells.is_some_and(|y| y>0)) {
+        // Production
+        for (res, val) in &actions.produce_resource {
+            if current_planet_info.is_some_and(|x| x.basic_resources.as_ref().is_some_and(|y| y.contains(res))) {
+                if *val > max_val {
+                    max_val = *val;
+                    best = Some(AIActionType::Produce(*res));
+                }
+            }
         }
-    }
-    // combination
-    for (res, val) in &actions.combine_resource {
-        if *val > max_val {
-            max_val = *val;
-            best = Some(AIActionType::Combine(*res));
+        // combination
+        for (res, val) in &actions.combine_resource {
+            if explorer.bag.can_craft(*res).0 {
+                if current_planet_info.is_some_and(|x| x.complex_resources.as_ref().is_some_and(|y| y.contains(res))) {
+                    if *val > max_val {
+                        max_val = *val;
+                        best = Some(AIActionType::Combine(*res));
+                    }
+                }
+            }
         }
     }
 
@@ -844,9 +915,14 @@ fn find_best_action(
     best
 }
 
-// ai core function that is called at every explorer cycle
+/// The main AI decision loop called every cycle when the explorer is idle and not in manual mode.
+/// Executes in three phases:
+/// 1. **Survey phase** (first visit): discovers neighbors and resources if unknown
+/// 2. **Utility calculation**: computes scores for all possible actions
+/// 3. **Action execution**: picks the action with the highest utility and executes it
+/// Handles all action types: produce, combine, move to, survey neighbors/energy, wait, and run away.
 #[allow(clippy::too_many_lines)]
-pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub (super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     //LOG
     log_fn_call!(explorer, "ai_core_function", explorer,);
     //LOG
@@ -999,6 +1075,11 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                     explorer.state = ExplorerState::GeneratingResource {
                         orchestrator_response: false,
                     };
+                    if let Some(planet_info)= explorer.topology_info.get_mut(&explorer.planet_id){
+                        if planet_info.energy_cells.is_some() {
+                            planet_info.energy_cells=Some(planet_info.energy_cells.unwrap()-1u32);
+                        }
+                    }
 
                     log_internal_op!(explorer, "sending GenerateResourceRequest");
                     match explorer.planet_channels.1.send(
@@ -1032,6 +1113,11 @@ pub fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::erro
                     match complex_resource_req {
                         Ok(complex_resource_req) => {
                             log_internal_op!(explorer, "sending CombineResourceRequest");
+                            if let Some(planet_info)= explorer.topology_info.get_mut(&explorer.planet_id){
+                                if planet_info.energy_cells.is_some() {
+                                    planet_info.energy_cells=Some(planet_info.energy_cells.unwrap()-1u32);
+                                }
+                            }
                             match explorer.planet_channels.1.send(
                                 ExplorerToPlanet::CombineResourceRequest {
                                     explorer_id: explorer.explorer_id,
