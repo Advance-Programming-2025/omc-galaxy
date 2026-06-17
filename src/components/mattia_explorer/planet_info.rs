@@ -3,10 +3,9 @@ use common_game::utils::ID;
 use logging_utils::log_fn_call;
 use std::collections::HashSet;
 
-
 #[derive(Debug)]
 /// enum used to classify the type of every planet
-pub (super) enum PlanetClassType {
+pub(super) enum PlanetClassType {
     A,
     B,
     C,
@@ -14,7 +13,7 @@ pub (super) enum PlanetClassType {
 }
 impl PlanetClassType {
     //getters of basic information based on inferred planet type
-    pub (super) fn can_have_rocket(&self) -> bool {
+    pub(super) fn can_have_rocket(&self) -> bool {
         match self {
             PlanetClassType::A => true,
             PlanetClassType::B => false,
@@ -22,7 +21,7 @@ impl PlanetClassType {
             PlanetClassType::D => false,
         }
     }
-    pub (super) fn max_energy_cells(&self) -> u32 {
+    pub(super) fn max_energy_cells(&self) -> u32 {
         match self {
             PlanetClassType::A => 5,
             PlanetClassType::B => 1,
@@ -34,19 +33,19 @@ impl PlanetClassType {
 
 #[derive(Debug)]
 /// main struct that stores information about the planet
-pub (super) struct PlanetInfo {
+pub(super) struct PlanetInfo {
     pub basic_resources: Option<HashSet<BasicResourceType>>,
     pub complex_resources: Option<HashSet<ComplexResourceType>>,
     pub neighbors: Option<HashSet<ID>>,
     pub energy_cells: Option<u32>,
-    pub charge_rate: Option<f32>, //inferred charge rate
-    pub timestamp_neighbors: u64, //last time tick that the neighbors were updated
-    pub timestamp_energy: u64,    //last time tick that energy cells were updated
+    pub charge_rate: Option<f32>,  //inferred charge rate
+    pub timestamp_neighbors: u64,  //last time tick that the neighbors were updated
+    pub timestamp_energy: u64,     //last time tick that energy cells were updated
     pub safety_score: Option<f32>, //calculated safety score of the planet
     pub inferred_planet_type: Option<PlanetClassType>,
 }
 impl PlanetInfo {
-    pub (super) fn new(time: u64) -> Self {
+    pub(super) fn new(time: u64) -> Self {
         log_fn_call!(
             dir
             ActorType::Explorer,
@@ -66,7 +65,7 @@ impl PlanetInfo {
         }
     }
     /// this method update the charge rate of the planet, based on the available information
-    pub (super) fn update_charge_rate(
+    pub(super) fn update_charge_rate(
         &mut self,
         current_energy: u32,
         current_time: u64,
@@ -113,7 +112,7 @@ impl PlanetInfo {
         self.timestamp_energy = current_time;
     }
     /// this method tries to infer the planet type based on the information available
-    pub (super) fn calculate_planet_type(&mut self) -> Result<(), String> {
+    pub(super) fn calculate_planet_type(&mut self) -> Result<(), String> {
         log_fn_call!(
             dir
             ActorType::Explorer,

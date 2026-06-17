@@ -1,20 +1,20 @@
+use crate::components::mattia_explorer::ActorType;
+use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::ai_params::AiParams;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::ExplorerState;
-use crate::components::mattia_explorer::ActorType;
-use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
-use logging_utils::{log_fn_call, log_internal_op, LoggableActor};
+use logging_utils::{LoggableActor, log_fn_call, log_internal_op};
 use rand::Rng;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 /// enum of actions that the ai can take
-pub (super) enum AIActionType {
+pub(super) enum AIActionType {
     Produce(BasicResourceType),
     Combine(ComplexResourceType),
     MoveTo(ID),
@@ -25,7 +25,7 @@ pub (super) enum AIActionType {
 }
 #[derive(Debug)]
 /// struct containing the points of every action
-pub (super) struct AIAction {
+pub(super) struct AIAction {
     pub produce_resource: HashMap<BasicResourceType, f32>, //not sure if this will be useful, because I think it is useless to waste energy cell in making resources
     pub combine_resource: HashMap<ComplexResourceType, f32>,
     pub move_to: HashMap<ID, f32>,
@@ -69,7 +69,7 @@ impl AIAction {
 //benefit from producing any resources
 /// struct containing the needs of every resource
 #[derive(Debug)]
-pub (super) struct ResourceNeeds {
+pub(super) struct ResourceNeeds {
     oxygen: f32,
     carbon: f32,
     silicon: f32,
@@ -175,15 +175,15 @@ impl ResourceNeeds {
     }
 }
 #[derive(Debug)]
-pub (super) struct AiData {
-    pub (super) resource_needs: ResourceNeeds,
-    pub (super) ai_action: AIAction,
-    pub (super) last_action: Option<AIActionType>,
-    pub (super) last_action_planet_id: Option<ID>,
-    pub (super) params: AiParams,
+pub(super) struct AiData {
+    pub(super) resource_needs: ResourceNeeds,
+    pub(super) ai_action: AIAction,
+    pub(super) last_action: Option<AIActionType>,
+    pub(super) last_action_planet_id: Option<ID>,
+    pub(super) params: AiParams,
 }
 impl AiData {
-    pub (super) fn new(params: AiParams) -> Self {
+    pub(super) fn new(params: AiParams) -> Self {
         Self {
             resource_needs: ResourceNeeds::new(),
             ai_action: AIAction::new(),
@@ -863,12 +863,14 @@ fn find_best_action(
         max_val = actions.survey_energy_cells;
         best = Some(AIActionType::SurveyEnergy);
     }
-    let current_planet_info=explorer.topology_info.get(&explorer.planet_id);
+    let current_planet_info = explorer.topology_info.get(&explorer.planet_id);
     //guard in order to check if the planet has energy cells
-    if current_planet_info.is_some_and(|x| x.energy_cells.is_some_and(|y| y>0)) {
+    if current_planet_info.is_some_and(|x| x.energy_cells.is_some_and(|y| y > 0)) {
         // Production
         for (res, val) in &actions.produce_resource {
-            if current_planet_info.is_some_and(|x| x.basic_resources.as_ref().is_some_and(|y| y.contains(res))) {
+            if current_planet_info
+                .is_some_and(|x| x.basic_resources.as_ref().is_some_and(|y| y.contains(res)))
+            {
                 if *val > max_val {
                     max_val = *val;
                     best = Some(AIActionType::Produce(*res));
@@ -878,7 +880,11 @@ fn find_best_action(
         // combination
         for (res, val) in &actions.combine_resource {
             if explorer.bag.can_craft(*res).0 {
-                if current_planet_info.is_some_and(|x| x.complex_resources.as_ref().is_some_and(|y| y.contains(res))) {
+                if current_planet_info.is_some_and(|x| {
+                    x.complex_resources
+                        .as_ref()
+                        .is_some_and(|y| y.contains(res))
+                }) {
                     if *val > max_val {
                         max_val = *val;
                         best = Some(AIActionType::Combine(*res));
@@ -922,7 +928,7 @@ fn find_best_action(
 /// 3. **Action execution**: picks the action with the highest utility and executes it
 /// Handles all action types: produce, combine, move to, survey neighbors/energy, wait, and run away.
 #[allow(clippy::too_many_lines)]
-pub (super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
     //LOG
     log_fn_call!(explorer, "ai_core_function", explorer,);
     //LOG
@@ -1075,9 +1081,10 @@ pub (super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn s
                     explorer.state = ExplorerState::GeneratingResource {
                         orchestrator_response: false,
                     };
-                    if let Some(planet_info)= explorer.topology_info.get_mut(&explorer.planet_id){
+                    if let Some(planet_info) = explorer.topology_info.get_mut(&explorer.planet_id) {
                         if planet_info.energy_cells.is_some() {
-                            planet_info.energy_cells=Some(planet_info.energy_cells.unwrap()-1u32);
+                            planet_info.energy_cells =
+                                Some(planet_info.energy_cells.unwrap() - 1u32);
                         }
                     }
 
@@ -1113,9 +1120,12 @@ pub (super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn s
                     match complex_resource_req {
                         Ok(complex_resource_req) => {
                             log_internal_op!(explorer, "sending CombineResourceRequest");
-                            if let Some(planet_info)= explorer.topology_info.get_mut(&explorer.planet_id){
+                            if let Some(planet_info) =
+                                explorer.topology_info.get_mut(&explorer.planet_id)
+                            {
                                 if planet_info.energy_cells.is_some() {
-                                    planet_info.energy_cells=Some(planet_info.energy_cells.unwrap()-1u32);
+                                    planet_info.energy_cells =
+                                        Some(planet_info.energy_cells.unwrap() - 1u32);
                                 }
                             }
                             match explorer.planet_channels.1.send(

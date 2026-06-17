@@ -1,5 +1,5 @@
-use crate::{components::orchestrator::Orchestrator};
-use logging_utils::{debug_println};
+use crate::components::orchestrator::Orchestrator;
+use logging_utils::debug_println;
 
 impl Orchestrator {
     pub(crate) fn print_planets_state(&self) {

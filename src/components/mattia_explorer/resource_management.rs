@@ -1,6 +1,6 @@
 use common_game::components::resource::{BasicResource, ComplexResource, GenericResource};
 
-pub (super) trait ToGeneric {
+pub(super) trait ToGeneric {
     fn res_to_generic(self) -> GenericResource;
 }
 impl ToGeneric for BasicResource {

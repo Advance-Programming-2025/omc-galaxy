@@ -6,7 +6,9 @@ use common_game::{
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
 use crossbeam_channel::Sender;
-use logging_utils::{LoggableActor, log_fn_call, log_orch_to_planet, warning_payload, log_internal_op};
+use logging_utils::{
+    LoggableActor, log_fn_call, log_internal_op, log_orch_to_planet, warning_payload,
+};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {

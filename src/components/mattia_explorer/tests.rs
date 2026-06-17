@@ -17,8 +17,8 @@
 
 mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -689,7 +689,7 @@ mod communication {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{utils::registry::PlanetType, Status};
+    use crate::{Status, utils::registry::PlanetType};
 
     use super::*;
 
@@ -891,8 +891,8 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::Status;
+    use crate::utils::registry::PlanetType;
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
@@ -1540,7 +1540,7 @@ mod combine_resource_tests {
 
         // generate 2 carbons
         for _ in 0..2 {
-            let _ =orch.send_generate_resource_request(0, BasicResourceType::Carbon);
+            let _ = orch.send_generate_resource_request(0, BasicResourceType::Carbon);
         }
         drain_messages(&mut orch, 300);
 
@@ -1548,7 +1548,7 @@ mod combine_resource_tests {
         travel_explorer(&mut orch, 0, 1);
 
         // now try to combine diamond
-        let _ =orch.send_combine_resource_request(0, ComplexResourceType::Diamond);
+        let _ = orch.send_combine_resource_request(0, ComplexResourceType::Diamond);
         drain_messages(&mut orch, 200);
         let bag = &orch.explorers_info.get(&0).unwrap().bag;
         debug_println!("{:?}", bag);
@@ -1915,9 +1915,9 @@ mod end_to_end_tests {
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::utils::registry::PlanetType;
-    use crate::utils::ExplorerInfo;
     use crate::Status;
+    use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,

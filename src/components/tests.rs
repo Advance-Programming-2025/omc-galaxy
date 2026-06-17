@@ -636,25 +636,50 @@ mod tests {
             let explorer_id = 0;
             let content = "1,4,2,3\n2,4,3\n3,4";
             orchestrator.initialize_galaxy_by_content(&content).unwrap();
-            orchestrator.start_all( &[], &[(explorer_id, starter_planet)]).unwrap();
+            orchestrator
+                .start_all(&[], &[(explorer_id, starter_planet)])
+                .unwrap();
 
-            println!("topology: {:?}",orchestrator.get_topology().0);
-            println!("attempting move from planet {} to planet {}", starter_planet, destination);
+            println!("topology: {:?}", orchestrator.get_topology().0);
+            println!(
+                "attempting move from planet {} to planet {}",
+                starter_planet, destination
+            );
 
             if let Err(res) = orchestrator.send_stop_explorer_ai(explorer_id) {
                 panic!("could not stop explorer AI. full error: {}", res);
             }
 
-            println!("explorer is currently stopped and in planet {}", orchestrator.explorers_info.get_planet(&explorer_id).unwrap());
+            println!(
+                "explorer is currently stopped and in planet {}",
+                orchestrator
+                    .explorers_info
+                    .get_planet(&explorer_id)
+                    .unwrap()
+            );
 
             if let Err(res) = orchestrator.send_move_to_planet(explorer_id, destination) {
-                panic!("could not send planet move to explorer. full error: {}", res);
+                panic!(
+                    "could not send planet move to explorer. full error: {}",
+                    res
+                );
             }
 
-            println!("after the move message the explorer is in planet {}", orchestrator.explorers_info.get_planet(&explorer_id).unwrap());
+            println!(
+                "after the move message the explorer is in planet {}",
+                orchestrator
+                    .explorers_info
+                    .get_planet(&explorer_id)
+                    .unwrap()
+            );
 
-            assert!(orchestrator.explorers_info.get_planet(&explorer_id).unwrap() == destination);
-
+            assert!(
+                orchestrator
+                    .explorers_info
+                    .get_planet(&explorer_id)
+                    .unwrap()
+                    == destination
+            );
         }
 
         #[test]

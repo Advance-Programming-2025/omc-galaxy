@@ -26,10 +26,7 @@ impl Orchestrator {
     /// actually present.
     ///
     /// * `msg` - the message to pass along to other functions
-    pub fn handle_planet_message(
-        &mut self,
-        msg: PlanetToOrchestrator,
-    ) -> Result<(), String> {
+    pub fn handle_planet_message(&mut self, msg: PlanetToOrchestrator) -> Result<(), String> {
         //LOG
         log_fn_call!(
             self,
@@ -135,7 +132,7 @@ impl Orchestrator {
                         "planet_id"=>planet_id,
                     ),
                 )
-                    .emit();
+                .emit();
                 //killing explorer just in case the KillPlanet message is manually sended
                 self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                 //LOG
@@ -162,7 +159,7 @@ impl Orchestrator {
                         "planet_id"=>planet_id
                     ),
                 )
-                    .emit();
+                .emit();
                 //LOG
             }
             PlanetToOrchestrator::StopPlanetAIResult { planet_id } => {
@@ -183,7 +180,8 @@ impl Orchestrator {
                         "message"=>"Planet AI stopped",
                         "planet_id"=>planet_id
                     ),
-                ).emit();
+                )
+                .emit();
                 //LOG
                 self.planets_info.update_status(planet_id, Status::Paused)?;
             }
@@ -387,7 +385,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                    .emit();
+                .emit();
                 //LOG
 
                 self.explorers_info
@@ -420,7 +418,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                    .emit();
+                .emit();
                 log_internal_op!(
                     self,
                     "action" => "explorer status updated to Dead",
@@ -440,7 +438,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                    .emit();
+                .emit();
                 //LOG
                 //the ai is started if it was in manual mode
                 self.explorers_info
@@ -469,7 +467,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                    .emit();
+                .emit();
                 //LOG
                 self.explorers_info
                     .insert_status(explorer_id, Status::Paused);
