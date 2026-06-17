@@ -47,7 +47,7 @@ impl Orchestrator {
     ///
     /// needed as a shorthand to initialize the OrchestratorToPlanet and ExplorerToPlanet channels |
     /// NOTE: these channels are simplex.
-    pub(crate) fn init_comms_planet() -> (
+    pub fn init_comms_planet() -> (
         Sender<OrchestratorToPlanet>,
         Receiver<OrchestratorToPlanet>,
         Sender<ExplorerToPlanet>,
@@ -95,7 +95,7 @@ impl Orchestrator {
     /// is created. See function [`add_explorer`](Self::add_explorer).
     ///
     /// NOTE: These channels are simplex.
-    pub(crate) fn init_comms_explorers() -> (
+    pub fn init_comms_explorers() -> (
         Sender<OrchestratorToExplorer>,
         Receiver<OrchestratorToExplorer>,
         Sender<PlanetToExplorer>,
@@ -137,7 +137,7 @@ impl Orchestrator {
     ///
     /// * `id` - id of the planet
     /// * `type_id` - the type of the planet (A,B,C,D)
-    pub(crate) fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
+    pub fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "add_planet()", id, type_id,);
         //LOG
