@@ -3,7 +3,6 @@ mod explorer_comms;
 pub mod gui_comms;
 pub mod handlers;
 pub mod init;
-pub mod macros;
 pub mod planets_comms;
 pub mod update;
 

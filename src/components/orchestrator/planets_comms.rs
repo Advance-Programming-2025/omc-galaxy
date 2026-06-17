@@ -1,4 +1,4 @@
-use crate::{Status, components::orchestrator::Orchestrator, log_orch_internal, settings};
+use crate::{Status, components::orchestrator::Orchestrator, settings};
 use common_game::logging::{Channel, LogEvent, Participant};
 use common_game::utils::ID;
 use common_game::{
@@ -6,7 +6,7 @@ use common_game::{
     protocols::orchestrator_planet::OrchestratorToPlanet,
 };
 use crossbeam_channel::Sender;
-use logging_utils::{LoggableActor, log_fn_call, log_orch_to_planet, warning_payload};
+use logging_utils::{LoggableActor, log_fn_call, log_orch_to_planet, warning_payload, log_internal_op};
 
 impl Orchestrator {
     pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
@@ -255,7 +255,7 @@ impl Orchestrator {
         // Guard: if the destination planet is dead its channel is disconnected,
         // so skip the send instead of returning an error.
         if self.planets_info.is_dead(&planet_id) {
-            log_orch_internal!(format!(
+            log_internal_op!(self, "action" => format!(
                 "send_incoming_explorer_request: planet {} is dead, skipping",
                 planet_id
             ));
@@ -265,7 +265,7 @@ impl Orchestrator {
         let sender = match self.planet_channels.get(&planet_id) {
             Some(sender) => sender,
             None => {
-                log_orch_internal!(format!("Unknown planet: {}", planet_id));
+                log_internal_op!(self, "action" => format!("Unknown planet: {}", planet_id));
                 return Err(format!("Unknown planet: {}", planet_id));
             }
         };
@@ -273,7 +273,7 @@ impl Orchestrator {
         let new_planet_to_explorer_sender = match self.explorer_channels.get(&explorer_id) {
             Some(sender) => sender,
             None => {
-                log_orch_internal!(format!("Unknown explorer: {}", explorer_id));
+                log_internal_op!(self, "action" => format!("Unknown explorer: {}", explorer_id));
                 return Err(format!("Unknown explorer: {}", explorer_id));
             }
         };

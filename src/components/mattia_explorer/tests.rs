@@ -600,7 +600,8 @@ mod test_one_million_crabs_planet {
 
 mod game_simulation {
     use super::*;
-    use crate::{Orchestrator, debug_println};
+    use crate::{Orchestrator};
+    use logging_utils::{debug_println};
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     #[test]

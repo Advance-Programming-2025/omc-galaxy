@@ -6,7 +6,6 @@ use super::topology::{PlanetInfo, TopologyManager};
 use crate::components::tommy_explorer::handlers::orchestrator::{
     combine_resource_request, generate_resource_request,
 };
-use crate::debug_println;
 use common_game::components::resource::{
     BasicResourceType, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType,
 };

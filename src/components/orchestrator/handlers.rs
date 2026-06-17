@@ -14,7 +14,7 @@ use logging_utils::{
 use std::time::{Duration, Instant};
 
 use crate::components::manual_explorer::BagType;
-use crate::{components::orchestrator::Orchestrator, log_orch_internal, utils::Status};
+use crate::{components::orchestrator::Orchestrator, utils::Status};
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
 impl Orchestrator {
@@ -52,7 +52,7 @@ impl Orchestrator {
                     // Skip if the planet is already dead (e.g. a previous AsteroidAck
                     // already triggered its kill before this one was processed)
                     if self.planets_info.get_status(&planet_id) == Status::Dead {
-                        log_orch_internal!(format!(
+                        log_internal_op!(self, "action" => format!(
                             "AsteroidAck for already-dead planet {}, skipping",
                             planet_id
                         ));
@@ -86,7 +86,7 @@ impl Orchestrator {
                     match self.planets_info.update_status(planet_id, Status::Dead) {
                         Ok(_) => {}
                         Err(err) => {
-                            log_orch_internal!(format!("planet status not updated: {}", err));
+                            log_internal_op!(self, "action" => format!("planet status not updated: {}", err));
                             return Err(err.to_string());
                         }
                     }
@@ -113,7 +113,7 @@ impl Orchestrator {
                 // Guard: if the planet is already dead (e.g. killed via AsteroidAck
                 // before this KillPlanetResult arrived), skip redundant processing
                 if self.planets_info.get_status(&planet_id) == Status::Dead {
-                    log_orch_internal!(format!(
+                    log_internal_op!(self, "action" => format!(
                         "KillPlanetResult for already-dead planet {}, skipping",
                         planet_id
                     ));
@@ -135,7 +135,7 @@ impl Orchestrator {
                         "planet_id"=>planet_id,
                     ),
                 )
-                .emit();
+                    .emit();
                 //killing explorer just in case the KillPlanet message is manually sended
                 self.send_kill_to_explorers_on_dying_planet(&planet_id)?;
                 //LOG
@@ -143,7 +143,7 @@ impl Orchestrator {
             // PlanetToOrchestrator::OutgoingExplorerResponse { planet_id, res }=>{},
             PlanetToOrchestrator::StartPlanetAIResult { planet_id } => {
                 if self.planets_info.is_dead(&planet_id) {
-                    log_orch_internal!(format!(
+                    log_internal_op!(self, "action" => format!(
                         "planet: {} is already dead, StartPlanetAIResult is ineffective",
                         planet_id
                     ));
@@ -162,12 +162,12 @@ impl Orchestrator {
                         "planet_id"=>planet_id
                     ),
                 )
-                .emit();
+                    .emit();
                 //LOG
             }
             PlanetToOrchestrator::StopPlanetAIResult { planet_id } => {
                 if self.planets_info.is_dead(&planet_id) {
-                    log_orch_internal!(format!(
+                    log_internal_op!(self, "action" => format!(
                         "planet: {} is already dead, StopPlanetAIResult is ineffective",
                         planet_id
                     ));
@@ -183,8 +183,7 @@ impl Orchestrator {
                         "message"=>"Planet AI stopped",
                         "planet_id"=>planet_id
                     ),
-                )
-                .emit();
+                ).emit();
                 //LOG
                 self.planets_info.update_status(planet_id, Status::Paused)?;
             }
@@ -197,7 +196,7 @@ impl Orchestrator {
                 if let Ok(_) = res {
                     // Guard: if the explorer is already dead, skip processing
                     if self.explorers_info.is_dead(&explorer_id) {
-                        log_orch_internal!(format!(
+                        log_internal_op!(self, "action" => format!(
                             "IncomingExplorerResponse for dead explorer {}, skipping",
                             explorer_id
                         ));
@@ -222,7 +221,7 @@ impl Orchestrator {
                     if move_to_planet_id >= 0
                         && !self.planets_info.is_running(&(move_to_planet_id as u32))
                     {
-                        log_orch_internal!(format!(
+                        log_internal_op!(self, "action" => format!(
                             "IncomingExplorerResponse: destination planet {} is dead, skipping",
                             move_to_planet_id
                         ));
@@ -243,7 +242,7 @@ impl Orchestrator {
                     // Guard: if the current planet is dead, we cannot send OutgoingExplorerRequest
                     if self.planets_info.is_dead(&current_planet_id) {
                         //not need to send a response to the explorer because it will be killed in moments
-                        log_orch_internal!(format!(
+                        log_internal_op!(self, "action" => format!(
                             "IncomingExplorerResponse: current planet {} is dead, skipping",
                             current_planet_id
                         ));
@@ -292,7 +291,7 @@ impl Orchestrator {
                             }
                         }
                     }
-                    
+
                     return Ok(());
                 }
             }
@@ -313,7 +312,7 @@ impl Orchestrator {
                     let current_planet_alive = !self.planets_info.is_dead(&planet_id);
                     //current planet dead so the explorer will be killed
                     if !explorer_alive || !current_planet_alive {
-                        log_orch_internal!(format!(
+                        log_internal_op!(self, "action" => format!(
                             "OutgoingExplorerResponse for dead planet {}/explorer {}, skipping",
                             planet_id, explorer_id
                         ));
@@ -332,7 +331,7 @@ impl Orchestrator {
                             .unwrap()
                             .move_to_planet_id = planet_id as i32; //updating dst to current planet
                         self.send_incoming_explorer_request(planet_id, explorer_id)?;
-                        log_orch_internal!(format!(
+                        log_internal_op!(self, "action" => format!(
                             "OutgoingExplorerResponse with destination planet killed {}, trying to recover",
                             dst_planet_id
                         ));
@@ -367,7 +366,7 @@ impl Orchestrator {
         let explorer_id_for_guard = msg.explorer_id();
         if !matches!(msg, ExplorerToOrchestrator::KillExplorerResult { .. }) {
             if self.explorers_info.is_dead(&explorer_id_for_guard) {
-                log_orch_internal!(format!(
+                log_internal_op!(self, "action" => format!(
                     "Ignoring message from dead explorer {}, skipping",
                     explorer_id_for_guard
                 ));
@@ -388,7 +387,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                .emit();
+                    .emit();
                 //LOG
 
                 self.explorers_info
@@ -421,7 +420,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                .emit();
+                    .emit();
                 log_internal_op!(
                     self,
                     "action" => "explorer status updated to Dead",
@@ -441,7 +440,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                .emit();
+                    .emit();
                 //LOG
                 //the ai is started if it was in manual mode
                 self.explorers_info
@@ -470,7 +469,7 @@ impl Orchestrator {
                         "explorer_id"=>explorer_id,
                     ),
                 )
-                .emit();
+                    .emit();
                 //LOG
                 self.explorers_info
                     .insert_status(explorer_id, Status::Paused);
@@ -565,7 +564,7 @@ impl Orchestrator {
 
                 // Check if dst_planet_id exists in the galaxy at all
                 if self.galaxy_lookup.get(&dst_planet_id).is_none() {
-                    log_orch_internal!(format!(
+                    log_internal_op!(self, "action" => format!(
                         "TravelToPlanetRequest: dst_planet_id {} does not exist, rejecting",
                         dst_planet_id
                     ));
@@ -746,7 +745,7 @@ impl Orchestrator {
                     // The explorer's channel is already disconnected (thread
                     // exited). This is expected during race conditions when
                     // multiple kill paths converge. Just log and continue.
-                    log_orch_internal!(format!(
+                    log_internal_op!(self, "action" => format!(
                         "send_kill_to_explorers_on_dying_planet: explorer {} channel disconnected, skipping",
                         i.0
                     ));

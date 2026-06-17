@@ -1,9 +1,8 @@
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
-use crate::log_message;
 use common_game::components::resource::{BasicResource, ComplexResource, GenericResource};
 use common_game::logging::{ActorType, EventType};
-use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::PlanetToExplorer;
+use logging_utils::log_message;
 
 /// Handles all messages from the planet.
 pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<(), String> {
