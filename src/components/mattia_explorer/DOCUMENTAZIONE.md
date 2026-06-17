@@ -40,17 +40,18 @@ L'explorer ha due modalita' operative:
 ```
 src/components/mattia_explorer/
 ├── mod.rs                  -- Struct Explorer, main loop, costruttore
-├── explorer_ai.rs          -- Motore AI utility-based (1104 righe)
-├── handlers.rs             -- Handler per ogni tipo di messaggio (982 righe)
+├── explorer_ai.rs          -- Motore AI utility-based
+├── ai_params.rs            -- All tunable AI parameters for the explorer
+├── handlers.rs             -- Handler per ogni tipo di messaggio
 ├── helpers.rs              -- Funzioni di utilita' (gather_info_from_planet)
 ├── states.rs               -- Enum degli stati e funzioni di matching
 ├── bag.rs                  -- Inventario risorse dell'explorer
 ├── buffers.rs              -- Gestione messaggi bufferizzati
 ├── resource_management.rs  -- Trait ToGeneric per conversione risorse
 ├── planet_info.rs          -- Dati topologici per pianeta (risorse, energia, tipo)
-├── tests.rs                -- Suite di test (2075 righe)
+├── tests.rs                -- Suite di test
 └── test_topology_files/
-    └── t0.txt              -- File topologia per i test (9 pianeti)
+    └── t0.txt              -- File topologia per i test
 ```
 
 ---
@@ -81,8 +82,9 @@ pub struct Explorer {
 
 `mod.rs:58-93`
 
-Alla creazione l'explorer:
+Alla creazione l'explorer (`new`):
 - Riceve i canali di comunicazione con orchestrator e pianeta
+- Chiama `Self::with_params` con `AiParams::default()`
 - Inizializza la topologia con il solo pianeta iniziale
 - Parte in stato `Idle`
 - Crea un `Bag` vuoto

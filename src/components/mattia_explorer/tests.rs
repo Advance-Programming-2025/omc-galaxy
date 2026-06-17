@@ -17,8 +17,8 @@
 
 mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -600,9 +600,9 @@ mod test_one_million_crabs_planet {
 
 mod game_simulation {
     use super::*;
-    use crate::{Orchestrator};
-    use logging_utils::{debug_println};
+    use crate::Orchestrator;
     use crossbeam_channel::{select, tick};
+    use logging_utils::debug_println;
     use std::time::Duration;
     #[test]
     fn simulation_25s() {
@@ -659,8 +659,8 @@ mod game_simulation {
     }
 }
 
-use logging_utils::debug_println;
 use crate::Orchestrator;
+use logging_utils::debug_println;
 
 #[test]
 /// Test if the explorer is spawned properly
@@ -689,7 +689,7 @@ mod communication {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{Status, utils::registry::PlanetType};
+    use crate::{utils::registry::PlanetType, Status};
 
     use super::*;
 
@@ -891,8 +891,8 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::Status;
     use crate::utils::registry::PlanetType;
+    use crate::Status;
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
@@ -1420,9 +1420,9 @@ mod combine_resource_tests {
     use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
     use common_game::utils::ID;
     use crossbeam_channel::{select, tick};
+    use logging_utils::debug_println;
     use std::thread::sleep;
     use std::time::Duration;
-    use logging_utils::debug_println;
 
     fn setup_multi_planet_orch(explorer_id: ID) -> Orchestrator {
         let mut orch = Orchestrator::new().unwrap();
@@ -1915,9 +1915,9 @@ mod end_to_end_tests {
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::Status;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
+    use crate::Status;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,

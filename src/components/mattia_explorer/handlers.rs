@@ -2,6 +2,7 @@ use crate::components::mattia_explorer::explorer_ai::AiData;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::resource_management::ToGeneric;
 use crate::components::mattia_explorer::states::ExplorerState;
+use crate::components::mattia_explorer::states::ExplorerState::Surveying;
 use crate::components::mattia_explorer::{Explorer, PlanetInfo};
 use common_game::components::resource::{
     BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, GenericResource,
@@ -14,7 +15,6 @@ use crossbeam_channel::Sender;
 use logging_utils::{log_internal_op, log_message, warning_payload, LoggableActor};
 use one_million_crabs::planet::ToString2;
 use std::collections::HashSet;
-use crate::components::mattia_explorer::states::ExplorerState::Surveying;
 
 /// this function put the explorer in the condition to receive messages (idle state),
 /// it is called when the explorer receives the StartExplorerAI message

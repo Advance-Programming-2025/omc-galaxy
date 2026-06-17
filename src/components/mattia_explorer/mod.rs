@@ -12,11 +12,11 @@ mod tests;
 use crate::components::mattia_explorer::ai_params::AiParams;
 use crate::components::mattia_explorer::bag::Bag;
 use crate::components::mattia_explorer::buffers::manage_buffer_msg;
-use crate::components::mattia_explorer::explorer_ai::{AiData, ai_core_function};
+use crate::components::mattia_explorer::explorer_ai::{ai_core_function, AiData};
 use crate::components::mattia_explorer::handlers::{combine_resource_request, current_planet_request, generate_resource_request, kill_explorer, manage_available_energy_cell_response, manage_combine_response, manage_generate_response, manage_supported_combination_response, manage_supported_resource_response, move_to_planet, neighbours_response, reset_explorer_ai, start_explorer_ai, stop_explorer_ai, supported_combination_request, supported_resource_request};
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::{
-    ExplorerState, orch_msg_match_state, planet_msg_match_state,
+    orch_msg_match_state, planet_msg_match_state, ExplorerState,
 };
 use common_game::components::resource::ResourceType;
 use common_game::protocols::orchestrator_explorer::{
@@ -49,6 +49,7 @@ pub (super) struct Explorer {
 
 impl Explorer {
     // at creation, an Explorer should be connected to Orchestrator and the starting Planet
+    /// Creates a new mattia_explorer
     pub (super) fn new(
         explorer_id: u32,
         planet_id: u32,
@@ -67,7 +68,7 @@ impl Explorer {
         )
     }
 
-    /// Creates an Explorer with custom AI parameters (for ML tuning)
+    /// Creates an Explorer with custom AI parameters
     pub (super) fn with_params(
         explorer_id: u32,
         planet_id: u32,
@@ -406,7 +407,7 @@ impl Explorer {
 }
 
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
-use logging_utils::{LoggableActor, get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message, warning_payload, debug_println};
+use logging_utils::{debug_println, get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message, warning_payload, LoggableActor};
 use std::fmt;
 use std::thread::sleep;
 use std::time::Duration;
