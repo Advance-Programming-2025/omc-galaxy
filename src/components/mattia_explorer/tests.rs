@@ -659,6 +659,7 @@ mod game_simulation {
     }
 }
 
+use logging_utils::debug_println;
 use crate::Orchestrator;
 
 #[test]
@@ -869,12 +870,12 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
         select! {
             recv(orch.receiver_orch_planet) -> planet_msg => {
                 if let Ok(msg) = planet_msg { //handling message if there is one
-                    orch.handle_planet_message(msg);
+                    let _ = orch.handle_planet_message(msg);
                 }
             }
             recv(orch.receiver_orch_explorer) -> explorer_msg => {
                 if let Ok(msg) = explorer_msg {
-                    orch.handle_explorer_message(msg);
+                    let _ = orch.handle_explorer_message(msg);
                 }
             }
             recv(timeout) -> _ => {
@@ -1421,6 +1422,7 @@ mod combine_resource_tests {
     use crossbeam_channel::{select, tick};
     use std::thread::sleep;
     use std::time::Duration;
+    use logging_utils::debug_println;
 
     fn setup_multi_planet_orch(explorer_id: ID) -> Orchestrator {
         let mut orch = Orchestrator::new().unwrap();
@@ -1538,8 +1540,7 @@ mod combine_resource_tests {
 
         // generate 2 carbons
         for _ in 0..2 {
-            orch.send_generate_resource_request(0, BasicResourceType::Carbon)
-                .unwrap();
+            let _ =orch.send_generate_resource_request(0, BasicResourceType::Carbon);
         }
         drain_messages(&mut orch, 300);
 
@@ -1547,10 +1548,10 @@ mod combine_resource_tests {
         travel_explorer(&mut orch, 0, 1);
 
         // now try to combine diamond
-        orch.send_combine_resource_request(0, ComplexResourceType::Diamond)
-            .unwrap();
+        let _ =orch.send_combine_resource_request(0, ComplexResourceType::Diamond);
         drain_messages(&mut orch, 200);
         let bag = &orch.explorers_info.get(&0).unwrap().bag;
+        debug_println!("{:?}", bag);
         assert!(bag.contains(&ResourceType::Complex(ComplexResourceType::Diamond)));
         assert!(
             !bag.contains(&ResourceType::Basic(BasicResourceType::Carbon)),

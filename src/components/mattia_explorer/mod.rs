@@ -102,7 +102,7 @@ impl Explorer {
             time: 1,
             ai_data: AiData::new(ai_params),
             current_planet_neighbors_update: false,
-            manual_mode: false,
+            manual_mode: true,
         }
     }
 
@@ -143,6 +143,7 @@ impl Explorer {
         let mut planet_channel_active = true;
 
         loop {
+            debug_println!("{:?}", planet_channel_active);
             self.time = self.time.wrapping_add(1);
 
             // Represents which channel fired and carries the received message (or disconnect error)
@@ -405,10 +406,7 @@ impl Explorer {
 }
 
 use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
-use logging_utils::{
-    LoggableActor, get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message,
-    warning_payload,
-};
+use logging_utils::{LoggableActor, get_receiver_id, get_sender_id, log_fn_call, log_internal_op, log_message, warning_payload, debug_println};
 use std::fmt;
 use std::thread::sleep;
 use std::time::Duration;
