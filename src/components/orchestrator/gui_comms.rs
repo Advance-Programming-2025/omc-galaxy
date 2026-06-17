@@ -1,7 +1,7 @@
 use crate::PlanetInfoMap;
-use crossbeam_channel::Sender;
 use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
 use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
+use crossbeam_channel::Sender;
 use log::info;
 
 use crate::utils::ExplorerInfoMap;
@@ -125,12 +125,24 @@ impl Orchestrator {
 
         Ok(())
     }
-pub fn send_move_explorer_from_gui(
+    pub fn send_move_explorer_from_gui(
         &mut self,
         explorer_id: u32,
         destination_planet_id: u32,
     ) -> Result<(), String> {
         self.send_stop_explorer_from_gui(explorer_id)?;
+
+        //check if the destination planet is correct relative to the explorer position
+        let Some(explorer_current_planet) = self.explorers_info.get_planet(&explorer_id) else {
+            return Err(format!("Explorer planet do not exist"));
+        };
+        if self.galaxy_topology[explorer_current_planet as usize][destination_planet_id as usize]
+            == false
+        {
+            // the move function will not work, but is visible from the UI so it is not necessary to throw an error
+            return Ok(());
+        }
+
         // let explorer_channel = self
         //     .explorer_channels
         //     .get(&explorer_id)
