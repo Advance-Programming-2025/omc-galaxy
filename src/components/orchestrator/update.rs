@@ -329,7 +329,7 @@ impl Orchestrator {
     /// Goes through every OrchestratorToExplorer channel and sends the `StopExplorerAI`
     ///
     /// Returns Err if any of the communication channels are inaccessible.
-    pub(crate) fn stop_all_explorer_ais(&mut self) -> Result<(), String> {
+    pub fn stop_all_explorer_ais(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "stop_all_explorer_ais()");
         //LOG
