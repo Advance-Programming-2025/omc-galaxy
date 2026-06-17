@@ -125,31 +125,38 @@ impl Orchestrator {
 
         Ok(())
     }
-    pub fn send_move_explorer_from_gui(
+pub fn send_move_explorer_from_gui(
         &mut self,
         explorer_id: u32,
         destination_planet_id: u32,
     ) -> Result<(), String> {
         self.send_stop_explorer_from_gui(explorer_id)?;
-        let explorer_channel = self
-            .explorer_channels
-            .get(&explorer_id)
-            .ok_or_else(|| format!("Explorer {explorer_id} not found"))?;
-        let from_orch = &explorer_channel.0;
+        // let explorer_channel = self
+        //     .explorer_channels
+        //     .get(&explorer_id)
+        //     .ok_or_else(|| format!("Explorer {explorer_id} not found"))?;
+        // let from_orch = &explorer_channel.0;
 
-        let planet_channel = self
-            .planet_channels
-            .get(&destination_planet_id)
-            .ok_or_else(|| format!("Planet {destination_planet_id} not found"))?;
-        let sender_to_new_planet = planet_channel.1.clone();
+        // let planet_channel = self
+        //     .planet_channels
+        //     .get(&destination_planet_id)
+        //     .ok_or_else(|| format!("Planet {destination_planet_id} not found"))?;
+        // let sender_to_new_planet = planet_channel.1.clone();
 
         if !self.planets_info.is_dead(&destination_planet_id) {
-            from_orch
-                .try_send(OrchestratorToExplorer::MoveToPlanet {
-                    sender_to_new_planet: Some(sender_to_new_planet),
-                    planet_id: destination_planet_id,
-                })
-                .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
+            let moved_explorer_info = self.explorers_info.get_mut(&explorer_id);
+            if let Some(map) = moved_explorer_info {
+                map.move_to_planet_id = destination_planet_id as i32;
+
+                self.send_incoming_explorer_request(destination_planet_id, explorer_id)?;
+
+                // from_orch
+                // .try_send(OrchestratorToExplorer::MoveToPlanet {
+                //     sender_to_new_planet: Some(sender_to_new_planet),
+                //     planet_id: destination_planet_id,
+                // })
+                // .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
+            }
 
             //LOG
 
