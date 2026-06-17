@@ -26,7 +26,7 @@ impl Orchestrator {
     /// actually present.
     ///
     /// * `msg` - the message to pass along to other functions
-    pub(crate) fn handle_planet_message(
+    pub fn handle_planet_message(
         &mut self,
         msg: PlanetToOrchestrator,
     ) -> Result<(), String> {

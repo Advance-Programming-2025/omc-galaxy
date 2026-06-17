@@ -137,7 +137,7 @@ impl Orchestrator {
     ///
     /// See [`send_asteroid`](`Self::send_asteroid`) for more details on how an asteroid
     /// is sent.
-    pub(crate) fn send_asteroid_to_all(&mut self) -> Result<(), String> {
+    pub fn send_asteroid_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "send_asteroid_to_all()");
         //LOG
@@ -195,7 +195,7 @@ impl Orchestrator {
     ///
     /// See [`send_planet_kill`](`Self::send_planet_kill`) for more details on how a
     /// planet kill message is sent.
-    pub(crate) fn send_planet_kill_to_all(&mut self) -> Result<(), String> {
+    pub fn send_planet_kill_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "send_planet_kill_to_all()");
         //LOG
