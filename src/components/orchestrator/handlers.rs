@@ -291,23 +291,9 @@ impl Orchestrator {
                                 return Err(format!("Failed to send explorer request: {}", err));
                             }
                         }
-                    } else if (move_to_planet_id as u32) == current_planet_id {
-                        //if the explorer has to stay on the same planet
-
-                        let sender = &self
-                            .explorer_channels
-                            .get(&explorer_id)
-                            .ok_or("could not get explorer sender".to_string())?
-                            .0;
-                        sender
-                            .send(OrchestratorToExplorer::MoveToPlanet {
-                                sender_to_new_planet: None,
-                                planet_id: move_to_planet_id as ID,
-                            })
-                            .map_err(|err| format!("could not send MoveToPlanet: {:?}", err))?;
-
-                        return Ok(());
                     }
+                    
+                    return Ok(());
                 }
             }
             PlanetToOrchestrator::OutgoingExplorerResponse {
