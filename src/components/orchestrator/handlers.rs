@@ -534,6 +534,11 @@ impl Orchestrator {
             } => {
                 if generated.is_ok() {
                     self.send_bag_content_request(explorer_id)?;
+                } else {
+                    // let the gui know of the error
+                    self.emit_failed_resource_generation(
+                        "Failed to generate basic resource".to_string(),
+                    );
                 }
             }
             ExplorerToOrchestrator::CombineResourceResponse {
@@ -542,6 +547,11 @@ impl Orchestrator {
             } => {
                 if generated.is_ok() {
                     self.send_bag_content_request(explorer_id)?;
+                } else {
+                    // let the GUI know of the error
+                    self.emit_failed_resource_generation(
+                        "Failed to combine into complex resource".to_string(),
+                    );
                 }
             }
             ExplorerToOrchestrator::BagContentResponse {

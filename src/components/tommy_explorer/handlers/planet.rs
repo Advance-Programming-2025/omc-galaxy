@@ -1,8 +1,10 @@
 use crate::components::tommy_explorer::{Explorer, ExplorerState};
+
 use common_game::components::resource::{BasicResource, ComplexResource, GenericResource};
-use common_game::logging::{ActorType, EventType};
+use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use common_game::protocols::planet_explorer::PlanetToExplorer;
-use logging_utils::log_message;
+use logging_utils::{log_message, warning_payload};
+use crate::components::tommy_explorer::bag::IntoGenericResource;
 
 /// Handles all messages from the planet.
 pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<(), String> {
@@ -19,21 +21,11 @@ pub fn handle_message(explorer: &mut Explorer, msg: PlanetToExplorer) -> Result<
         }
         PlanetToExplorer::GenerateResourceResponse { resource } => {
             put_basic_resource_in_bag(explorer, resource);
-            // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
-            //     ExplorerToOrchestrator::BagContentResponse {
-            //         explorer_id: explorer.explorer_id,
-            //         bag_content: explorer.bag.to_resource_types() })
-            //     .unwrap();
             explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
         PlanetToExplorer::CombineResourceResponse { complex_response } => {
             put_complex_resource_in_bag(explorer, complex_response);
-            // explorer.send_to_orchestrator( // TODO inviare questo ignorando il protocollo o fare polling?
-            //     ExplorerToOrchestrator::BagContentResponse {
-            //         explorer_id: explorer.explorer_id,
-            //         bag_content: explorer.bag.to_resource_types() })
-            //     .unwrap();
             explorer.set_state(ExplorerState::Idle);
             Ok(())
         }
@@ -87,15 +79,10 @@ fn update_complex_resources(
     }
 }
 
-/// Puts a basic resource in the explorer bag.
+/// Puts a basic resource in the explorer's bag.
 pub fn put_basic_resource_in_bag(explorer: &mut Explorer, resource: Option<BasicResource>) {
     if let Some(resource) = resource {
-        let new_resource = match resource {
-            BasicResource::Oxygen(oxygen) => oxygen.to_generic(),
-            BasicResource::Hydrogen(hydrogen) => hydrogen.to_generic(),
-            BasicResource::Carbon(carbon) => carbon.to_generic(),
-            BasicResource::Silicon(silicon) => silicon.to_generic(),
-        };
+        let new_resource = resource.into_generic_resource();
         explorer.insert_in_bag(new_resource);
         log_message!(
             ActorType::Planet,
@@ -111,21 +98,14 @@ pub fn put_basic_resource_in_bag(explorer: &mut Explorer, resource: Option<Basic
     }
 }
 
-/// Puts a complex resource in the explorer bag.
+/// Puts a complex resource in the explorer's bag.
 pub fn put_complex_resource_in_bag(
     explorer: &mut Explorer,
     complex_response: Result<ComplexResource, (String, GenericResource, GenericResource)>,
 ) {
     match complex_response {
         Ok(complex_resource) => {
-            let new_resource = match complex_resource {
-                ComplexResource::Diamond(diamond) => diamond.to_generic(),
-                ComplexResource::Water(water) => water.to_generic(),
-                ComplexResource::Life(life) => life.to_generic(),
-                ComplexResource::Robot(robot) => robot.to_generic(),
-                ComplexResource::Dolphin(dolphin) => dolphin.to_generic(),
-                ComplexResource::AIPartner(ai_partner) => ai_partner.to_generic(),
-            };
+            let new_resource = complex_resource.into_generic_resource();
             explorer.insert_in_bag(new_resource);
             log_message!(
                 ActorType::Planet,
@@ -138,7 +118,18 @@ pub fn put_complex_resource_in_bag(
             );
         }
         Err((err_msg, res1, res2)) => {
-            // TODO log this error
+            LogEvent::new(
+                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
+                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                EventType::MessagePlanetToExplorer,
+                Channel::Error,
+                warning_payload!(
+                    "CombineResourceResponse failed",
+                    err_msg,
+                    "put_complex_resource_in_bag()";
+                    "explorer data"=>format!("{:?}", explorer)
+                ),
+            ).emit();
 
             // Put the resources back in the bag
             explorer.insert_in_bag(res1);

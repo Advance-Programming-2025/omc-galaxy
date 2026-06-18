@@ -31,6 +31,8 @@ pub enum OrchestratorEvent {
     SunrayReceived { planet_id: u32 },
     AsteroidSent { planet_id: u32 },
     ExplorerMoved { explorer_id: u32, destination: u32 },
+    ExplorerMoveStarted { explorer_id: u32, destination: u32 },
+    ResourceGenerationFailed { message: String },
 }
 
 ///The core of the game.

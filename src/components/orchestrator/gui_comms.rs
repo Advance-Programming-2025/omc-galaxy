@@ -4,7 +4,7 @@ use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
 use crossbeam_channel::Sender;
 use log::info;
 
-use crate::utils::ExplorerInfoMap;
+use crate::utils::{ExplorerInfoMap, Status};
 use crate::{
     components::orchestrator::{Orchestrator, OrchestratorEvent},
     utils::GalaxySnapshot,
@@ -119,6 +119,9 @@ impl Orchestrator {
             .try_send(OrchestratorToExplorer::StopExplorerAI)
             .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
 
+        self.explorers_info
+            .insert_status(explorer_id, Status::Paused);
+
         //LOG
 
         //LOG
@@ -161,18 +164,9 @@ impl Orchestrator {
                 map.move_to_planet_id = destination_planet_id as i32;
 
                 self.send_incoming_explorer_request(destination_planet_id, explorer_id)?;
-
-                // from_orch
-                // .try_send(OrchestratorToExplorer::MoveToPlanet {
-                //     sender_to_new_planet: Some(sender_to_new_planet),
-                //     planet_id: destination_planet_id,
-                // })
-                // .map_err(|_| format!("Cannot send message to {explorer_id}"))?;
             }
 
-            //LOG
-
-            //LOG
+            self.emit_explorer_move_started(explorer_id, destination_planet_id);
         }
         Ok(())
     }
@@ -222,7 +216,35 @@ impl Orchestrator {
             .push(OrchestratorEvent::AsteroidSent { planet_id });
     }
 
+    ///inform the GUI that an explorer move started
+    pub(crate) fn emit_explorer_move_started(&mut self, explorer_id: u32, planet_id: u32) {
+        info!("GUI event esplorer_move_started was triggered");
+        self.gui_messages
+            .push(OrchestratorEvent::ExplorerMoveStarted {
+                explorer_id,
+                destination: planet_id,
+            });
+    }
+
+    pub(crate) fn emit_failed_resource_generation(&mut self, msg: String) {
+        self.gui_messages
+            .push(OrchestratorEvent::ResourceGenerationFailed { message: msg });
+    }
+
     pub(crate) fn emit_explorer_move(&mut self, explorer_id: u32, planet_id: u32) {
+        let move_to_id = self
+            .explorers_info
+            .get(&explorer_id)
+            .map(|info| info.move_to_planet_id)
+            .unwrap_or(-1);
+        // CASE: explorer sent a move request while it was being set to manual mode
+        if move_to_id >= 0 && (move_to_id as u32) != planet_id {
+            info!(
+                "GUI event esplorer_move was triggered but move_to_planet_id {} differs from {}, skipping",
+                move_to_id, planet_id
+            );
+            return;
+        }
         info!("GUI event esplorer_move was triggered");
         self.gui_messages.push(OrchestratorEvent::ExplorerMoved {
             explorer_id,
