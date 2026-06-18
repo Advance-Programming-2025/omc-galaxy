@@ -533,43 +533,4 @@ impl Orchestrator {
 
         Ok(())
     }
-
-    pub fn send_celestial_from_gui(
-        &mut self,
-        id_list: Vec<u32>,
-        is_asteroid: bool,
-    ) -> Result<(), String> {
-        let alive = self.planets_info.get_list_id_alive();
-
-        for planet_id in id_list {
-            if !alive.contains(&planet_id) {
-                continue;
-            }
-
-            let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
-                self.planet_channels.iter().find_map(|(&id, (sender, _))| {
-                    if id == planet_id {
-                        Some((id, sender.clone()))
-                    } else {
-                        None
-                    }
-                });
-
-            match parameters {
-                Some(valid) => {
-                    if is_asteroid {
-                        self.send_asteroid(valid.0, &valid.1)?
-                    } else {
-                        self.send_sunray(valid.0, &valid.1)?
-                    }
-                }
-                None => {
-                    return Err(
-                        "send_celestial_from_gui: no valid planet parameters found".to_string()
-                    );
-                }
-            }
-        }
-        Ok(())
-    }
 }
