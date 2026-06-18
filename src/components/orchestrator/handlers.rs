@@ -558,8 +558,6 @@ impl Orchestrator {
                 current_planet_id,
                 dst_planet_id,
             } => {
-                //un explorer può andare su un pianeta che è stoppato? risposta: no
-
                 // Check if dst_planet_id exists in the galaxy at all
                 if self.galaxy_lookup.get(&dst_planet_id).is_none() {
                     log_internal_op!(self, "action" => format!(
@@ -597,6 +595,13 @@ impl Orchestrator {
                         _ => false,
                     }
                 };
+
+                // avoid answering if the explorer has been put in manual mode
+                if let Some(map) = self.explorers_info.get(&explorer_id) {
+                    if matches!(map.status, Status::Paused) {
+                        return Ok(());
+                    }
+                }
 
                 // if not existing or not a neighbour of the current planet, reject
                 if !is_neighbour
