@@ -1023,7 +1023,6 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), String> {
             explorer,
             "action to be taken" => format!("{:?}", best_action)
         );
-        println!("action to be taken: {:?}", best_action);
         if let Some(ai_action) = best_action {
             explorer.ai_data.last_action = Some(ai_action.clone());
             explorer.ai_data.last_action_planet_id = Some(explorer.planet_id);
