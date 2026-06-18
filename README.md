@@ -1,16 +1,41 @@
-# One-million-crabs galaxy game
-Galaxy simulation about Explorers travelling around the galaxy to gather resources, combining them and create some complex resources. They try not to die, watch how they performe during the simulation and you can manually interact with the simulation
+# One Million Crabs 🦀
 
+A galaxy simulation backend, developed for the 2025/26 Advanced Programming course @ UniTN.
+
+>Galaxy simulation about explorers travelling around the galaxy to gather and combine resources. Watch as strive to survive and how they perform during the simulation!
+
+omc-galaxy focuses on:
+- Handling multi-threaded components
+- Accomodating modular and well-structured code
+- Extensible features
+- Solid protocol implementation 
+
+## Run the project
+The recommended way to run the project is through the One Million Crabs GUIs:
+- Use [omc-gui](https://github.com/Advance-Programming-2025/omc-gui) for a Bevy-based graphical environment, courtesy of Davide Da Col
+- Use [ratatui-gui](https://github.com/Advance-Programming-2025/ratatui-gui) for a Ratatui-based TUI visualizer, courtesy of Marco Adami
+
+The omc-galaxy code is used as a dependency for both projects, which allows for more modular development and better separation of concerns.
+
+## Architecture
+
+The simulation consists of three main components:
+
+- **Orchestrator**: manages the galaxy and global events
+- **Planets**: autonomous actors that offer varying combination of recipes and defence
+- **Explorers**: autonomous agents that act according to the current state of the galaxy
+
+All components communicate through message-passing channels.
 
 ## Initialization file
-Create a new .env file and write in it the variable as in .env.example use the absolute path of the initialization file.
+The galaxy's topology is set through a topology file, which can either be set as a path in an .env file or sent directly to the orchestrator with the appropriate methods.
 
-File format:
-the file follows csv schema and each row represent a planet, the first 2 elements are: `planet_id`, `type_id`
+If you wish to set the .env file for testing purposes, create a new .env file and write in it the variable as in .env.example use the absolute path of the initialization file.
 
-The remaining elements are the `planet_id`s to which the planet is connected.
+### File format:
+the file follows the .csv schema and each row represent a planet, where the first 2 elements are: `planet_id`, `type_id`
 
-(Note: It doesn't matter if you define a connection in only one direction or both; the program will always create a bidirectional connection.)
+The remaining elements are the `planet_id`s to which the planet is connected (Note: It doesn't matter if you define a connection in only one direction or both; the program will always create a bidirectional connection).
 
 (Note: `planet_id` and `type_id` are `u32`)
 
@@ -29,15 +54,16 @@ List of possible values of `type_id`:
 _: Random (one type will be chosen at random from among the possible ones)
 ```
 
-Write in it this topology:
+An example of a valid topology would be the following:
 ```
-0, 4, 1, 2, 3, 4
-1, 4, 2, 3, 4
-2, 4, 3
-3, 4
-4, 4
+0, 5, 1, 2, 3, 4
+1, 2, 2, 3, 4
+2, 3, 3
+3, 6
+4, 7
 ```
-The adjacency matrix should look like this:
+
+The corresponding adjacency matrix should look like this:
 ```
 [false, true, true, true, true]
 [true, false, true, true, true]
@@ -46,29 +72,45 @@ The adjacency matrix should look like this:
 [true, true, false, false, false]
 ```
 
-## How to run it (at the moment)
-Go in `orch-example`, after that you can use `cargo run` or `cargo run --features omc-galaxy/debug-prints` to se all the debug messages. 
+Graphically, that would look something like:
+```
+          1---------+
+         /|\        |
+        / | \       |
+       /  |  \      |
+      /   |   \     |
+     /    |    \    |
+    3-----4     5   |
+     \    |    /    |
+      \   |   /     |
+       \  |  /      |
+        \ | /       |
+         \|/        |
+          2---------+
+```
 
-In order to see the logs you have to first set RUST_LOG variable to whatever level you want (Error, Warning, Info, Debug, Trace)
+## Explorers
+The project features two different explorer implementations:
+- "The survivor", which aims to survive as long as possible by dodging dangerous situations, courtesy of Mattia Pistollato
+- "The AI-researcher", which aims to create as many AI partners as possible by optimizing its paths and generations, courtesy of Tommaso Ascolani
 
-For Windows: `$env:RUST_LOG="debug";`
-
-For Unix: `RUST_LOG=debug`
-
-By default env_logger filters out everything below Info
+The documentation and further specific details are available inside the repo, respectively at `src/components/mattia_explorer` and `/src/components/tommy_explorer`.
 
 ## Tests
-Use `cargo nextest run`
+For limitations outside of our control, the standard `cargo test` function will fail after the first test.
+This is because certain components of the common crate can only be instantiated once, which means that the standard `cargo test` runner cannot execute the entire test suite reliably (since it relies on a single environment).
 
->Tests run with `cargo test` are considered as the same process. Therefore we cannot istanciate orchestrator multiple times in different test.
+To fully test the library, utilize `nextest`; the pre-built binaries are available [here](https://nexte.st/docs/installation/pre-built-binaries/). After installing the program, run the following command:
 
+```bash
+cargo nextest run --no-fail-fast
+```
 
-
-# Task for each member
+# Contributions
 - Davide Da Col => UI
 - Mattia Pistollato => Explorer
 - Tommaso Ascolani => Explorer
-- Marco Adami => Explorer
+- Marco Adami => UI
 
 
 
