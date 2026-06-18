@@ -13,8 +13,16 @@ use logging_utils::LoggableActor;
 use logging_utils::log_fn_call;
 
 impl Orchestrator {
-    // TODO unify this function and the next one in send_celestial_from_gui
-    pub fn send_sunray_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
+    /// Send a celestial body when requested from the GUI
+    ///
+    /// The method checks if the planets in the list are alive
+    /// and sends the requested celestial body, as specified by
+    /// the `is_sunray` field
+    pub fn send_celestial_from_gui(
+        &mut self,
+        id_list: Vec<u32>,
+        is_sunray: bool,
+    ) -> Result<(), String> {
         let alive = self.planets_info.get_list_id_alive();
 
         for planet_id in id_list {
@@ -32,32 +40,14 @@ impl Orchestrator {
                 });
 
             match parameters {
-                Some(valid) => self.send_sunray(valid.0, &valid.1)?,
-                None => todo!(),
-            }
-        }
-        Ok(())
-    }
-
-    pub fn send_asteroid_from_gui(&mut self, id_list: Vec<u32>) -> Result<(), String> {
-        for planet_id in id_list {
-            if !self.planets_info.get_list_id_alive().contains(&planet_id) {
-                return Ok(());
-                // return Err("Planet is either dead or not valid".to_string());
-            }
-
-            let parameters: Option<(u32, Sender<OrchestratorToPlanet>)> =
-                self.planet_channels.iter().find_map(|(&id, (sender, _))| {
-                    if id == planet_id {
-                        Some((id, sender.clone()))
+                Some(valid) => {
+                    if is_sunray {
+                        self.send_sunray(valid.0, &valid.1)?
                     } else {
-                        None
+                        self.send_asteroid(valid.0, &valid.1)?
                     }
-                });
-
-            match parameters {
-                Some(valid) => self.send_asteroid(valid.0, &valid.1)?,
-                None => {}
+                }
+                None => todo!(),
             }
         }
         Ok(())
