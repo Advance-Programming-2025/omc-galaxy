@@ -282,7 +282,8 @@ impl ExplorerInfoMap {
         if let Some(explorer_info) = self.map.get(explorer_id) {
             return explorer_info.status == Status::Dead;
         }
-        false
+        // false
+        true
     }
 
     pub fn is_running(&self, explorer_id: &u32) -> bool {

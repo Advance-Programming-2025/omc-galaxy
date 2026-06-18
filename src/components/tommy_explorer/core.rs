@@ -17,7 +17,7 @@ use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer
 use common_game::utils::ID;
 use crossbeam_channel::{Receiver, Sender, select};
 use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{VecDeque};
 use std::fmt;
 
 /// struct of the explorer
@@ -200,16 +200,16 @@ impl Explorer {
 
     /// the explorer main loop
     pub fn run(&mut self) -> Result<(), String> {
-        if self.state.should_terminate() {
-            return Ok(());
-        }
 
         // every iteration the explorer receives messages from both planet and orchestrator channels,
         // then it behaves based on the message received, if the message received and the explorer state
         // do not match together the message is pushed into the corresponding buffer, and it will be read
         // when the explorer will be in an "Idle" state
         loop {
-            // println!("[TOMMY EXPLORER INFO] planet: {}", self.planet_id);
+            if self.state.should_terminate() {
+                return Ok(());
+            }
+
             select! {
                 // receive the orchestrator messages
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
@@ -395,7 +395,7 @@ impl Explorer {
                                 ActorType::Explorer,
                                 self.explorer_id,
                                 ActorType::Orchestrator,
-                                0u32, // L'ID dell'orchestrator è convenzionalmente 0
+                                0u32,
                                 EventType::MessageExplorerToOrchestrator,
                                 "neighbors request sent";
                                 "planet_id" => self.planet_id.to_string()
@@ -541,8 +541,8 @@ impl Explorer {
 
                     // if the topology isn't fully discovered simply generate/combine the useful resources
                     // otherwise:
-                    // check what and how many resources the explorer has
-                    // check what and how many resources are needed to complete the goal -> see the dependency graph of the resources
+                    // checks what resources the explorer has
+                    // checks how many resources are needed to complete the goal -> see the dependency graph of the resources
                     // maybe check what resources can be obtained from other planets in a possible path
                     // choose the resource based on the things written above
                     // generate/combine it

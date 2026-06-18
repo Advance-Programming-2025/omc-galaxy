@@ -281,7 +281,7 @@ impl Explorer {
             ComplexResourceType::Water,
         ];
 
-        // Pipeline funzionale per le risorse complesse
+        // Pipeline for complex resources
         let complex_target = craft_order.into_iter()
             // the planet has to support the resource
             .filter(|c| current_planet_info.get_complex_resources().map_or(false, |set| set.contains(c)))
