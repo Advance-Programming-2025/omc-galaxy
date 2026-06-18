@@ -701,9 +701,7 @@ mod explorer_full_tests {
 
     use crate::utils::registry::PlanetType;
     use crate::{Orchestrator, Status};
-    use common_game::components::resource::{
-        BasicResourceType, ComplexResourceType, ResourceType,
-    };
+    use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
     };

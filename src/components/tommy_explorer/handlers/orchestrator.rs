@@ -537,7 +537,11 @@ fn supported_combination_request(explorer: &mut Explorer) {
 }
 
 /// Sends the GenerateResourceRequest, waits for the planet response, and if successful puts the resource in the bag.
-pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResourceType, is_from_orchestrator: bool) {
+pub fn generate_resource_request(
+    explorer: &mut Explorer,
+    to_generate: BasicResourceType,
+    is_from_orchestrator: bool,
+) {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -583,18 +587,29 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
             )
             .emit();
 
-            if is_from_orchestrator {
-                send_to_orchestrator_and_log!(
-                    explorer,
-                    ExplorerToOrchestrator::GenerateResourceResponse {
-                        explorer_id: explorer.explorer_id,
-                        generated: Err("failed to generate resource".to_string()),
-                    },
-                    None::<ExplorerState>,
-                    "GenerateResource was not sent",
-                    "generate_resource_request()",
-                    "to_generate" => to_generate.to_string_2()
-                );
+            if (is_from_orchestrator) {
+                match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+                    explorer_id: explorer.explorer_id,
+                    generated: Err("failed to generate resource".to_string()),
+                }) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        LogEvent::new(
+                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                            Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                            EventType::MessageExplorerToOrchestrator,
+                            Channel::Error,
+                            warning_payload!(
+                                "GenerateResourceResponse was not sent",
+                                err,
+                                "generate_resource_request()";
+                                "to_generate" => to_generate.to_string_2(),
+                                "explorer data"=>format!("{:?}", explorer)
+                            ),
+                        )
+                        .emit();
+                    }
+                }
             }
             return;
         }
@@ -633,42 +648,70 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
             )
             .emit();
 
-            if is_from_orchestrator {
-                send_to_orchestrator_and_log!(
-                    explorer,
-                    ExplorerToOrchestrator::GenerateResourceResponse {
-                        explorer_id: explorer.explorer_id,
-                        generated: Err("failed to generate resource".to_string()),
-                    },
-                    None::<ExplorerState>,
-                    "GenerateResourceResponse was not sent",
-                    "generate_resource_request()",
-                    "to_generate" => to_generate.to_string_2()
-                );
+            if (is_from_orchestrator) {
+                match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+                    explorer_id: explorer.explorer_id,
+                    generated: Err("failed to generate resource".to_string()),
+                }) {
+                    Ok(_) => {}
+                    Err(err) => {
+                        LogEvent::new(
+                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                            Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                            EventType::MessageExplorerToOrchestrator,
+                            Channel::Error,
+                            warning_payload!(
+                                "GenerateResourceResponse was not sent",
+                                err,
+                                "generate_resource_request()";
+                                "to_generate" => to_generate.to_string_2(),
+                                "explorer data"=>format!("{:?}", explorer)
+                            ),
+                        )
+                            .emit();
+                    }
+                }
             }
             return;
         }
     }
 
-    if is_from_orchestrator {
-        send_to_orchestrator_and_log!(
-            explorer,
-            ExplorerToOrchestrator::GenerateResourceResponse {
-                explorer_id: explorer.explorer_id,
-                generated: Ok(()),
-            },
-            Some(ExplorerState::Idle),
-            "GenerateResourceResponse was not sent",
-            "generate_resource_request()",
-            "to_generate" => to_generate.to_string_2()
-        );
+    if (is_from_orchestrator) {
+        match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+            explorer_id: explorer.explorer_id,
+            generated: Ok(()),
+        }) {
+            Ok(_) => {
+                explorer.set_state(ExplorerState::Idle);
+            }
+            Err(err) => {
+                LogEvent::new(
+                    Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                    EventType::MessageExplorerToOrchestrator,
+                    Channel::Error,
+                    warning_payload!(
+                        "GenerateResourceResponse was not sent",
+                        err,
+                        "generate_resource_request()";
+                        "to_generate" => to_generate.to_string_2(),
+                        "explorer data"=>format!("{:?}", explorer)
+                    ),
+                )
+                    .emit();
+            }
+        }
     } else {
         explorer.set_state(ExplorerState::Idle);
     }
 }
 
 /// Sends the CombineResourceRequest, waits for the planet response, and if successful puts the resource in the bag.
-pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexResourceType, is_from_orchestrator: bool) {
+pub fn combine_resource_request(
+    explorer: &mut Explorer,
+    to_generate: ComplexResourceType,
+    is_from_orchestrator: bool,
+) {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -725,11 +768,27 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                                 explorer_id: explorer.explorer_id,
                                 generated: Err("failed to generate resource".to_string()),
                             },
-                            Some(ExplorerState::Idle),
-                            "CombineResourceResponse was not sent",
-                            "combine_resource_request()",
-                            "to_generate" => to_generate.to_string_2()
-                        );
+                        ) {
+                            Ok(_) => {
+                                explorer.set_state(ExplorerState::Idle);
+                            }
+                            Err(err) => {
+                                LogEvent::new(
+                                    Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                                    EventType::MessageExplorerToOrchestrator,
+                                    Channel::Error,
+                                    warning_payload!(
+                                        "CombineResourceResponse was not sent",
+                                        err,
+                                        "combine_resource_request()";
+                                        "to_generate" => to_generate.to_string_2(),
+                                        "explorer data"=>format!("{:?}", explorer)
+                                    ),
+                                )
+                                    .emit();
+                            }
+                        }
                     }
                     return;
                 }
@@ -762,18 +821,31 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                 }
             }
 
-            if is_from_orchestrator {
-                send_to_orchestrator_and_log!(
-                    explorer,
-                    ExplorerToOrchestrator::CombineResourceResponse {
-                        explorer_id: explorer.explorer_id,
-                        generated: Ok(()),
-                    },
-                    Some(ExplorerState::Idle),
-                    "CombineResourceResponse was not sent",
-                    "combine_resource_request()",
-                    "to_generate" => to_generate.to_string_2()
-                );
+            if (is_from_orchestrator) {
+                match explorer.send_to_orchestrator(ExplorerToOrchestrator::GenerateResourceResponse {
+                    explorer_id: explorer.explorer_id,
+                    generated: Ok(()),
+                }) {
+                    Ok(_) => {
+                        explorer.set_state(ExplorerState::Idle);
+                    }
+                    Err(err) => {
+                        LogEvent::new(
+                            Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
+                            Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                            EventType::MessageExplorerToOrchestrator,
+                            Channel::Error,
+                            warning_payload!(
+                                "CombineResourceResponse was not sent",
+                                err,
+                                "combine_resource_request()";
+                                "to_generate" => to_generate.to_string_2(),
+                                "explorer data"=>format!("{:?}", explorer)
+                            ),
+                        )
+                            .emit();
+                    }
+                }
             } else {
                 explorer.set_state(ExplorerState::Idle);
             }
@@ -835,4 +907,3 @@ fn neighbors_response(explorer: &mut Explorer, neighbors: Vec<u32>) {
         "neighbors"=>format!("{:?}", neighbors)
     );
 }
-

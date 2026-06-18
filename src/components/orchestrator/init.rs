@@ -1,4 +1,5 @@
 use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
+use rand::seq::IndexedRandom;
 use std::{fs, thread};
 
 use common_game::{
@@ -503,10 +504,10 @@ impl Orchestrator {
                         1 => Ciuc,
                         2 => HoustonWeHaveABorrow,
                         3 => ImmutableCosmicBorrow,
-                        4 => OneMillionCrabs,
+                        4 => TheCompilerStrikesBack,
                         5 => Rustrelli,
                         6 => RustyCrab,
-                        7 => TheCompilerStrikesBack,
+                        7 => OneMillionCrabs,
                         _ => PlanetType::random(),
                     },
                 ),
@@ -614,6 +615,41 @@ impl Orchestrator {
         Ok(())
     }
 
+    pub fn initialize_galaxy_by_random_selection(
+        &mut self,
+        num_planets: u32,
+    ) -> Result<(), String> {
+        log_fn_call!(self, "initialize_galaxy_by_random_selection()", num_planets);
+
+        let mut new_topology: Vec<Vec<bool>> = Vec::new();
+        for _ in 0..num_planets {
+            new_topology.push(vec![false; num_planets as usize]);
+        }
+        for i in 0..new_topology.len() {
+            for j in 0..i {
+                let connected = rand::random::<f64>() < 0.40;
+                new_topology[i][j] = connected;
+                new_topology[j][i] = connected;
+            }
+        }
+        self.galaxy_topology = new_topology;
+
+        // FIX: popola lookup, manca prima. id == matrix_idx per costruzione random.
+        let mut new_lookup: FxHashMap<u32, (u32, PlanetType)> = FxHashMap::default();
+        for planet_id in 0..num_planets {
+            let ptype = PlanetType::random();
+            new_lookup.insert(planet_id, (planet_id, ptype.clone()));
+            self.add_planet(planet_id, ptype)?;
+        }
+        self.galaxy_lookup = new_lookup;
+        self.galaxy_reverse_lookup = self
+            .galaxy_lookup
+            .iter()
+            .map(|(&planet_id, &(matrix_idx, _))| (matrix_idx, planet_id))
+            .collect();
+
+        Ok(())
+    }
     /// Initialize the galaxy using a list of planet IDs.
     ///
     /// This function is normally called by

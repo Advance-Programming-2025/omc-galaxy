@@ -388,4 +388,3 @@ impl Bag {
         Ok(ComplexResourceRequest::AIPartner(r, d))
     }
 }
-

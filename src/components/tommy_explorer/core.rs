@@ -413,7 +413,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -456,7 +457,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -499,7 +501,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -532,7 +535,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -554,36 +558,76 @@ impl Explorer {
                             match resource {
                                 ResourceType::Basic(basic_resource) => match basic_resource {
                                     BasicResourceType::Oxygen => {
-                                        generate_resource_request(self, BasicResourceType::Oxygen, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Oxygen,
+                                            false,
+                                        );
                                     }
                                     BasicResourceType::Hydrogen => {
-                                        generate_resource_request(self, BasicResourceType::Hydrogen, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Hydrogen,
+                                            false,
+                                        );
                                     }
                                     BasicResourceType::Carbon => {
-                                        generate_resource_request(self, BasicResourceType::Carbon, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Carbon,
+                                            false,
+                                        );
                                     }
                                     BasicResourceType::Silicon => {
-                                        generate_resource_request(self, BasicResourceType::Silicon, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Silicon,
+                                            false,
+                                        );
                                     }
                                 },
                                 ResourceType::Complex(complex_resource) => match complex_resource {
                                     ComplexResourceType::Diamond => {
-                                        combine_resource_request(self, ComplexResourceType::Diamond, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Diamond,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Water => {
-                                        combine_resource_request(self, ComplexResourceType::Water, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Water,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Life => {
-                                        combine_resource_request(self, ComplexResourceType::Life, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Life,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Robot => {
-                                        combine_resource_request(self, ComplexResourceType::Robot, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Robot,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Dolphin => {
-                                        combine_resource_request(self, ComplexResourceType::Dolphin, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Dolphin,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::AIPartner => {
-                                        combine_resource_request(self, ComplexResourceType::AIPartner, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::AIPartner,
+                                            false,
+                                        );
                                     }
                                 },
                             }
@@ -668,7 +712,10 @@ impl Explorer {
                                     self.move_queue.clear();
 
                                     LogEvent::new(
-                                        Some(Participant::new(ActorType::Explorer, self.explorer_id)),
+                                        Some(Participant::new(
+                                            ActorType::Explorer,
+                                            self.explorer_id,
+                                        )),
                                         Some(Participant::new(ActorType::Orchestrator, 0u32)),
                                         EventType::MessageExplorerToOrchestrator,
                                         Channel::Error,
@@ -679,7 +726,8 @@ impl Explorer {
                                             "target_planet" => target_planet.to_string(),
                                             "explorer data" => format!("{:?}", self)
                                         ),
-                                    ).emit();
+                                    )
+                                    .emit();
                                 }
                             }
                         } else {
