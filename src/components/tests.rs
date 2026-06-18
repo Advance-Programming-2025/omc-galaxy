@@ -44,10 +44,15 @@ mod tests_actor_management {
         orch.initialize_galaxy_by_content(&content).unwrap();
         orch.start_all(&[], &[(explorer_id, planet_id)]).unwrap();
 
+        std::thread::sleep(std::time::Duration::from_millis(100));
+
+        orch.handle_game_messages().unwrap();
+
         assert!(orch.explorers_info.get(&explorer_id).is_some());
+
         assert_eq!(
             orch.explorers_info.get_status(&explorer_id).unwrap(),
-            Status::Paused
+            Status::Running
         );
         assert!(orch.explorer_channels.contains_key(&explorer_id));
     }
@@ -172,15 +177,11 @@ mod tests_file_integration {
     }
 }
 #[cfg(test)]
-mod test_One_million_crabs_planet {
-    use crate::utils::ExplorerInfo;
+mod test_one_million_crabs_planet {
     use crate::utils::registry::*;
     use crate::*;
     use common_game::components::resource::BasicResourceType;
-    use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
     use crossbeam_channel::{select, tick};
-    use logging_utils::log_internal_op;
-    use std::thread;
     use std::thread::sleep;
     use std::time::Duration;
 
@@ -189,7 +190,7 @@ mod test_One_million_crabs_planet {
         let mut orchestrator = Orchestrator::new().unwrap();
         let planet_id = 1;
         let explorer_id = 2;
-        let content = "1,4";
+        let content = "1,7";
         orchestrator.initialize_galaxy_by_content(content).unwrap();
         orchestrator
             .start_all(&[(explorer_id, planet_id)], &[])
@@ -200,26 +201,26 @@ mod test_One_million_crabs_planet {
             .unwrap()
             .0
             .clone();
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        let _ = orchestrator.send_sunray(planet_id, &planet_channel);
+        let _ = orchestrator.send_sunray(planet_id, &planet_channel);
+        let _ = orchestrator.send_sunray(planet_id, &planet_channel);
+        let _ = orchestrator.send_sunray(planet_id, &planet_channel);
+        let _ = orchestrator.send_sunray(planet_id, &planet_channel);
+        let _ = orchestrator.send_sunray(planet_id, &planet_channel);
         println!("SENDED 6 SUNRAY");
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_millis(100));
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _ = orchestrator.send_sunray(planet_id, &planet_channel);
+        let _ = orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_secs(1));
-        orchestrator.send_bag_content_request(explorer_id);
-        orchestrator.send_internal_state_request(
+        let _ = orchestrator.send_bag_content_request(explorer_id);
+        let _ = orchestrator.send_internal_state_request(
             &orchestrator.planet_channels.get(&planet_id).unwrap().0,
             planet_id,
         );
@@ -448,7 +449,6 @@ mod tests {
     // Testing one of every single planet in the registry simultaneously.
     mod planet_integration {
         use super::*;
-        use std::process::id;
         use strum::IntoEnumIterator;
 
         #[test]
@@ -556,7 +556,7 @@ mod tests {
                 }
             }
 
-            assert!(failed_counter == 0);
+            assert_eq!(failed_counter, 0);
         }
     }
 
@@ -599,7 +599,7 @@ mod tests {
 
             println!("Survivors: {}/{}", survivors, n_planets);
             // In a heavy scenario, we just want to ensure the Orchestrator didn't crash
-            assert!(orch.planets_info.len() == n_planets as usize);
+            assert_eq!(orch.planets_info.len(), n_planets as usize);
         }
 
         #[test]
@@ -665,6 +665,10 @@ mod tests {
                 );
             }
 
+            std::thread::sleep(Duration::from_millis(100));
+
+            orchestrator.handle_game_messages().unwrap();
+
             println!(
                 "after the move message the explorer is in planet {}",
                 orchestrator
@@ -673,13 +677,10 @@ mod tests {
                     .unwrap()
             );
 
-            assert!(
-                orchestrator
-                    .explorers_info
-                    .get_planet(&explorer_id)
-                    .unwrap()
-                    == destination
-            );
+            assert_eq!(orchestrator
+                           .explorers_info
+                           .get_planet(&explorer_id)
+                           .unwrap(), destination);
         }
 
         #[test]
