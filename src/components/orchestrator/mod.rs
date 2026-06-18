@@ -23,6 +23,8 @@ use logging_utils::{log_fn_call, log_internal_op};
 use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
+
+#[derive(Debug)]
 pub enum OrchestratorEvent {
     PlanetDestroyed { planet_id: u32 },
     SunraySent { planet_id: u32 },
