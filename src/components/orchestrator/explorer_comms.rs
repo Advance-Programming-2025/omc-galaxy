@@ -1,4 +1,4 @@
-use crate::Orchestrator;
+use crate::{Orchestrator, utils::Status};
 use common_game::components::resource::{BasicResourceType, ComplexResourceType};
 use common_game::logging::{ActorType, EventType};
 use common_game::protocols::orchestrator_explorer::OrchestratorToExplorer;
@@ -89,6 +89,8 @@ impl Orchestrator {
                     explorer_id
                 )
             })?;
+
+        self.explorers_info.insert_status(explorer_id, Status::Paused);
 
         //LOG
         log_message!(
