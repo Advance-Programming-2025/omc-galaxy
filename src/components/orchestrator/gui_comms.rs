@@ -137,7 +137,7 @@ impl Orchestrator {
 
         //check if the destination planet is correct relative to the explorer position
         let Some(explorer_current_planet) = self.explorers_info.get_planet(&explorer_id) else {
-            return Err(format!("Explorer planet do not exist"));
+            return Err("Explorer planet do not exist".to_string());
         };
         if self.galaxy_topology[explorer_current_planet as usize][destination_planet_id as usize]
             == false

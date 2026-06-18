@@ -13,8 +13,9 @@ use logging_utils::{
 };
 use std::time::{Duration, Instant};
 
-use crate::components::manual_explorer::BagType;
 use crate::{components::orchestrator::Orchestrator, utils::Status};
+use crate::components::tommy_explorer::bag::BagType;
+
 pub const TIMEOUT_DURATION: Duration = Duration::from_millis(10);
 
 impl Orchestrator {
@@ -443,7 +444,7 @@ impl Orchestrator {
                 )
                 .emit();
                 //LOG
-                //the ai is started if it was in manual mode
+                //the AI is started if it was in manual mode
                 self.explorers_info
                     .insert_status(explorer_id, Status::Running);
                 if self.explorers_info.get(&explorer_id).is_none() {
