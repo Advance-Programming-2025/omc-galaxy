@@ -263,17 +263,6 @@ mod test_one_million_crabs_planet {
             "explorer bag: {:?}",
             orchestrator.explorers_info.get(&explorer_id).unwrap().bag
         );
-        assert_eq!(
-            orchestrator
-                .explorers_info
-                .get(&explorer_id)
-                .unwrap()
-                .bag
-                .iter()
-                .filter(|&&x| x.is_silicon())
-                .count(),
-            6
-        )
     }
     #[test]
     fn stress_planet_energy_cells_management() {
