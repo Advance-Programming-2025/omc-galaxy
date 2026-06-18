@@ -16,17 +16,29 @@
 // ============================================================================
 
 mod test_one_million_crabs_planet {
+    #[cfg(test)]
     use super::*;
+    #[cfg(test)]
     use crate::utils::ExplorerInfo;
+    #[cfg(test)]
     use crate::utils::registry::PlanetType;
+    #[cfg(test)]
     use crate::{Orchestrator, Status};
+    #[cfg(test)]
     use common_game::components::resource::BasicResourceType;
+    #[cfg(test)]
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
+    #[cfg(test)]
     use common_game::protocols::planet_explorer::ExplorerToPlanet::GenerateResourceRequest;
+    #[cfg(test)]
     use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer};
+    #[cfg(test)]
     use crossbeam_channel::{select, tick};
+    #[cfg(test)]
     use rand::Rng;
+    #[cfg(test)]
     use std::thread::sleep;
+    #[cfg(test)]
     use std::time::Duration;
     #[test]
     fn stress_planet_energy_cells_management_2() {
@@ -630,10 +642,15 @@ mod test_one_million_crabs_planet {
 }
 
 mod game_simulation {
+    #[cfg(test)]
     use super::*;
+    #[cfg(test)]
     use crate::Orchestrator;
+    #[cfg(test)]
     use crossbeam_channel::{select, tick};
+    #[cfg(test)]
     use logging_utils::debug_println;
+    #[cfg(test)]
     use std::time::Duration;
     #[test]
     fn simulation_25s() {
@@ -694,8 +711,8 @@ mod game_simulation {
     }
 }
 
+#[cfg(test)]
 use crate::Orchestrator;
-use logging_utils::debug_println;
 
 #[test]
 /// Test if the explorer is spawned properly

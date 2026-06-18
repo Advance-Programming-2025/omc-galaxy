@@ -95,6 +95,7 @@ impl Explorer {
     }
 
     /// gets the current state
+    #[cfg(test)]
     pub fn state(&self) -> &ExplorerState {
         &self.state
     }

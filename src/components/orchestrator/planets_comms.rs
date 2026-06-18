@@ -1,4 +1,6 @@
-use crate::{Status, components::orchestrator::Orchestrator};
+#[cfg(test)]
+use crate::Status;
+use crate::{components::orchestrator::Orchestrator};
 use common_game::logging::{Channel, LogEvent, Participant};
 use common_game::utils::ID;
 use common_game::{
@@ -47,6 +49,7 @@ impl Orchestrator {
     /// Sends a sun ray to all planets.
     ///
     /// See [`send_sunray`](`Self::send_sunray`) for more details on how a sunray is sent.
+    #[cfg(test)]
     pub(crate) fn send_sunray_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "send_sunray_to_all()");
@@ -106,36 +109,6 @@ impl Orchestrator {
         Ok(())
     }
 
-    /// Sends an asteroid to all planets.
-    ///
-    /// See [`send_asteroid`](`Self::send_asteroid`) for more details on how an asteroid
-    /// is sent.
-    pub(crate) fn send_asteroid_to_all(&mut self) -> Result<(), String> {
-        //LOG
-        log_fn_call!(self, "send_asteroid_to_all()");
-        //LOG
-
-        //unwrap cannot fail because every id is contained in the map
-        //collect all the senders in a vector
-        let sender_asteroid: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
-            .planet_channels
-            .iter()
-            .filter_map(|(id, (sender, _))| {
-                let status = &self.planets_info;
-                if status.get_status(id) != Status::Dead {
-                    Some((*id, sender.clone()))
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        // actually send the messages
-        for (id, sender) in sender_asteroid {
-            self.send_asteroid(id, &sender)?;
-        }
-        Ok(())
-    }
 
     /// Kill a specific planet.
     ///
@@ -167,6 +140,7 @@ impl Orchestrator {
     ///
     /// See [`send_planet_kill`](`Self::send_planet_kill`) for more details on how a
     /// planet kill message is sent.
+    #[cfg(test)]
     pub(crate) fn send_planet_kill_to_all(&mut self) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "send_planet_kill_to_all()");

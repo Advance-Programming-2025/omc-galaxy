@@ -21,6 +21,7 @@ impl PlanetInfo {
     }
 
     /// Creates a PlanetInfo with all fields set.
+    #[cfg(test)]
     pub fn with_data(
         basic_resources: HashSet<BasicResourceType>,
         complex_resources: HashSet<ComplexResourceType>,
@@ -95,6 +96,7 @@ impl TopologyManager {
     }
 
     /// Gets information about a planet, creating an entry if it doesn't exist.
+    #[cfg(test)]
     pub fn get_or_create(&mut self, planet_id: ID) -> &mut PlanetInfo {
         self.planets
             .entry(planet_id)
@@ -137,6 +139,7 @@ impl TopologyManager {
     }
 
     /// Returns all known planet IDs.
+    #[cfg(test)]
     pub fn known_planets(&self) -> Vec<ID> {
         self.planets.keys().copied().collect()
     }
@@ -147,6 +150,7 @@ impl TopologyManager {
     }
 
     /// Checks if all the known planets' information are complete.
+    #[cfg(test)]
     pub fn is_fully_discovered(&self) -> bool {
         let mut all_known_ids = HashSet::new();
 

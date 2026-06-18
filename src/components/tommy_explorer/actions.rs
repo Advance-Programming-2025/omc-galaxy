@@ -47,6 +47,7 @@ impl ActionQueue {
     }
 
     /// Pushes an action to the front of the queue.
+    #[cfg(test)]
     pub fn push_front(&mut self, action: ExplorerAction) {
         self.queue.push_front(action);
     }
@@ -62,11 +63,13 @@ impl ActionQueue {
     }
 
     /// Returns the number of actions in the queue.
+    #[cfg(test)]
     pub fn len(&self) -> usize {
         self.queue.len()
     }
 
     /// Checks if the queue is empty:
+    #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         self.queue.is_empty()
     }
@@ -99,6 +102,7 @@ impl MoveQueue {
     }
 
     /// Push a move back to the end of the queue.
+    #[cfg(test)]
     pub fn push_back(&mut self, x: u32) {
         self.move_queue.push_back(x);
     }
@@ -110,6 +114,7 @@ impl MoveQueue {
     }
 
     /// Checks if the queue is empty.
+    #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         self.move_queue.is_empty()
     }

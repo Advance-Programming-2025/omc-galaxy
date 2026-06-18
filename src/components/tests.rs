@@ -1,6 +1,8 @@
 #[cfg(test)]
 use crate::components::orchestrator::Orchestrator;
+#[cfg(test)]
 use crate::utils::Status;
+#[cfg(test)]
 use crate::utils::registry::PlanetType;
 
 #[cfg(test)]
@@ -230,7 +232,7 @@ mod test_one_million_crabs_planet {
                 recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                     match planet_msg {
                         Ok(msg) => {
-                            orchestrator.handle_planet_message(msg);
+                            let _=orchestrator.handle_planet_message(msg);
                         }
                         Err(_) => {}
                     }
@@ -238,7 +240,7 @@ mod test_one_million_crabs_planet {
                 recv(orchestrator.receiver_orch_explorer)-> explorer_msg=> {
                     match explorer_msg {
                         Ok(msg) => {
-                            orchestrator.handle_explorer_message(msg);
+                            let _=orchestrator.handle_explorer_message(msg);
                         }
                         Err(_) => {}
                     }
@@ -281,33 +283,34 @@ mod test_one_million_crabs_planet {
             .unwrap()
             .0
             .clone();
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
-        orchestrator.send_sunray(planet_id, &planet_channel);
-        orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
+        let _=orchestrator.send_sunray(planet_id, &planet_channel);
+        let _=orchestrator.send_generate_resource_request(explorer_id, BasicResourceType::Silicon);
         sleep(Duration::from_secs(1));
-        orchestrator.send_bag_content_request(explorer_id);
-        orchestrator.send_internal_state_request(
+        let _=orchestrator.send_bag_content_request(explorer_id);
+        let _=orchestrator.send_internal_state_request(
             &orchestrator.planet_channels.get(&planet_id).unwrap().0,
             planet_id,
         );
@@ -317,7 +320,7 @@ mod test_one_million_crabs_planet {
                 recv(orchestrator.receiver_orch_planet) -> planet_msg => {
                     match planet_msg {
                         Ok(msg) => {
-                            orchestrator.handle_planet_message(msg);
+                            let _=orchestrator.handle_planet_message(msg);
                         }
                         Err(_) => {}
                     }
@@ -325,7 +328,7 @@ mod test_one_million_crabs_planet {
                 recv(orchestrator.receiver_orch_explorer)-> explorer_msg=> {
                     match explorer_msg {
                         Ok(msg) => {
-                            orchestrator.handle_explorer_message(msg);
+                            let _=orchestrator.handle_explorer_message(msg);
                         }
                         Err(_) => {}
                     }

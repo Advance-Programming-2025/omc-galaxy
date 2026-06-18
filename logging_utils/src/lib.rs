@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 pub use common_game::logging::{ActorType, Channel, EventType, LogEvent, Participant};
 use crossbeam_channel::Receiver;
 pub use crossbeam_channel::Sender;

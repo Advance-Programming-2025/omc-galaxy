@@ -1,4 +1,3 @@
-pub mod debug;
 mod explorer_comms;
 pub mod gui_comms;
 pub mod handlers;
