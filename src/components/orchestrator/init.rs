@@ -25,7 +25,7 @@ use crate::{
         registry::{PLANET_REGISTRY, PlanetType},
     },
 };
-use omc_mattia_explorer::Explorer as MattiaExplorer;
+use crate::components::mattia_explorer::Explorer as MattiaExplorer;
 
 use crate::utils::ExplorerInfo;
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};

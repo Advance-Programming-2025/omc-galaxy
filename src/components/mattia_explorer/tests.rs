@@ -17,8 +17,8 @@
 
 mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -255,6 +255,10 @@ mod test_one_million_crabs_planet {
                 .count(),
             available_energy_cells as usize
         );
+
+        let _ = orchestrator.send_planet_kill_to_all();
+        let _ = orchestrator.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orchestrator, 200);
     }
     #[test]
     fn stress_planet_energy_cells_management_3() {
@@ -401,6 +405,9 @@ mod test_one_million_crabs_planet {
                 .count(),
             available_energy_cells as usize
         );
+        let _ = orchestrator.send_planet_kill_to_all();
+        let _ = orchestrator.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orchestrator, 200);
     }
 
     #[test]
@@ -607,6 +614,7 @@ mod game_simulation {
     #[test]
     fn simulation_25s() {
         let mut orchestrator = Orchestrator::new().unwrap();
+        let explorer_id=10;
         orchestrator
             .initialize_galaxy_by_file(
                 "./src/components/mattia_explorer/test_topology_files/t0.txt",
@@ -614,7 +622,7 @@ mod game_simulation {
             .expect("testing expect");
         orchestrator.start_all_planet_ais().expect("testing expect");
         orchestrator
-            .add_mattia_explorer(10, 0)
+            .add_mattia_explorer(explorer_id, 0)
             .expect("testing expect");
         orchestrator
             .start_all_explorer_ais()
@@ -656,6 +664,9 @@ mod game_simulation {
                 }
             }
         }
+        let _ = orchestrator.send_planet_kill_to_all();
+        let _ = orchestrator.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orchestrator, 200);
     }
 }
 
@@ -676,11 +687,16 @@ fn test_spawn_explorer_on_planet() {
     orch.initialize_galaxy_by_content(topology).unwrap();
 
     //init explorer
-    orch.add_mattia_explorer(0, 0).unwrap();
+    let explorer_id = 0;
+    orch.add_mattia_explorer(explorer_id, 0).unwrap();
 
     // check if explorer is correctly registered
     assert_eq!(orch.explorers_info.len(), 1);
-    assert!(orch.explorers_info.get(&0).is_some());
+    assert!(orch.explorers_info.get(&explorer_id).is_some());
+
+    let _ = orch.send_planet_kill_to_all();
+    let _ = orch.send_kill_explorer_ai(explorer_id);
+    drain_messages(&mut orch, 200);
 }
 #[cfg(test)]
 mod communication {
@@ -689,7 +705,7 @@ mod communication {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{Status, utils::registry::PlanetType};
+    use crate::{utils::registry::PlanetType, Status};
 
     use super::*;
 
@@ -726,6 +742,10 @@ mod communication {
             orch.explorers_info.get_status(&explorer_id).unwrap(),
             Status::Running
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 
     /// Test if the explorer ai stops properly
@@ -758,6 +778,10 @@ mod communication {
             orch.explorers_info.get_status(&explorer_id).unwrap(),
             Status::Paused
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 
     /// Test if the sunray exchange works properly
@@ -797,6 +821,10 @@ mod communication {
             }
             None => panic!(),
         }
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 
     #[test]
@@ -816,7 +844,7 @@ mod communication {
         orch.add_mattia_explorer(explorer_id, planet_id)
             .expect("testing expect");
 
-        //stop_planet_ais
+
         orch.send_supported_combination_request(explorer_id)
             .unwrap();
         sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
@@ -832,6 +860,9 @@ mod communication {
             }
             None => panic!(),
         }
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -891,8 +922,8 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::Status;
     use crate::utils::registry::PlanetType;
+    use crate::Status;
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
@@ -906,6 +937,10 @@ mod lifecycle_tests {
         drain_messages(&mut orch, 200);
 
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- StopExplorerAI -> StopExplorerAIResult ----
@@ -924,6 +959,10 @@ mod lifecycle_tests {
         drain_messages(&mut orch, 200);
 
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Paused);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- ResetExplorerAI -> ResetExplorerAIResult ----
@@ -966,6 +1005,10 @@ mod lifecycle_tests {
             Status::Running
         );
         assert!(ack_received);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- KillExplorer -> KillExplorerResult ----
@@ -978,6 +1021,9 @@ mod lifecycle_tests {
         drain_messages(&mut orch, 100);
 
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Dead);
+
+        let _ = orch.send_planet_kill_to_all();
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Start -> Stop -> Start cycle ----
@@ -1000,6 +1046,10 @@ mod lifecycle_tests {
         orch.send_start_explorer_ai(0).unwrap();
         drain_messages(&mut orch, 100);
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Kill from idle state (no start) ----
@@ -1013,6 +1063,9 @@ mod lifecycle_tests {
         drain_messages(&mut orch, 50);
 
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Dead);
+
+        let _ = orch.send_planet_kill_to_all();
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Kill while running ----
@@ -1029,6 +1082,9 @@ mod lifecycle_tests {
         drain_messages(&mut orch, 100);
 
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Dead);
+
+        let _ = orch.send_planet_kill_to_all();
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Double start (idempotency) ----
@@ -1064,7 +1120,11 @@ mod lifecycle_tests {
 
         // should still be running
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Running);
-        assert!(ack_received)
+        assert!(ack_received);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Stop without start ----
@@ -1097,6 +1157,10 @@ mod lifecycle_tests {
 
         assert_eq!(orch.explorers_info.get_status(&0).unwrap(), Status::Paused);
         assert!(ack_received);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Multiple explorers lifecycle ----
@@ -1108,39 +1172,44 @@ mod lifecycle_tests {
         orch.initialize_galaxy_by_content(&topology).unwrap();
         orch.start_all_planet_ais().unwrap();
 
-        orch.add_mattia_explorer(10, 0).unwrap();
-        orch.add_mattia_explorer(20, 0).unwrap();
+        let explorer_id_1 = 10;
+        let explorer_id_2 = 20;
+        orch.add_mattia_explorer(explorer_id_1, 0).unwrap();
+        orch.add_mattia_explorer(explorer_id_2, 0).unwrap();
 
         // start both
         orch.start_all_explorer_ais().unwrap();
         drain_messages(&mut orch, 200);
 
         assert_eq!(
-            orch.explorers_info.get_status(&10).unwrap(),
+            orch.explorers_info.get_status(&explorer_id_1).unwrap(),
             Status::Running
         );
         assert_eq!(
-            orch.explorers_info.get_status(&20).unwrap(),
+            orch.explorers_info.get_status(&explorer_id_2).unwrap(),
             Status::Running
         );
 
         // stop only one
-        orch.send_stop_explorer_ai(10).unwrap();
+        orch.send_stop_explorer_ai(explorer_id_1).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&10).unwrap(), Status::Paused);
+        assert_eq!(orch.explorers_info.get_status(&explorer_id_1).unwrap(), Status::Paused);
         assert_eq!(
-            orch.explorers_info.get_status(&20).unwrap(),
+            orch.explorers_info.get_status(&explorer_id_2).unwrap(),
             Status::Running
         );
 
         // kill both
-        orch.send_kill_explorer_ai(10).unwrap();
-        orch.send_kill_explorer_ai(20).unwrap();
+        orch.send_kill_explorer_ai(explorer_id_1).unwrap();
+        orch.send_kill_explorer_ai(explorer_id_2).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&10).unwrap(), Status::Dead);
-        assert_eq!(orch.explorers_info.get_status(&20).unwrap(), Status::Dead);
+        assert_eq!(orch.explorers_info.get_status(&explorer_id_1).unwrap(), Status::Dead);
+        assert_eq!(orch.explorers_info.get_status(&explorer_id_2).unwrap(), Status::Dead);
+
+        let _ = orch.send_planet_kill_to_all();
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -1188,6 +1257,10 @@ mod current_planet_tests {
                 .unwrap(),
             planet_id
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -1232,6 +1305,10 @@ mod resource_tests {
         assert!(info.supported_resources.is_some());
         // OneMillionCrabs should have some supported resources
         assert!(!info.supported_resources.as_ref().unwrap().is_empty());
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
     #[test]
     fn supported_combination_request() {
@@ -1260,6 +1337,10 @@ mod resource_tests {
         let info = orch.planets_info.get_info(0).unwrap();
         assert!(response, "SupportedCombinationResult not received");
         assert!(info.supported_combination.is_some());
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
     #[test]
     fn supported_resource_then_combination_request() {
@@ -1299,6 +1380,10 @@ mod resource_tests {
         assert!(res_response, "SupportedResourceResult not received");
         assert!(info.supported_resources.is_some());
         assert!(info.supported_combination.is_some());
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -1338,7 +1423,11 @@ mod generate_resource_tests {
             explorer_info
                 .bag
                 .contains(&ResourceType::Basic(BasicResourceType::Silicon))
-        )
+        );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
     // ---- Generate multiple resources in sequence ----
 
@@ -1375,6 +1464,10 @@ mod generate_resource_tests {
             info.bag
                 .contains(&ResourceType::Basic(BasicResourceType::Oxygen))
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Generate resource without energy (no sunrays) ----
@@ -1406,6 +1499,10 @@ mod generate_resource_tests {
         }
         assert!(response, "GeneratedResourceResponse not received");
         assert!(orch.explorers_info.get(&0u32).unwrap().bag.is_empty());
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -1471,6 +1568,10 @@ mod combine_resource_tests {
         }
         assert!(response, "GeneratedResourceResponse not received");
         assert!(orch.explorers_info.get(&0u32).unwrap().bag.is_empty());
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Attempt to combine complex resource with only one base resource ----
@@ -1518,6 +1619,10 @@ mod combine_resource_tests {
                 .bag
                 .contains(&ResourceType::Basic(BasicResourceType::Hydrogen))
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Generate resources then combine ----
@@ -1540,7 +1645,7 @@ mod combine_resource_tests {
 
         // generate 2 carbons
         for _ in 0..2 {
-            let _ = orch.send_generate_resource_request(0, BasicResourceType::Carbon);
+            let _ =orch.send_generate_resource_request(0, BasicResourceType::Carbon);
         }
         drain_messages(&mut orch, 300);
 
@@ -1548,7 +1653,7 @@ mod combine_resource_tests {
         travel_explorer(&mut orch, 0, 1);
 
         // now try to combine diamond
-        let _ = orch.send_combine_resource_request(0, ComplexResourceType::Diamond);
+        let _ =orch.send_combine_resource_request(0, ComplexResourceType::Diamond);
         drain_messages(&mut orch, 200);
         let bag = &orch.explorers_info.get(&0).unwrap().bag;
         debug_println!("{:?}", bag);
@@ -1556,7 +1661,11 @@ mod combine_resource_tests {
         assert!(
             !bag.contains(&ResourceType::Basic(BasicResourceType::Carbon)),
             "it should have consumed all the carbon"
-        )
+        );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -1578,6 +1687,10 @@ mod bag_content_tests {
 
         let bag = &orch.explorers_info.get(&0).unwrap().bag;
         assert!(bag.is_empty());
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     #[test]
@@ -1606,6 +1719,10 @@ mod bag_content_tests {
             orch.explorers_info.get(&0).unwrap().bag,
             vec![ResourceType::Basic(BasicResourceType::Hydrogen)]
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -1660,6 +1777,10 @@ mod movement_tests {
         drain_messages(&mut orch, 50);
 
         // protocol exchange completed without panic. I don't really think there is much left that i can control
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 
     #[test]
@@ -1681,6 +1802,10 @@ mod movement_tests {
                 .unwrap(),
             1
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 
     #[test]
@@ -1723,65 +1848,11 @@ mod movement_tests {
                 .unwrap(),
             0
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
-
-    // ---- Full travel protocol via AI (start AI, let it explore) ----
-    //
-    // #[test]
-    // fn ai_driven_travel_protocol() {
-    //     let explorer_id: ID = 10;
-    //     let mut orch = setup_multi_planet_orch(explorer_id);
-    //
-    //     // charge all planets
-    //     for pid in 0..3 {
-    //         if let Some(ch) = orch.planet_channels.get(&pid) {
-    //             let sender = ch.0.clone();
-    //             for _ in 0..5 {
-    //                 orch.send_sunray(pid, &sender);
-    //             }
-    //         }
-    //     }
-    //     drain_messages(&mut orch, 300);
-    //
-    //     // start explorer AI
-    //     orch.send_start_explorer_ai(explorer_id).unwrap();
-    //     drain_messages(&mut orch, 200);
-    //
-    //     // let the AI run for a while, processing messages
-    //     let do_tick = tick(Duration::from_millis(50));
-    //     let timeout = tick(Duration::from_secs(5));
-    //     loop {
-    //         select! {
-    //             recv(orch.receiver_orch_planet) -> planet_msg => {
-    //                 if let Ok(msg) = planet_msg {
-    //                     let _ = orch.handle_planet_message(msg);
-    //                 }
-    //             }
-    //             recv(orch.receiver_orch_explorer) -> explorer_msg => {
-    //                 if let Ok(msg) = explorer_msg {
-    //                     let _ = orch.handle_explorer_message(msg);
-    //                 }
-    //             }
-    //             recv(do_tick) -> _ => {
-    //                 // periodically send sunrays to keep planets charged
-    //                 for pid in 0..3 {
-    //                     if let Some(ch) = orch.planet_channels.get(&pid) {
-    //                         let sender = ch.0.clone();
-    //                         orch.send_sunray(pid, &sender);
-    //                     }
-    //                 }
-    //             }
-    //             recv(timeout) -> _ => {
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //
-    //     // after running, explorer should still be alive
-    //     assert_ne!(orch.explorers_info.get_status(&explorer_id), Status::Dead);
-    // }
-
-    // ---- Neighbours response for planet with no neighbours ----
 }
 
 // ============================================================================
@@ -1811,7 +1882,8 @@ mod resource_after_movement_tests {
         let topology = "0,0,1\n1,4,0\n";
         orch.initialize_galaxy_by_content(topology).unwrap();
         orch.start_all_planet_ais().unwrap();
-        orch.add_mattia_explorer(10, 0).unwrap();
+        let explorer_id = 10;
+        orch.add_mattia_explorer(explorer_id, 0).unwrap();
 
         // charge both planets
         if let Some(ch) = orch.planet_channels.get(&1) {
@@ -1821,27 +1893,31 @@ mod resource_after_movement_tests {
         drain_messages(&mut orch, 50);
 
         // move explorer from planet 0 to planet 1 via full protocol
-        travel_explorer(&mut orch, 10, 1);
+        travel_explorer(&mut orch, explorer_id, 1);
 
         // verify explorer is on planet 1
-        orch.send_current_planet_request(10).unwrap();
+        orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&10).unwrap(), 1);
+        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 1);
 
         // now generate a resource on planet 1
-        orch.send_generate_resource_request(10, BasicResourceType::Silicon)
+        orch.send_generate_resource_request(explorer_id, BasicResourceType::Silicon)
             .unwrap();
-        orch.send_bag_content_request(10).unwrap();
+        orch.send_bag_content_request(explorer_id).unwrap();
         drain_messages(&mut orch, 200);
 
         // protocol completed
         assert!(
             orch.explorers_info
-                .get(&10)
+                .get(&explorer_id)
                 .unwrap()
                 .bag
                 .contains(&ResourceType::Basic(BasicResourceType::Silicon))
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(explorer_id);
+        drain_messages(&mut orch, 200);
     }
 }
 
@@ -1873,6 +1949,10 @@ mod end_to_end_tests {
         // everything should have been processed without panic
         assert!(orch.explorers_info.get(&0).is_some());
         assert_eq!(orch.explorers_info.get_current_planet(&0).unwrap(), 0);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     /// Multiple generate requests in rapid succession (tests buffering)
@@ -1906,18 +1986,21 @@ mod end_to_end_tests {
             .filter(|r| **r == ResourceType::Basic(BasicResourceType::Carbon))
             .count();
         assert_eq!(carbon_count, 5);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 }
-
 // ============================================================================
 // 12. Explorer-Planet direct communication tests
 // ============================================================================
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::Status;
-    use crate::utils::ExplorerInfo;
     use crate::utils::registry::PlanetType;
+    use crate::utils::ExplorerInfo;
+    use crate::Status;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -2013,6 +2096,10 @@ mod explorer_planet_comms {
             got_response,
             "Should have received SupportedResourceResponse from planet"
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- SupportedCombinationRequest to Planet ----
@@ -2049,6 +2136,10 @@ mod explorer_planet_comms {
             got_response,
             "Should have received SupportedCombinationResponse from planet"
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- GenerateResourceRequest to Planet ----
@@ -2097,6 +2188,10 @@ mod explorer_planet_comms {
             got_response,
             "Should have received GenerateResourceResponse from planet"
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- AvailableEnergyCellRequest to Planet ----
@@ -2141,6 +2236,10 @@ mod explorer_planet_comms {
             got_response,
             "Should have received AvailableEnergyCellResponse from planet"
         );
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ---- TravelToPlanetRequest to non-existent planet ----
@@ -2189,6 +2288,10 @@ mod explorer_planet_comms {
 
         // explorer should still be on the original planet
         assert_eq!(explorer.planet_id, original_planet_id);
+
+        let _ = orch.send_planet_kill_to_all();
+        let _ = orch.send_kill_explorer_ai(0);
+        drain_messages(&mut orch, 200);
     }
 
     // ========================================================================
@@ -2267,6 +2370,8 @@ mod explorer_planet_comms {
             "AsteroidAck on dead planet should return Ok, got: {:?}",
             result
         );
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: KillPlanetResult on already-dead planet (Race #1) ----
@@ -2287,6 +2392,8 @@ mod explorer_planet_comms {
             "KillPlanetResult on dead planet should return Ok, got: {:?}",
             result
         );
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: message from dead explorer is dropped (Race #2) ----
@@ -2328,6 +2435,9 @@ mod explorer_planet_comms {
             !got_response,
             "Dead explorer should not receive any response"
         );
+
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: IncomingExplorerResponse for dead explorer (Race #2) ----
@@ -2351,6 +2461,9 @@ mod explorer_planet_comms {
             "IncomingExplorerResponse for dead explorer should return Ok, got: {:?}",
             result
         );
+
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: IncomingExplorerResponse with dead/non-existent
@@ -2395,6 +2508,9 @@ mod explorer_planet_comms {
             got_rejection,
             "Explorer should receive MoveToPlanet rejection with planet_id 77"
         );
+
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: IncomingExplorerResponse with dead current planet (Race #2) ----
@@ -2418,6 +2534,9 @@ mod explorer_planet_comms {
             "IncomingExplorerResponse with dead current planet should return Ok, got: {:?}",
             result
         );
+
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: OutgoingExplorerResponse for dead explorer (Race #2) ----
@@ -2444,6 +2563,9 @@ mod explorer_planet_comms {
             "OutgoingExplorerResponse for dead explorer should return Ok, got: {:?}",
             result
         );
+
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: OutgoingExplorerResponse with dead destination planet
@@ -2478,6 +2600,9 @@ mod explorer_planet_comms {
             updated_dst, 0,
             "Explorer should be redirected back to current planet after dst planet dies"
         );
+
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 
     // ---- Edge Case: send_incoming_explorer_request on dead planet (Race #2) ----
@@ -2497,5 +2622,8 @@ mod explorer_planet_comms {
             "send_incoming_explorer_request on dead planet should return Ok, got: {:?}",
             result
         );
+
+        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        drain_messages(&mut orch, 200);
     }
 }
