@@ -2141,7 +2141,7 @@ mod explorer_planet_comms {
 
     #[test]
     fn explorer_sends_supported_combination_request_to_planet() {
-        let (mut orch, explorer) = setup_manual_explorer(PlanetType::RustyCrab, 0, 0);
+        let (mut orch, explorer) = setup_manual_explorer(PlanetType::ImmutableCosmicBorrow, 0, 0);
 
         explorer
             .planet_channels

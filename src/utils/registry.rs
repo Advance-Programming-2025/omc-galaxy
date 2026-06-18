@@ -15,10 +15,10 @@ pub enum PlanetType {
     Ciuc,
     HoustonWeHaveABorrow,
     ImmutableCosmicBorrow,
+    OneMillionCrabs,
     Rustrelli,
     RustyCrab,
     TheCompilerStrikesBack,
-    OneMillionCrabs,
 }
 impl PlanetType {
     pub fn random() -> Self {
