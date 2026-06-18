@@ -226,6 +226,11 @@ impl Orchestrator {
             });
     }
 
+    pub(crate) fn emit_failed_resource_generation(&mut self, msg: String) {
+        self.gui_messages
+            .push(OrchestratorEvent::ResourceGenerationFailed { message: msg });
+    }
+
     pub(crate) fn emit_explorer_move(&mut self, explorer_id: u32, planet_id: u32) {
         let move_to_id = self
             .explorers_info
