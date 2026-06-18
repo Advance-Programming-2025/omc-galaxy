@@ -12,6 +12,41 @@ use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer
 use logging_utils::{debug_println, log_message, warning_payload};
 use one_million_crabs::planet::ToString2;
 
+macro_rules! send_to_orchestrator_and_log {
+    (
+        $explorer:expr,
+        $msg:expr,
+        $on_success_state:expr,
+        $error_warning:expr,
+        $fn_name:expr
+        $(, $extra_key:expr => $extra_val:expr)*
+    ) => {
+        match $explorer.send_to_orchestrator($msg) {
+            Ok(_) => {
+                if let Some(state) = $on_success_state {
+                    $explorer.set_state(state);
+                }
+            }
+            Err(err) => {
+                LogEvent::new(
+                    Some(Participant::new(ActorType::Explorer, $explorer.explorer_id)),
+                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                    EventType::MessageExplorerToOrchestrator,
+                    Channel::Error,
+                    warning_payload!(
+                        $error_warning,
+                        err,
+                        $fn_name;
+                        "explorer data" => format!("{:?}", $explorer)
+                        $(, $extra_key => $extra_val)*
+                    ),
+                )
+                .emit();
+            }
+        }
+    };
+}
+
 /// Handles all messages from the orchestrator,
 /// returns Ok(true) if the explorer should terminate, Ok(false) otherwise.
 pub fn handle_message(
@@ -191,8 +226,8 @@ fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
         })
         .map_err(|e| {
             LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 Some(Participant::new(ActorType::Orchestrator, 0u32)),
+                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
                 EventType::MessageExplorerToOrchestrator,
                 Channel::Error,
                 warning_payload!(
@@ -265,7 +300,7 @@ fn move_to_planet(
                     "explorer data"=>format!("{:?}", explorer)
                 ),
             ).emit();
-            
+
             explorer.action_queue.clear();
             explorer.action_queue.reset();
             explorer.move_queue.clear();
@@ -286,29 +321,17 @@ fn current_planet_request(explorer: &mut Explorer) {
         "current planet id requested";
         "planet_id"=>explorer.planet_id.to_string()
     );
-    match explorer.send_to_orchestrator(ExplorerToOrchestrator::CurrentPlanetResult {
-        explorer_id: explorer.id(),
-        planet_id: explorer.planet_id(),
-    }) {
-        Ok(_) => {
-            // explorer.set_state(ExplorerState::Idle);
-        }
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "CurrentPlanetResult not sent",
-                    err,
-                    "current_planet_request()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-        }
-    }
+
+    send_to_orchestrator_and_log!(
+        explorer,
+        ExplorerToOrchestrator::CurrentPlanetResult {
+            explorer_id: explorer.id(),
+            planet_id: explorer.planet_id(),
+        },
+        None::<ExplorerState>,
+        "CurrentPlanetResult not sent",
+        "current_planet_request()"
+    );
 }
 
 /// Sends the basic resources supported by the current planet to the orchestrator.
@@ -400,29 +423,16 @@ fn supported_resource_request(explorer: &mut Explorer) {
     }
 
     // sends the result to the orchestrator
-    match explorer.send_to_orchestrator(ExplorerToOrchestrator::SupportedResourceResult {
-        explorer_id: explorer.id(),
-        supported_resources,
-    }) {
-        Ok(_) => {
-            explorer.set_state(ExplorerState::Idle);
-        }
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "SupportedResourceResult not sent",
-                    err,
-                    "supported_resource_request()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-        }
-    }
+    send_to_orchestrator_and_log!(
+        explorer,
+        ExplorerToOrchestrator::SupportedResourceResult {
+            explorer_id: explorer.id(),
+            supported_resources,
+        },
+        Some(ExplorerState::Idle),
+        "SupportedResourceResult not sent",
+        "supported_resource_request()"
+    );
 }
 
 /// Sends the complex resources supported by the current planet to the orchestrator.
@@ -489,7 +499,7 @@ fn supported_combination_request(explorer: &mut Explorer) {
                     ActorType::Explorer,
                     explorer.explorer_id,
                     EventType::MessagePlanetToExplorer,
-                    "supported combination reaponse";
+                    "supported combination response";
                     "planet_id"=>explorer.planet_id.to_string()
                 );
                 return;
@@ -514,33 +524,24 @@ fn supported_combination_request(explorer: &mut Explorer) {
     }
 
     // sends the result to the orchestrator
-    match explorer.send_to_orchestrator(ExplorerToOrchestrator::SupportedCombinationResult {
-        explorer_id: explorer.id(),
-        combination_list: supported_combinations,
-    }) {
-        Ok(_) => {
-            explorer.set_state(ExplorerState::Idle);
-        }
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "SupportedCombinationResult not sent",
-                    err,
-                    "supported_combination_request()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-        }
-    }
+    send_to_orchestrator_and_log!(
+        explorer,
+        ExplorerToOrchestrator::SupportedCombinationResult {
+            explorer_id: explorer.id(),
+            combination_list: supported_combinations,
+        },
+        Some(ExplorerState::Idle),
+        "SupportedCombinationResult not sent",
+        "supported_combination_request()"
+    );
 }
 
 /// Sends the GenerateResourceRequest, waits for the planet response, and if successful puts the resource in the bag.
-pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicResourceType, is_from_orchestrator: bool) {
+pub fn generate_resource_request(
+    explorer: &mut Explorer,
+    to_generate: BasicResourceType,
+    is_from_orchestrator: bool,
+) {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -706,7 +707,11 @@ pub fn generate_resource_request(explorer: &mut Explorer, to_generate: BasicReso
 }
 
 /// Sends the CombineResourceRequest, waits for the planet response, and if successful puts the resource in the bag.
-pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexResourceType, is_from_orchestrator: bool) {
+pub fn combine_resource_request(
+    explorer: &mut Explorer,
+    to_generate: ComplexResourceType,
+    is_from_orchestrator: bool,
+) {
     log_message!(
         ActorType::Orchestrator,
         0u32,
@@ -756,8 +761,9 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                     )
                     .emit();
 
-                    if (is_from_orchestrator) {
-                        match explorer.send_to_orchestrator(
+                    if is_from_orchestrator {
+                        send_to_orchestrator_and_log!(
+                            explorer,
                             ExplorerToOrchestrator::CombineResourceResponse {
                                 explorer_id: explorer.explorer_id,
                                 generated: Err("failed to generate resource".to_string()),
@@ -803,7 +809,7 @@ pub fn combine_resource_request(explorer: &mut Explorer, to_generate: ComplexRes
                         EventType::MessagePlanetToExplorer,
                         Channel::Error,
                         warning_payload!(
-                            "CombineResourceResponse not sent",
+                            "CombineResourceRequest not valid",
                             err,
                             "combine_resource_request()";
                             "to_generate" => to_generate.to_string_2(),
@@ -874,27 +880,16 @@ fn bag_content_request(explorer: &mut Explorer) {
         "bag content request";
     );
 
-    match explorer.send_to_orchestrator(ExplorerToOrchestrator::BagContentResponse {
-        explorer_id: explorer.id(),
-        bag_content: explorer.get_bag_content(),
-    }) {
-        Ok(_) => {}
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "BagContentResponse not sent",
-                    err,
-                    "bag_content_request()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-        }
-    }
+    send_to_orchestrator_and_log!(
+        explorer,
+        ExplorerToOrchestrator::BagContentResponse {
+            explorer_id: explorer.id(),
+            bag_content: explorer.get_bag_content(),
+        },
+        None::<ExplorerState>,
+        "BagContentResponse not sent",
+        "bag_content_request()"
+    );
 }
 
 /// Updates the neighbours of the current planet.
@@ -912,4 +907,3 @@ fn neighbors_response(explorer: &mut Explorer, neighbors: Vec<u32>) {
         "neighbors"=>format!("{:?}", neighbors)
     );
 }
-

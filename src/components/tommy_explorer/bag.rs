@@ -1,4 +1,7 @@
-use common_game::components::resource::{BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType, GenericResource, ResourceType};
+use common_game::components::resource::{
+    BasicResource, BasicResourceType, ComplexResource, ComplexResourceRequest, ComplexResourceType,
+    GenericResource, ResourceType,
+};
 
 /// The type that is returned to the orchestrator when he asks for the explorer's bag,
 /// it's a vector of ResourceType.

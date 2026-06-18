@@ -90,7 +90,8 @@ impl Orchestrator {
                 )
             })?;
 
-        self.explorers_info.insert_status(explorer_id, Status::Paused);
+        self.explorers_info
+            .insert_status(explorer_id, Status::Paused);
 
         //LOG
         log_message!(

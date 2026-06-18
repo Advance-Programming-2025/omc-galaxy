@@ -89,7 +89,9 @@ mod test_one_million_crabs_planet {
             .unwrap()
             .0
             .clone();
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -98,7 +100,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -107,7 +111,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -116,7 +122,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -125,7 +133,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -134,7 +144,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -143,7 +155,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -152,7 +166,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -161,7 +177,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -170,7 +188,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -179,7 +199,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -188,7 +210,9 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
+        orchestrator
+            .send_sunray(planet_id, &planet_channel)
+            .expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -1947,7 +1971,6 @@ mod end_to_end_tests {
     #[test]
     fn rapid_fire_messages() {
         let mut orch = setup_orch_with_explorer(PlanetType::BlackAdidasShoe, 0, 0);
-
 
         // send multiple different requests rapidly
         orch.send_bag_content_request(0).unwrap();

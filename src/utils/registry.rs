@@ -15,15 +15,16 @@ pub enum PlanetType {
     Ciuc,
     HoustonWeHaveABorrow,
     ImmutableCosmicBorrow,
-    OneMillionCrabs,
     Rustrelli,
     RustyCrab,
     TheCompilerStrikesBack,
+    OneMillionCrabs,
 }
 impl PlanetType {
     pub fn random() -> Self {
         let mut rng = rand::rng();
-        let variants: Vec<PlanetType> = PlanetType::iter().collect();
+        let mut variants: Vec<PlanetType> = PlanetType::iter().collect();
+        variants.pop(); // remove OneMillionCrabs
         *variants.choose(&mut rng).unwrap()
     }
 }
@@ -74,12 +75,7 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
             )
         }),
     );
-    map.insert(
-        PlanetType::OneMillionCrabs,
-        Box::new(|rx_o, tx_o, rx_e, planet_id| {
-            one_million_crabs::planet::create_planet(rx_o, tx_o, rx_e, planet_id)
-        }),
-    );
+
     map.insert(
         PlanetType::Rustrelli,
         Box::new(|rx_o, tx_o, rx_e, planet_id| {
@@ -107,6 +103,12 @@ pub static PLANET_REGISTRY: Lazy<HashMap<PlanetType, PlanetFactory>> = Lazy::new
             Ok(the_compiler_strikes_back::planet::create_planet(
                 rx_o, tx_o, rx_e, planet_id,
             ))
+        }),
+    );
+    map.insert(
+        PlanetType::OneMillionCrabs,
+        Box::new(|rx_o, tx_o, rx_e, planet_id| {
+            one_million_crabs::planet::create_planet(rx_o, tx_o, rx_e, planet_id)
         }),
     );
 

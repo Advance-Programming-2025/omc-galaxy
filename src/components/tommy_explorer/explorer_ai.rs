@@ -1,10 +1,9 @@
+use crate::components::tommy_explorer::Explorer;
 use crate::components::tommy_explorer::topology::TopologyManager;
 use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
 use std::collections::{HashMap, HashSet, VecDeque};
-use crate::components::tommy_explorer::Explorer;
 
 impl TopologyManager {
-
     /// Finds the shortest path to the nearest unexplored or partially explored planet.
     ///
     /// This method leverages a lazy Breadth-First Search (BFS) iterator to scan the
@@ -36,7 +35,11 @@ impl TopologyManager {
     ///
     /// Returns `Some(path)` to the target planet, or `None` if the resource is currently
     /// unavailable in the known topology.
-    pub fn find_path_to_resource(&self, start_node: u32, target_res: ResourceType) -> Option<VecDeque<u32>> {
+    pub fn find_path_to_resource(
+        &self,
+        start_node: u32,
+        target_res: ResourceType,
+    ) -> Option<VecDeque<u32>> {
         // Initialize the BFS iterator to explore the topology outward from the current position
         let mut bfs = self.bfs_iter(start_node);
 
@@ -45,9 +48,13 @@ impl TopologyManager {
             if let Some(info) = self.get(node) {
                 match target_res {
                     // Check if the planet can provide the required basic resource
-                    ResourceType::Basic(b) => info.get_basic_resources().map_or(false, |s| s.contains(&b)),
+                    ResourceType::Basic(b) => {
+                        info.get_basic_resources().map_or(false, |s| s.contains(&b))
+                    }
                     // Check if the planet's laboratories support the required complex combination
-                    ResourceType::Complex(c) => info.get_complex_resources().map_or(false, |s| s.contains(&c)),
+                    ResourceType::Complex(c) => info
+                        .get_complex_resources()
+                        .map_or(false, |s| s.contains(&c)),
                 }
             } else {
                 // If we have no info on the node, we safely skip it
@@ -80,9 +87,9 @@ impl RecipeExt for ComplexResourceType {
                 (ResourceType::Complex(ComplexResourceType::Water), 1),
                 (ResourceType::Basic(BasicResourceType::Carbon), 1),
             ],
-            ComplexResourceType::Diamond => vec![
-                (ResourceType::Basic(BasicResourceType::Carbon), 2),
-            ],
+            ComplexResourceType::Diamond => {
+                vec![(ResourceType::Basic(BasicResourceType::Carbon), 2)]
+            }
             ComplexResourceType::Robot => vec![
                 (ResourceType::Basic(BasicResourceType::Silicon), 1),
                 (ResourceType::Complex(ComplexResourceType::Life), 1),
@@ -101,14 +108,13 @@ impl RecipeExt for ComplexResourceType {
             *counts.entry(item.clone()).or_insert(0) += 1;
         }
 
-        self.ingredients().iter().all(|(req_res, req_qty)| {
-            counts.get(req_res).unwrap_or(&0) >= req_qty
-        })
+        self.ingredients()
+            .iter()
+            .all(|(req_res, req_qty)| counts.get(req_res).unwrap_or(&0) >= req_qty)
     }
 }
 
 impl Explorer {
-
     /// Returns the absolute priority resource to craft
     pub fn get_production_priority(&self) -> ResourceType {
         let bag = self.bag.to_resource_types();
@@ -281,10 +287,14 @@ impl Explorer {
             ComplexResourceType::Water,
         ];
 
-        // Pipeline funzionale per le risorse complesse
+        // Pipeline for complex resources
         let complex_target = craft_order.into_iter()
             // the planet has to support the resource
-            .filter(|c| current_planet_info.get_complex_resources().map_or(false, |set| set.contains(c)))
+            .filter(|c| {
+                current_planet_info
+                    .get_complex_resources()
+                    .map_or(false, |set| set.contains(c))
+            })
             // I need to be able to craft it with the ingredients in the bag
             .filter(|c| c.can_be_crafted(&bag_items))
             .map(ResourceType::Complex)
@@ -296,9 +306,11 @@ impl Explorer {
         }
 
         // if not, search for a basic target
-        current_planet_info.get_basic_resources()
+        current_planet_info
+            .get_basic_resources()
             .and_then(|planet_basic| {
-                planet_basic.iter()
+                planet_basic
+                    .iter()
                     .map(|&b| ResourceType::Basic(b))
                     .find(|res| needed.contains(res))
             })

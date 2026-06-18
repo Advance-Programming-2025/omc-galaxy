@@ -17,7 +17,7 @@ use common_game::protocols::planet_explorer::{ExplorerToPlanet, PlanetToExplorer
 use common_game::utils::ID;
 use crossbeam_channel::{Receiver, Sender, select};
 use logging_utils::{get_receiver_id, get_sender_id, log_fn_call, log_message, warning_payload};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{VecDeque};
 use std::fmt;
 
 /// struct of the explorer
@@ -200,16 +200,16 @@ impl Explorer {
 
     /// the explorer main loop
     pub fn run(&mut self) -> Result<(), String> {
-        if self.state.should_terminate() {
-            return Ok(());
-        }
 
         // every iteration the explorer receives messages from both planet and orchestrator channels,
         // then it behaves based on the message received, if the message received and the explorer state
         // do not match together the message is pushed into the corresponding buffer, and it will be read
         // when the explorer will be in an "Idle" state
         loop {
-            // println!("[TOMMY EXPLORER INFO] planet: {}", self.planet_id);
+            if self.state.should_terminate() {
+                return Ok(());
+            }
+
             select! {
                 // receive the orchestrator messages
                 recv(self.orchestrator_channels.0) -> msg_orchestrator => {
@@ -395,7 +395,7 @@ impl Explorer {
                                 ActorType::Explorer,
                                 self.explorer_id,
                                 ActorType::Orchestrator,
-                                0u32, // L'ID dell'orchestrator è convenzionalmente 0
+                                0u32,
                                 EventType::MessageExplorerToOrchestrator,
                                 "neighbors request sent";
                                 "planet_id" => self.planet_id.to_string()
@@ -413,7 +413,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -456,7 +457,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -499,7 +501,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -532,7 +535,8 @@ impl Explorer {
                                     "execute_ai_action()";
                                     "explorer data" => format!("{:?}", self)
                                 ),
-                            ).emit();
+                            )
+                            .emit();
                         }
                     }
                 }
@@ -541,8 +545,8 @@ impl Explorer {
 
                     // if the topology isn't fully discovered simply generate/combine the useful resources
                     // otherwise:
-                    // check what and how many resources the explorer has
-                    // check what and how many resources are needed to complete the goal -> see the dependency graph of the resources
+                    // checks what resources the explorer has
+                    // checks how many resources are needed to complete the goal -> see the dependency graph of the resources
                     // maybe check what resources can be obtained from other planets in a possible path
                     // choose the resource based on the things written above
                     // generate/combine it
@@ -554,36 +558,76 @@ impl Explorer {
                             match resource {
                                 ResourceType::Basic(basic_resource) => match basic_resource {
                                     BasicResourceType::Oxygen => {
-                                        generate_resource_request(self, BasicResourceType::Oxygen, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Oxygen,
+                                            false,
+                                        );
                                     }
                                     BasicResourceType::Hydrogen => {
-                                        generate_resource_request(self, BasicResourceType::Hydrogen, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Hydrogen,
+                                            false,
+                                        );
                                     }
                                     BasicResourceType::Carbon => {
-                                        generate_resource_request(self, BasicResourceType::Carbon, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Carbon,
+                                            false,
+                                        );
                                     }
                                     BasicResourceType::Silicon => {
-                                        generate_resource_request(self, BasicResourceType::Silicon, false);
+                                        generate_resource_request(
+                                            self,
+                                            BasicResourceType::Silicon,
+                                            false,
+                                        );
                                     }
                                 },
                                 ResourceType::Complex(complex_resource) => match complex_resource {
                                     ComplexResourceType::Diamond => {
-                                        combine_resource_request(self, ComplexResourceType::Diamond, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Diamond,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Water => {
-                                        combine_resource_request(self, ComplexResourceType::Water, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Water,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Life => {
-                                        combine_resource_request(self, ComplexResourceType::Life, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Life,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Robot => {
-                                        combine_resource_request(self, ComplexResourceType::Robot, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Robot,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::Dolphin => {
-                                        combine_resource_request(self, ComplexResourceType::Dolphin, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::Dolphin,
+                                            false,
+                                        );
                                     }
                                     ComplexResourceType::AIPartner => {
-                                        combine_resource_request(self, ComplexResourceType::AIPartner, false);
+                                        combine_resource_request(
+                                            self,
+                                            ComplexResourceType::AIPartner,
+                                            false,
+                                        );
                                     }
                                 },
                             }
@@ -668,7 +712,10 @@ impl Explorer {
                                     self.move_queue.clear();
 
                                     LogEvent::new(
-                                        Some(Participant::new(ActorType::Explorer, self.explorer_id)),
+                                        Some(Participant::new(
+                                            ActorType::Explorer,
+                                            self.explorer_id,
+                                        )),
                                         Some(Participant::new(ActorType::Orchestrator, 0u32)),
                                         EventType::MessageExplorerToOrchestrator,
                                         Channel::Error,
@@ -679,7 +726,8 @@ impl Explorer {
                                             "target_planet" => target_planet.to_string(),
                                             "explorer data" => format!("{:?}", self)
                                         ),
-                                    ).emit();
+                                    )
+                                    .emit();
                                 }
                             }
                         } else {

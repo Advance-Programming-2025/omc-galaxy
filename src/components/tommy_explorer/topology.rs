@@ -192,8 +192,7 @@ impl TopologyManager {
     }
 }
 
-
-use std::collections::{VecDeque};
+use std::collections::VecDeque;
 
 // Definiamo il nostro iteratore con la parent_map inclusa
 pub struct BFSPathIterator<'a> {
@@ -210,7 +209,12 @@ impl<'a> BFSPathIterator<'a> {
         queue.push_back(start_node);
         visited.insert(start_node);
 
-        Self { topology, queue, visited, parent_map: HashMap::new() }
+        Self {
+            topology,
+            queue,
+            visited,
+            parent_map: HashMap::new(),
+        }
     }
 
     pub fn reconstruct_path(&self, target: u32) -> VecDeque<u32> {
@@ -223,7 +227,6 @@ impl<'a> BFSPathIterator<'a> {
         path
     }
 }
-
 
 impl<'a> Iterator for BFSPathIterator<'a> {
     type Item = u32;

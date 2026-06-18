@@ -701,9 +701,7 @@ mod explorer_full_tests {
 
     use crate::utils::registry::PlanetType;
     use crate::{Orchestrator, Status};
-    use common_game::components::resource::{
-        BasicResourceType, ComplexResourceType, ResourceType,
-    };
+    use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
     };
@@ -719,7 +717,7 @@ mod explorer_full_tests {
         explorer: Explorer,
         // Orchestrator side
         orch_receiver: Receiver<ExplorerToOrchestrator<BagType>>, // receives from explorer
-        orch_sender: Sender<OrchestratorToExplorer>,              // sends to explorer
+        // orch_sender: Sender<OrchestratorToExplorer>,              // sends to explorer
         // Planet side
         planet_receiver: Receiver<ExplorerToPlanet>, // receives from explorer
         planet_sender: Sender<PlanetToExplorer>,     // sends to explorer
@@ -731,7 +729,7 @@ mod explorer_full_tests {
         }
 
         fn new_with_params(explorer_id: u32, planet_id: u32, energy_cells: u32) -> Self {
-            let (orch_send, orch_recv) = unbounded::<OrchestratorToExplorer>();
+            let (_orch_send, orch_recv) = unbounded::<OrchestratorToExplorer>();
             let (explorer_orch_send, explorer_orch_recv) =
                 unbounded::<ExplorerToOrchestrator<BagType>>();
             let (planet_send, planet_recv) = unbounded::<PlanetToExplorer>();
@@ -748,17 +746,17 @@ mod explorer_full_tests {
             TestStruct {
                 explorer,
                 orch_receiver: explorer_orch_recv,
-                orch_sender: orch_send,
+                // orch_sender: orch_send,
                 planet_receiver: explorer_planet_recv,
                 planet_sender: planet_send,
             }
         }
 
-        fn send_to_explorer_from_orch(&self, msg: OrchestratorToExplorer) {
-            self.orch_sender
-                .send(msg)
-                .expect("Failed to send to explorer from orchestrator");
-        }
+        // fn send_to_explorer_from_orch(&self, msg: OrchestratorToExplorer) {
+        //     self.orch_sender
+        //         .send(msg)
+        //         .expect("Failed to send to explorer from orchestrator");
+        // }
 
         fn send_to_explorer_from_planet(&self, msg: PlanetToExplorer) {
             self.planet_sender
@@ -778,17 +776,17 @@ mod explorer_full_tests {
                 .expect("Timeout waiting for explorer->planet message")
         }
 
-        fn recv_from_explorer_to_orch_opt(&self) -> Option<ExplorerToOrchestrator<BagType>> {
-            self.orch_receiver
-                .recv_timeout(Duration::from_millis(50))
-                .ok()
-        }
+        // fn recv_from_explorer_to_orch_opt(&self) -> Option<ExplorerToOrchestrator<BagType>> {
+        //     self.orch_receiver
+        //         .recv_timeout(Duration::from_millis(50))
+        //         .ok()
+        // }
 
-        fn recv_from_explorer_to_planet_opt(&self) -> Option<ExplorerToPlanet> {
-            self.planet_receiver
-                .recv_timeout(Duration::from_millis(50))
-                .ok()
-        }
+        // fn recv_from_explorer_to_planet_opt(&self) -> Option<ExplorerToPlanet> {
+        //     self.planet_receiver
+        //         .recv_timeout(Duration::from_millis(50))
+        //         .ok()
+        // }
     }
 
     // ==================== 1. ORCHESTRATOR -> EXPLORER Messages ====================
@@ -1223,8 +1221,8 @@ mod explorer_full_tests {
             });
 
             // Verify the channel delivers the message (received by explorer's planet channel)
-            // Since the explorer's planet_channels.0 is the receiver, we can't read it externally
-            // but we can verify the send didn't panic/err
+            // Since the explorer's planet_channels.0 is the receiver, we can't read it externally,
+            // but we can verify the sending didn't panic/err
             // The real test is that the channel is set up correctly
             assert!(true); // channel send succeeded (would panic otherwise)
         }
@@ -2252,11 +2250,11 @@ mod explorer_full_tests {
         /// Sending on a disconnected channel should return Err
         #[test]
         fn test_send_to_orchestrator_after_receiver_dropped() {
-            let (orch_send, orch_recv) = unbounded::<OrchestratorToExplorer>();
+            let (_orch_send, orch_recv) = unbounded::<OrchestratorToExplorer>();
             let (explorer_orch_send, explorer_orch_recv) =
                 unbounded::<ExplorerToOrchestrator<BagType>>();
-            let (planet_send, planet_recv) = unbounded::<PlanetToExplorer>();
-            let (explorer_planet_send, explorer_planet_recv) = unbounded::<ExplorerToPlanet>();
+            let (_planet_send, planet_recv) = unbounded::<PlanetToExplorer>();
+            let (explorer_planet_send, _explorer_planet_recv) = unbounded::<ExplorerToPlanet>();
 
             let explorer = Explorer::new(
                 1,
@@ -2337,7 +2335,7 @@ mod explorer_full_tests {
                 // spawn planet
                 orch.add_planet(0, PlanetType::RustyCrab).unwrap();
 
-                // start planet ai
+                // start planet AI
                 orch.planet_channels[&0]
                     .0
                     .send(OrchestratorToPlanet::StartPlanetAI)
@@ -2428,7 +2426,7 @@ mod explorer_full_tests {
                 loop {
                     match orch.handle_game_messages() {
                         Ok(_) => {}
-                        Err(e) => break,
+                        Err(_) => break,
                     }
                     if orch.planets_info.get_status(&0) == Status::Dead {
                         break;
