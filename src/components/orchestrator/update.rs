@@ -355,7 +355,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    /// Global start function, starts all of the planets'
+    /// Global start function, starts all the planets'
     /// and explorer's AIs.
     ///
     /// The function performs the following steps in order:
@@ -382,7 +382,7 @@ impl Orchestrator {
         self.start_all_planet_ais()?;
 
         // 2. Wait 20ms for the planets to be fully ready
-        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::thread::sleep(Duration::from_millis(20));
 
         // 3. Spawn all explorers on their designated planets
         for &(explorer_id, planet_id) in mattia_explorers {
@@ -405,7 +405,7 @@ impl Orchestrator {
         Ok(())
     }
 
-    // /// Global start function, starts all of the planets'
+    // /// Global start function, starts all the planets'
     // /// and explorer's AIs; wrapper on
     // /// [`start_all_planet_ais`](`Self::start_all_planet_ais`)
     // /// and on
@@ -432,7 +432,7 @@ impl Orchestrator {
     //     Ok(())
     // }
 
-    /// Global stop function, pauses all of the planets'
+    /// Global stop function, pauses all the planets'
     /// and explorer's AIs; wrapper on
     /// [`stop_all_planet_ais`](`Self::stop_all_planet_ais`)
     /// and on
@@ -464,7 +464,7 @@ impl Orchestrator {
         self.start_all_planet_ais()?;
 
         // 2. Wait 20ms for the planets to be fully ready
-        std::thread::sleep(std::time::Duration::from_millis(20));
+        std::thread::sleep(Duration::from_millis(20));
 
         // 3. Start all explorer AIs
         self.start_all_explorer_ais()?;

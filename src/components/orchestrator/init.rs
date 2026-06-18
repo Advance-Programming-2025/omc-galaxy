@@ -1,5 +1,4 @@
 use logging_utils::{LoggableActor, get_receiver_id, get_sender_id};
-use rand::seq::IndexedRandom;
 use std::{fs, thread};
 
 use common_game::{
@@ -172,7 +171,7 @@ impl Orchestrator {
 
         //creation of the planet
 
-        let mut new_planet = (PLANET_REGISTRY.get(&type_id).unwrap().as_ref())(
+        let mut new_planet = PLANET_REGISTRY.get(&type_id).unwrap().as_ref()(
             planet_to_orchestrator_channels.0,
             planet_to_orchestrator_channels.1,
             receiver_explorer,
@@ -224,7 +223,7 @@ impl Orchestrator {
     /// * `planet_id` - id of the planet the explorer will be spawned on
     /// * `free_cells` - the amount of currently free cells in the visiting planet
     /// * `sender_explorer` - pre-existing explorer to planet channel
-    /// REMEMBER in order to work this function needs to be called when the planet ai is ALREADY
+    /// REMEMBER in order to work this function needs to be called when the planet AI is ALREADY
     /// running, not before
     pub fn add_tommy_explorer(&mut self, explorer_id: u32, planet_id: u32) -> Result<(), String> {
         log_fn_call!(
@@ -327,7 +326,7 @@ impl Orchestrator {
     /// * `planet_id` - id of the planet the explorer will be spawned on
     /// * `free_cells` - the amount of currently free cells in the visiting planet
     /// * `sender_explorer` - pre-existing explorer to planet channel
-    /// REMEMBER in order to work this function needs to be called when the planet ai is ALREADY
+    /// REMEMBER in order to work this function needs to be called when the planet AI is ALREADY
     /// running, not before
     pub fn add_mattia_explorer(&mut self, explorer_id: u32, planet_id: u32) -> Result<(), String> {
         log_fn_call!(
@@ -551,10 +550,10 @@ impl Orchestrator {
     /// The function is thread safe thanks to the use of RwLock, even though no
     /// other threads should request the galaxy topology during initialization.
     ///
-    /// Returns Err if RwLock fails to lock on a write or if the following function in
+    /// Returns Err if RwLock fails to lock on a 'write' or if the following function in
     /// the initialization chain fails as well.
     ///
-    /// * `adj_list` - a two dimensional matrix,
+    /// * `adj_list` - a two-dimensional matrix,
     ///  parsed by `initialize_galaxy_by_file`
     pub(crate) fn initialize_galaxy_by_adj_list(
         &mut self,
@@ -570,7 +569,7 @@ impl Orchestrator {
             .iter()
             .for_each(|_row| debug_println!("{:?}", _row));
 
-        //Initialize matrix of adjecencies
+        //Initialize matrix of adjacent
         let mut new_topology: Vec<Vec<bool>> = Vec::new();
 
         for _ in 0..num_planets {
@@ -610,7 +609,7 @@ impl Orchestrator {
         //LOG
 
         //Initialize all the planets give the list of ids
-        let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one ids
+        let ids_list: Vec<u32> = self.galaxy_lookup.keys().map(|x| x.clone()).collect(); //Every row should have at least one id
         self.initialize_planets_by_ids_list(ids_list.clone())?;
         Ok(())
     }

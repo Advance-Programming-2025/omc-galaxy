@@ -51,7 +51,7 @@ impl Orchestrator {
         //LOG
         log_fn_call!(self, "send_sunray_to_all()");
         //LOG
-        //collect all of the senders in a vector
+        //collect all the senders in a vector
         let senders_sunray: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
             .planet_channels
             .iter()
@@ -116,7 +116,7 @@ impl Orchestrator {
         //LOG
 
         //unwrap cannot fail because every id is contained in the map
-        //collect all of the senders in a vector
+        //collect all the senders in a vector
         let sender_asteroid: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
             .planet_channels
             .iter()
@@ -140,7 +140,7 @@ impl Orchestrator {
     /// Kill a specific planet.
     ///
     /// Sends a KillPlanet message to the planet, which is required to handle it.
-    /// This function does not check wether the planet has actually died: it only
+    /// This function does not check weather the planet has actually died: it only
     /// sends the message.
     ///
     /// Returns Err if the planet's channel is inaccessible.
@@ -173,7 +173,7 @@ impl Orchestrator {
         log_fn_call!(self, "send_planet_kill_to_all()");
         //LOG
 
-        //collect all of the senders in a vector
+        //collect all the senders in a vector
         let senders_to_kill: Vec<(u32, Sender<OrchestratorToPlanet>)> = self
             .planet_channels
             .iter()
@@ -226,7 +226,7 @@ impl Orchestrator {
         );
 
         // Guard: if the destination planet is dead its channel is disconnected,
-        // so skip the send instead of returning an error.
+        // so skip the sending instead of returning an error.
         if self.planets_info.is_dead(&planet_id) {
             log_internal_op!(self, "action" => format!(
                 "send_incoming_explorer_request: planet {} is dead, skipping",

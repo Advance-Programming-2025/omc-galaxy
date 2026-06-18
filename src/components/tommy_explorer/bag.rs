@@ -206,8 +206,8 @@ pub trait IntoGenericResource {
 impl IntoGenericResource for BasicResource {
     fn into_generic_resource(self) -> GenericResource {
         match self {
-            BasicResource::Oxygen(o) => o.to_generic(),
             BasicResource::Hydrogen(h) => h.to_generic(),
+            BasicResource::Oxygen(o) => o.to_generic(),
             BasicResource::Carbon(c) => c.to_generic(),
             BasicResource::Silicon(s) => s.to_generic(),
         }
@@ -217,8 +217,8 @@ impl IntoGenericResource for BasicResource {
 impl IntoGenericResource for ComplexResource {
     fn into_generic_resource(self) -> GenericResource {
         match self {
-            ComplexResource::Diamond(d) => d.to_generic(),
             ComplexResource::Water(w) => w.to_generic(),
+            ComplexResource::Diamond(d) => d.to_generic(),
             ComplexResource::Life(l) => l.to_generic(),
             ComplexResource::Robot(r) => r.to_generic(),
             ComplexResource::Dolphin(d) => d.to_generic(),

@@ -6,7 +6,6 @@ pub mod init;
 pub mod planets_comms;
 pub mod update;
 
-use crate::components::manual_explorer::BagType;
 use crate::utils::registry::PlanetType;
 use crate::utils::types::GalaxyTopology;
 use crate::utils::{ExplorerInfoMap, PlanetInfoMap};
@@ -23,6 +22,7 @@ use logging_utils::{log_fn_call, log_internal_op};
 use rand::Rng;
 use rustc_hash::FxHashMap;
 use std::collections::HashMap;
+use crate::components::tommy_explorer::bag::BagType;
 
 #[derive(Debug)]
 pub enum OrchestratorEvent {
