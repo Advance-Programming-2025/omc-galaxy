@@ -446,7 +446,7 @@ fn score_basic_resource_production(
         .resource_needs
         .get_effective_need(ResourceType::Basic(resource_type), params)
         * (1.0 / (resource_count*2) as f32) //less resource -> more needs
-        * (1.0 - (1.0 / energy_cells as f32)) //less energy cells -> more conservative
+        * (1.0 - (0.6 / energy_cells as f32)) //less energy cells -> more conservative
         * (if planet_info.charge_rate.unwrap_or(0.0) > 0f32 { //considering charge rate
             1.0
         } else {
