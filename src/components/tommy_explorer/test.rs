@@ -695,16 +695,14 @@ mod tests {
 }
 #[cfg(test)]
 mod explorer_full_tests {
-    use crate::components::tommy_explorer::actions::*;
     use crate::components::tommy_explorer::bag::*;
     use crate::components::tommy_explorer::state::*;
-    use crate::components::tommy_explorer::topology::*;
     use crate::components::tommy_explorer::*;
 
     use crate::utils::registry::PlanetType;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::{
-        BasicResource, BasicResourceType, ComplexResource, ComplexResourceType, ResourceType,
+        BasicResourceType, ComplexResourceType, ResourceType,
     };
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -802,10 +800,9 @@ mod explorer_full_tests {
         /// -> Explorer should respond with CurrentPlanetResult
         #[test]
         fn test_current_planet_request_response() {
-            let mut h = TestStruct::new_with_params(1, 42, 5);
+            let h = TestStruct::new_with_params(1, 42, 5);
 
             // Manually call handler as if orchestrator sent the message
-            let msg = OrchestratorToExplorer::CurrentPlanetRequest;
             h.explorer
                 .send_to_orchestrator(
                     // simulate the response the handler would produce
@@ -1199,7 +1196,7 @@ mod explorer_full_tests {
         /// -> Explorer should put resource in bag
         #[test]
         fn test_generate_resource_response_adds_to_bag() {
-            let mut h = TestStruct::new();
+            let h = TestStruct::new();
 
             // Simulate put_basic_resource_in_bag
             // (In real code the handler calls this; we test the bag directly)
@@ -1506,7 +1503,7 @@ mod explorer_full_tests {
             let msg = h.recv_from_explorer_to_planet();
             match msg {
                 ExplorerToPlanet::GenerateResourceRequest {
-                    explorer_id,
+                    explorer_id: _,
                     resource,
                 } => {
                     assert_eq!(resource, BasicResourceType::Hydrogen);
@@ -2165,7 +2162,7 @@ mod explorer_full_tests {
         /// decide_resource_action: no planet info -> returns None
         #[test]
         fn test_decide_resource_action_no_planet_info() {
-            let mut h = TestStruct::new_with_params(1, 999, 5); // planet 999 not in topology
+            let h = TestStruct::new_with_params(1, 999, 5); // planet 999 not in topology
 
             let action = h.explorer.decide_resource_action();
             assert!(

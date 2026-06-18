@@ -191,3 +191,65 @@ impl TopologyManager {
         }
     }
 }
+
+
+use std::collections::{VecDeque};
+
+// Definiamo il nostro iteratore con la parent_map inclusa
+pub struct BFSPathIterator<'a> {
+    topology: &'a TopologyManager,
+    queue: VecDeque<u32>,
+    visited: HashSet<u32>,
+    parent_map: HashMap<u32, u32>,
+}
+
+impl<'a> BFSPathIterator<'a> {
+    pub fn new(topology: &'a TopologyManager, start_node: u32) -> Self {
+        let mut queue = VecDeque::new();
+        let mut visited = HashSet::new();
+        queue.push_back(start_node);
+        visited.insert(start_node);
+
+        Self { topology, queue, visited, parent_map: HashMap::new() }
+    }
+
+    pub fn reconstruct_path(&self, target: u32) -> VecDeque<u32> {
+        let mut path = VecDeque::new();
+        let mut curr = target;
+        while let Some(&parent) = self.parent_map.get(&curr) {
+            path.push_front(curr);
+            curr = parent;
+        }
+        path
+    }
+}
+
+
+impl<'a> Iterator for BFSPathIterator<'a> {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(current) = self.queue.pop_front() {
+            if let Some(info) = self.topology.get(current) {
+                if let Some(neighbours) = &info.neighbours {
+                    for &neighbor in neighbours {
+                        if !self.visited.contains(&neighbor) {
+                            self.visited.insert(neighbor);
+                            self.parent_map.insert(neighbor, current);
+                            self.queue.push_back(neighbor);
+                        }
+                    }
+                }
+            }
+            return Some(current);
+        }
+        None
+    }
+}
+
+impl TopologyManager {
+    /// Crea un nuovo iteratore BFS a partire da un nodo
+    pub fn bfs_iter(&self, start: u32) -> BFSPathIterator<'_> {
+        BFSPathIterator::new(self, start)
+    }
+}
