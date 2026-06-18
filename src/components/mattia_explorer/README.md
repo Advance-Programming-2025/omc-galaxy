@@ -393,3 +393,14 @@ The codebase uses `unwrap()` in several places, all of which are guarded:
 | `mod.rs` — time counter | Uses `wrapping_add(1)` instead of `+`; wraps at `u64::MAX` without panic |
 
 Logically impossible situations are handled with warning logs rather than panics, so the explorer continues running.
+
+## 13. Tests
+
+In order to see the logs you have to first set `RUST_LOG` variable to whatever level you want (Error, Warning, Info, Debug, Trace)
+For Windows: `$env:RUST_LOG="debug"`;
+For Unix: `RUST_LOG=debug`
+By default env_logger filters out everything below Info
+
+To run all the test simply run `cargo nextest run --nocapture --no-fail-fast mattia_explorer::tests`
+
+If you want to hide all the compilation warnings use: `$env:RUSTFLAGS="-Awarnings"`
