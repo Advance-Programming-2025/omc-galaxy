@@ -611,7 +611,7 @@ fn calculate_safety_score(
     {
         1.0
     } else {
-        0.5 // penalty because the planet does not have a rocket
+        0.1 // penalty because the planet does not have a rocket
     };
     //adding some randomness
     let mut rng = rand::rng();
@@ -1023,6 +1023,7 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), String> {
             explorer,
             "action to be taken" => format!("{:?}", best_action)
         );
+        println!("action to be taken: {:?}", best_action);
         if let Some(ai_action) = best_action {
             explorer.ai_data.last_action = Some(ai_action.clone());
             explorer.ai_data.last_action_planet_id = Some(explorer.planet_id);
