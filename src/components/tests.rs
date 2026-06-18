@@ -345,7 +345,9 @@ mod test_one_million_crabs_planet {
                 .filter(|&&x| x.is_silicon())
                 .count()
                 <= 12
-        )
+        );
+        let _ =orchestrator.send_planet_kill_to_all();
+        let _ = orchestrator.send_kill_explorer_ai(2);
     }
 }
 
