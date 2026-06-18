@@ -1,4 +1,4 @@
-use crate::{Status, components::orchestrator::Orchestrator, settings};
+use crate::{Status, components::orchestrator::Orchestrator};
 use common_game::logging::{Channel, LogEvent, Participant};
 use common_game::utils::ID;
 use common_game::{
@@ -11,35 +11,6 @@ use logging_utils::{
 };
 
 impl Orchestrator {
-    pub fn send_sunray_or_asteroid(&mut self) -> Result<(), String> {
-        log_fn_call!(self, "send_sunray_or_asteroid()");
-        // debug_println!("{:?}", self.ticker);
-        match settings::pop_sunray_asteroid_sequence() {
-            Some('S') => {
-                self.send_sunray_to_all()?;
-            }
-            Some('A') => {
-                self.send_asteroid_to_all()?;
-            }
-            _msg => {
-                // Probability mode
-
-                // Get a random planet
-                let planet_id = self.get_random_planet_id()?;
-
-                // Get planet communication channel
-                let sender = &self.planet_channels.get(&planet_id).unwrap().0.clone();
-
-                // Decide whether to send sunray or asteroid
-                if settings::does_sunray_spawn() {
-                    self.send_sunray(planet_id, sender)?;
-                } else {
-                    self.send_asteroid(planet_id, sender)?;
-                }
-            }
-        }
-        Ok(())
-    }
     /// Send a sun ray to a planet.
     ///
     /// Requests a sun ray through the `forge` and sends it to the planet.
