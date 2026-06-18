@@ -611,7 +611,7 @@ fn calculate_safety_score(
     {
         1.0
     } else {
-        0.1 // penalty because the planet does not have a rocket
+        0.5 // penalty because the planet does not have a rocket
     };
     //adding some randomness
     let mut rng = rand::rng();
