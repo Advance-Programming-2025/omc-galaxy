@@ -275,21 +275,10 @@ impl Orchestrator {
                                 );
                             }
                             Err(err) => {
-                                //todo possible to log this in the main loop
-                                LogEvent::new(
-                                    Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                                    Some(Participant::new(ActorType::Planet, current_planet_id)),
-                                    EventType::MessageOrchestratorToPlanet,
-                                    Channel::Warning,
-                                    warning_payload!(
-                                        "Failed to send OutgoingExplorerRequest",
-                                        err,
-                                        "handle_planet_msg()";
-                                        "msg" => format!("PlanetToOrchestrator::IncomingExplorerResponse {{ {}, {}, {:?} }}",planet_id, explorer_id, res )
-                                    )
-                                ).emit();
-
-                                return Err(format!("Failed to send explorer request: {}", err));
+                                return Err(format!(
+                                    "Failed to send OutgoingExplorerRequest in handle_planet_msg(). Error: {}. Context: PlanetToOrchestrator::IncomingExplorerResponse {{ {}, {}, {:?} }}",
+                                    err, planet_id, explorer_id, res
+                                ));
                             }
                         }
                     }
@@ -395,7 +384,7 @@ impl Orchestrator {
                 self.explorers_info
                     .insert_status(explorer_id, Status::Running);
                 if self.explorers_info.get(&explorer_id).is_none() {
-                    self.send_current_planet_request(explorer_id)?; //todo is this necessary?
+                    self.send_current_planet_request(explorer_id)?;
                 }
 
                 //LOG
@@ -448,7 +437,7 @@ impl Orchestrator {
                 self.explorers_info
                     .insert_status(explorer_id, Status::Running);
                 if self.explorers_info.get(&explorer_id).is_none() {
-                    self.send_current_planet_request(explorer_id)?; //todo is this necessary
+                    self.send_current_planet_request(explorer_id)?; 
                 }
 
                 //LOG

@@ -163,7 +163,6 @@ impl Orchestrator {
         Ok(())
     }
 
-    // TODO safe to delete?
     /// Sends a Kill message to all planets.
     ///
     /// See [`send_planet_kill`](`Self::send_planet_kill`) for more details on how a
