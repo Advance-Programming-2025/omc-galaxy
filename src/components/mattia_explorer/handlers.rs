@@ -61,30 +61,14 @@ pub(super) fn reset_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         "explorer ai reset"
     );
     log_internal_op!(explorer, "sending ResetExplorerAIResult");
-    match explorer
+    explorer
         .orchestrator_channels
         .1
         .send(ExplorerToOrchestrator::ResetExplorerAIResult {
             explorer_id: explorer.explorer_id,
-        }) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "ResetExplorerAIResult not sent",
-                    err,
-                    "reset_explorer_ai()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-            Err(err.to_string())
-        }
-    }
+        })
+        .map_err(|err| format!("ResetExplorerAIResult not sent: {}", err))?;
+    Ok(())
 }
 
 /// this function put the explorer in the condition to wait for a StartExplorerAI message (WaitingToStartExplorerAI state),
@@ -102,30 +86,14 @@ pub(super) fn stop_explorer_ai(explorer: &mut Explorer) -> Result<(), String> {
         "manual_mode"=>"true",
     );
     log_internal_op!(explorer, "sending StopExplorerAIResult");
-    match explorer
+    explorer
         .orchestrator_channels
         .1
         .send(ExplorerToOrchestrator::StopExplorerAIResult {
             explorer_id: explorer.explorer_id,
-        }) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "StopExplorerAIResult not sent",
-                    err,
-                    "stop_explorer_ai()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-            Err(err.to_string())
-        }
-    }
+        })
+        .map_err(|err| format!("StopExplorerAIResult not sent: {}", err))?;
+    Ok(())
 }
 
 /// this function puts the explorer in the Killed state waiting for the thread to be terminated
@@ -141,30 +109,14 @@ pub(super) fn kill_explorer(explorer: &mut Explorer) -> Result<(), String> {
     );
 
     log_internal_op!(explorer, "sending KillExplorerResult");
-    match explorer
+    explorer
         .orchestrator_channels
         .1
         .send(ExplorerToOrchestrator::KillExplorerResult {
             explorer_id: explorer.explorer_id,
-        }) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "KillExplorerResult not sent",
-                    err,
-                    "kill_explorer()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-            Err(err.to_string())
-        }
-    }
+        })
+        .map_err(|err| format!("KillExplorerResult not sent: {}", err))?;
+    Ok(())
 }
 
 /// this function sets the sender_to_planet of the explorer struct
@@ -199,7 +151,7 @@ pub(super) fn move_to_planet(
                     if !explorer.manual_mode {
                         //in the case the explorer it is not in manual mode it
                         //automatically surveys vital information
-                        explorer.state = ExplorerState::Surveying {
+                        explorer.state = Surveying {
                             resources: planet_info.basic_resources.is_none(),
                             combinations: planet_info.complex_resources.is_none(),
                             energy_cells: true,
@@ -227,7 +179,7 @@ pub(super) fn move_to_planet(
                         //in the case the explorer it is not in manual mode it
                         //automatically surveys vital information
                         explorer.current_planet_neighbors_update = true;
-                        explorer.state = ExplorerState::Surveying {
+                        explorer.state = Surveying {
                             resources: true,
                             combinations: true,
                             energy_cells: true,
@@ -285,31 +237,15 @@ pub(super) fn current_planet_request(explorer: &mut Explorer) -> Result<(), Stri
         "planet_id"=>explorer.planet_id.to_string()
     );
     log_internal_op!(explorer, "sending CurrentPlanetResult");
-    match explorer
+    explorer
         .orchestrator_channels
         .1
         .send(ExplorerToOrchestrator::CurrentPlanetResult {
             explorer_id: explorer.explorer_id,
             planet_id: explorer.planet_id,
-        }) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Orchestrator, 0u32)),
-                EventType::MessageExplorerToOrchestrator,
-                Channel::Error,
-                warning_payload!(
-                    "CurrentPlanetResult not sent",
-                    err,
-                    "current_planet_request()";
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-            Err(err.to_string())
-        }
-    }
+        })
+        .map_err(|err| format!("CurrentPlanetResult not sent: {}", err))?;
+    Ok(())
 }
 
 /// this function sends the basic resources supported by the current planet to the orchestrator
@@ -343,7 +279,7 @@ pub(super) fn supported_resource_request(explorer: &mut Explorer) -> Result<(), 
                 None => match explorer.state {
                     // it is impossible that in this branch the explorer isn't in the Idle state
                     ExplorerState::Idle => {
-                        explorer.state = ExplorerState::Surveying {
+                        explorer.state = Surveying {
                             resources: true,
                             combinations: false,
                             energy_cells: false,
@@ -369,7 +305,7 @@ pub(super) fn supported_resource_request(explorer: &mut Explorer) -> Result<(), 
             // it is impossible that in this branch the explorer isn't in the Idle state
             match explorer.state {
                 ExplorerState::Idle => {
-                    explorer.state = ExplorerState::Surveying {
+                    explorer.state = Surveying {
                         resources: true,
                         combinations: true,
                         energy_cells: true,
@@ -422,7 +358,7 @@ pub(super) fn supported_combination_request(explorer: &mut Explorer) -> Result<(
                     // it is impossible that in this branch the explorer isn't in the Idle state
                     match explorer.state {
                         ExplorerState::Idle => {
-                            explorer.state = ExplorerState::Surveying {
+                            explorer.state = Surveying {
                                 resources: false,
                                 combinations: true,
                                 energy_cells: false,
@@ -449,7 +385,7 @@ pub(super) fn supported_combination_request(explorer: &mut Explorer) -> Result<(
             );
             match explorer.state {
                 ExplorerState::Idle => {
-                    explorer.state = ExplorerState::Surveying {
+                    explorer.state = Surveying {
                         resources: true,
                         combinations: true,
                         energy_cells: true,
@@ -494,33 +430,15 @@ pub(super) fn generate_resource_request(
 
     log_internal_op!(explorer, "sending GenerateResourceRequest");
     //sending the request
-    match explorer
+    explorer
         .planet_channels
         .1
         .send(ExplorerToPlanet::GenerateResourceRequest {
             explorer_id: explorer.explorer_id,
             resource: to_generate,
-        }) {
-        Ok(_) => Ok(()),
-        Err(err) => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-                EventType::MessageExplorerToPlanet,
-                Channel::Error,
-                warning_payload!(
-                    "GenerateResourceRequest not sent",
-                    err,
-                    "generate_resource_request()";
-                    "to_generate" => to_generate.to_string_2(),
-                    "to_orchestrator" => to_orchestrator,
-                    "explorer data"=>format!("{:?}", explorer)
-                ),
-            )
-            .emit();
-            Err(err.to_string())
-        }
-    }
+        })
+        .map_err(|err| format!("GenerateResourceRequest not sent: {}", err))?;
+    Ok(())
 }
 
 /// this function sends the GenerateResourceRequest, then the explorer state is updated and,
@@ -559,33 +477,14 @@ pub(super) fn combine_resource_request(
             };
 
             log_internal_op!(explorer, "sending CombineResourceRequest");
-            match explorer
+            explorer
                 .planet_channels
                 .1
                 .send(ExplorerToPlanet::CombineResourceRequest {
                     explorer_id: explorer.explorer_id,
                     msg: request,
-                }) {
-                Ok(_) => Ok(()),
-                Err(err) => {
-                    LogEvent::new(
-                        Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                        Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-                        EventType::MessageExplorerToPlanet,
-                        Channel::Error,
-                        warning_payload!(
-                            "CombineResourceRequest not sent",
-                            err,
-                            "combine_resource_request()";
-                            "to_generate" => to_generate.to_string_2(),
-                            "to_orchestrator" => to_orchestrator,
-                            "explorer data"=>format!("{:?}", explorer)
-                        ),
-                    )
-                    .emit();
-                    Err(err.to_string())
-                }
-            }
+                })
+                .map_err(|err| format!("CombineResourceRequest not sent: {}", err))
         }
         Err(err) => {
             //cannot creare complex resource request
@@ -679,7 +578,7 @@ pub(super) fn manage_supported_resource_response(
         "supported resource"=>format!("{:?}", resource_list)
     );
     match explorer.state {
-        ExplorerState::Surveying {
+        Surveying {
             resources: true,
             combinations,
             energy_cells,
@@ -725,7 +624,7 @@ pub(super) fn manage_supported_resource_response(
                 //if the explorer is not waiting for energy cells and combinations response
                 explorer.state = ExplorerState::Idle;
             } else {
-                explorer.state = ExplorerState::Surveying {
+                explorer.state = Surveying {
                     resources: false,
                     combinations,
                     energy_cells,
@@ -759,7 +658,7 @@ pub(super) fn manage_supported_combination_response(
         "supported combinations"=>format!("{:?}", combination_list)
     );
     match explorer.state {
-        ExplorerState::Surveying {
+        Surveying {
             resources,
             combinations: true,
             energy_cells,
@@ -803,7 +702,7 @@ pub(super) fn manage_supported_combination_response(
                 //if the explorer is not waiting for energy cells and resources response
                 explorer.state = ExplorerState::Idle;
             } else {
-                explorer.state = ExplorerState::Surveying {
+                explorer.state = Surveying {
                     resources,
                     combinations: false,
                     energy_cells,
@@ -968,7 +867,7 @@ pub(super) fn manage_available_energy_cell_response(
     );
 
     match explorer.state {
-        ExplorerState::Surveying {
+        Surveying {
             resources,
             combinations,
             energy_cells: true,
@@ -986,7 +885,7 @@ pub(super) fn manage_available_energy_cell_response(
             if !resources && !combinations {
                 explorer.state = ExplorerState::Idle;
             } else {
-                explorer.state = ExplorerState::Surveying {
+                explorer.state = Surveying {
                     resources,
                     combinations,
                     energy_cells: false,
@@ -996,19 +895,9 @@ pub(super) fn manage_available_energy_cell_response(
             }
         }
         _ => {
-            LogEvent::new(
-                Some(Participant::new(ActorType::Planet, explorer.planet_id)),
-                Some(Participant::new(ActorType::Explorer, explorer.explorer_id)),
-                EventType::MessagePlanetToExplorer,
-                Channel::Warning,
-                warning_payload!(
-                    "received AvailableEnergyCellResponse while not in Surveying state — this should not happen",
-                    "",
-                    "manage_available_energy_cell_response()";
-                    "explorer state" => format!("{:?}", explorer.state)
-                ),
-            )
-            .emit();
+            return Err(
+                "received AvailableEnergyCellResponse while not in Surveying state".to_string(),
+            );
         }
     }
     Ok(())

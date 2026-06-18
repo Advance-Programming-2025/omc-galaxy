@@ -33,7 +33,7 @@ pub type GalaxyTopology = Vec<Vec<bool>>;
 pub type GalaxySnapshot = Vec<(u32, u32)>;
 
 pub struct PlanetInfoMap {
-    pub map: BTreeMap<u32, PlanetInfo>,
+    pub(crate) map: BTreeMap<u32, PlanetInfo>,
 }
 impl PlanetInfoMap {
     pub fn new() -> Self {
@@ -219,7 +219,7 @@ impl PlanetInfo {
 }
 
 pub struct ExplorerInfoMap {
-    pub map: BTreeMap<u32, ExplorerInfo>,
+    pub(crate) map: BTreeMap<u32, ExplorerInfo>,
 }
 
 impl ExplorerInfoMap {

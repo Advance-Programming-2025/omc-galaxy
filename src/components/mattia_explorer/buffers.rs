@@ -23,7 +23,7 @@ pub(super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
     log_fn_call!(explorer, "manage_buffer_msg",);
     //LOG
     if !explorer.buffer_orchestrator_msg.is_empty() {
-        //this should never panic (pop protected by the previus check)
+        //this should never panic (pop protected by the previous check)
         if orch_msg_match_state(
             &explorer.state,
             explorer.buffer_orchestrator_msg.front().unwrap(),
@@ -83,7 +83,7 @@ pub(super) fn manage_buffer_msg(explorer: &mut Explorer) -> Result<(), String> {
         }
     }
     if !explorer.buffer_planet_msg.is_empty() {
-        //this should not panic (pop protected by the previus check)
+        //this should not panic (pop protected by the previous check)
         if planet_msg_match_state(&explorer.state, explorer.buffer_planet_msg.front().unwrap()) {
             let msg = explorer.buffer_planet_msg.pop_front().unwrap();
             match msg {

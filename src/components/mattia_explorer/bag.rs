@@ -1,4 +1,3 @@
-use crate::components::mattia_explorer::Explorer;
 use common_game::components::resource::{
     AIPartner, BasicResource, BasicResourceType, Carbon, ComplexResource, ComplexResourceRequest,
     ComplexResourceType, Diamond, Dolphin, GenericResource, Hydrogen, Life, Oxygen, ResourceType,
@@ -390,36 +389,3 @@ impl Bag {
     }
 }
 
-/// this function puts a complex resource in the explorer bag
-pub(super) fn put_complex_resource_in_the_bag(
-    explorer: &mut Explorer,
-    complex_response: Result<ComplexResource, (String, GenericResource, GenericResource)>,
-) {
-    if let Ok(complex_resource) = complex_response {
-        let new_resource = match complex_resource {
-            ComplexResource::Diamond(diamond) => diamond.to_generic(),
-            ComplexResource::Water(water) => water.to_generic(),
-            ComplexResource::Life(life) => life.to_generic(),
-            ComplexResource::Robot(robot) => robot.to_generic(),
-            ComplexResource::Dolphin(dolphin) => dolphin.to_generic(),
-            ComplexResource::AIPartner(ai_partner) => ai_partner.to_generic(),
-        };
-        explorer.bag.insert(new_resource);
-    }
-}
-
-/// this function puts a basic resource in the explorer bag
-pub(super) fn put_basic_resource_in_the_bag(
-    explorer: &mut Explorer,
-    resource: Option<BasicResource>,
-) {
-    if let Some(resource) = resource {
-        let new_resource = match resource {
-            BasicResource::Oxygen(oxygen) => oxygen.to_generic(),
-            BasicResource::Hydrogen(hydrogen) => hydrogen.to_generic(),
-            BasicResource::Carbon(carbon) => carbon.to_generic(),
-            BasicResource::Silicon(silicon) => silicon.to_generic(),
-        };
-        explorer.bag.insert(new_resource);
-    }
-}

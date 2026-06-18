@@ -13,6 +13,7 @@ use crossbeam_channel::{Receiver, Sender, unbounded};
 use rustc_hash::FxHashMap;
 
 use super::Orchestrator;
+use crate::components::mattia_explorer::Explorer as MattiaExplorer;
 use crate::utils::registry::PlanetType::{
     BlackAdidasShoe, Ciuc, HoustonWeHaveABorrow, ImmutableCosmicBorrow, OneMillionCrabs, Rustrelli,
     RustyCrab, TheCompilerStrikesBack,
@@ -25,7 +26,6 @@ use crate::{
         registry::{PLANET_REGISTRY, PlanetType},
     },
 };
-use crate::components::mattia_explorer::Explorer as MattiaExplorer;
 
 use crate::utils::ExplorerInfo;
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
@@ -47,7 +47,7 @@ impl Orchestrator {
     ///
     /// needed as a shorthand to initialize the OrchestratorToPlanet and ExplorerToPlanet channels |
     /// NOTE: these channels are simplex.
-    pub fn init_comms_planet() -> (
+    pub(crate) fn init_comms_planet() -> (
         Sender<OrchestratorToPlanet>,
         Receiver<OrchestratorToPlanet>,
         Sender<ExplorerToPlanet>,
@@ -95,7 +95,7 @@ impl Orchestrator {
     /// is created. See function [`add_explorer`](Self::add_explorer).
     ///
     /// NOTE: These channels are simplex.
-    pub fn init_comms_explorers() -> (
+    pub(crate) fn init_comms_explorers() -> (
         Sender<OrchestratorToExplorer>,
         Receiver<OrchestratorToExplorer>,
         Sender<PlanetToExplorer>,
@@ -137,7 +137,7 @@ impl Orchestrator {
     ///
     /// * `id` - id of the planet
     /// * `type_id` - the type of the planet (A,B,C,D)
-    pub fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
+    pub(crate) fn add_planet(&mut self, id: u32, type_id: PlanetType) -> Result<(), String> {
         //LOG
         log_fn_call!(self, "add_planet()", id, type_id,);
         //LOG

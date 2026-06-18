@@ -17,8 +17,8 @@
 
 mod test_one_million_crabs_planet {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use crate::{Orchestrator, Status};
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_planet::OrchestratorToPlanet;
@@ -89,7 +89,7 @@ mod test_one_million_crabs_planet {
             .unwrap()
             .0
             .clone();
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -98,7 +98,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -107,7 +107,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -116,7 +116,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -125,7 +125,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -134,7 +134,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -143,7 +143,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -152,7 +152,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -161,7 +161,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -170,7 +170,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -179,7 +179,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -188,7 +188,7 @@ mod test_one_million_crabs_planet {
                 resource: BasicResourceType::Silicon,
             })
             .expect("testing expect");
-        orchestrator.send_sunray(planet_id, &planet_channel);
+        orchestrator.send_sunray(planet_id, &planet_channel).expect("failed to send the message");
         new_explorer
             .planet_channels
             .1
@@ -614,7 +614,7 @@ mod game_simulation {
     #[test]
     fn simulation_25s() {
         let mut orchestrator = Orchestrator::new().unwrap();
-        let explorer_id=10;
+        let explorer_id = 10;
         orchestrator
             .initialize_galaxy_by_file(
                 "./src/components/mattia_explorer/test_topology_files/t0.txt",
@@ -705,7 +705,7 @@ mod communication {
     use std::thread::sleep;
     use std::time::Duration;
 
-    use crate::{utils::registry::PlanetType, Status};
+    use crate::{Status, utils::registry::PlanetType};
 
     use super::*;
 
@@ -844,7 +844,6 @@ mod communication {
         orch.add_mattia_explorer(explorer_id, planet_id)
             .expect("testing expect");
 
-
         orch.send_supported_combination_request(explorer_id)
             .unwrap();
         sleep(Duration::from_millis(500)); //handle game messages has a deadline of 10 ms
@@ -922,8 +921,8 @@ fn drain_messages(orch: &mut Orchestrator, duration_ms: u64) {
 #[cfg(test)]
 mod lifecycle_tests {
     use super::*;
-    use crate::utils::registry::PlanetType;
     use crate::Status;
+    use crate::utils::registry::PlanetType;
     use crossbeam_channel::{select, tick};
     use std::time::Duration;
     // ---- StartExplorerAI -> StartExplorerAIResult ----
@@ -1194,7 +1193,10 @@ mod lifecycle_tests {
         orch.send_stop_explorer_ai(explorer_id_1).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&explorer_id_1).unwrap(), Status::Paused);
+        assert_eq!(
+            orch.explorers_info.get_status(&explorer_id_1).unwrap(),
+            Status::Paused
+        );
         assert_eq!(
             orch.explorers_info.get_status(&explorer_id_2).unwrap(),
             Status::Running
@@ -1205,8 +1207,14 @@ mod lifecycle_tests {
         orch.send_kill_explorer_ai(explorer_id_2).unwrap();
         drain_messages(&mut orch, 100);
 
-        assert_eq!(orch.explorers_info.get_status(&explorer_id_1).unwrap(), Status::Dead);
-        assert_eq!(orch.explorers_info.get_status(&explorer_id_2).unwrap(), Status::Dead);
+        assert_eq!(
+            orch.explorers_info.get_status(&explorer_id_1).unwrap(),
+            Status::Dead
+        );
+        assert_eq!(
+            orch.explorers_info.get_status(&explorer_id_2).unwrap(),
+            Status::Dead
+        );
 
         let _ = orch.send_planet_kill_to_all();
         drain_messages(&mut orch, 200);
@@ -1288,7 +1296,7 @@ mod resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:_res_explorer_id,ref supported_resources}=msg{
+                        if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:_res_explorer_id,supported_resources: _}=msg{
                             response=true;
                         }
                         orch.handle_explorer_message(msg).expect("testing expect");
@@ -1323,7 +1331,7 @@ mod resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:_res_explorer_id, ref combination_list}=msg{
+                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:_res_explorer_id, combination_list: _}=msg{
                             response=true;
                         }
                         orch.handle_explorer_message(msg).expect("testing expect");
@@ -1360,10 +1368,10 @@ mod resource_tests {
             select! {
                 recv(orch.receiver_orch_explorer) -> explorer_msg => {
                     if let Ok(msg) = explorer_msg {
-                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:_res_explorer_id, ref combination_list}=msg{
+                        if let ExplorerToOrchestrator::SupportedCombinationResult {explorer_id:_res_explorer_id, combination_list: _}=msg{
                             comb_response=true;
                         }
-                        else if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:_res_explorer_id,ref supported_resources}=msg{
+                        else if let ExplorerToOrchestrator::SupportedResourceResult {explorer_id:_res_explorer_id,supported_resources: _}=msg{
                             res_response=true;
                         }
                         orch.handle_explorer_message(msg).expect("testing expect");
@@ -1645,7 +1653,7 @@ mod combine_resource_tests {
 
         // generate 2 carbons
         for _ in 0..2 {
-            let _ =orch.send_generate_resource_request(0, BasicResourceType::Carbon);
+            let _ = orch.send_generate_resource_request(0, BasicResourceType::Carbon);
         }
         drain_messages(&mut orch, 300);
 
@@ -1653,7 +1661,7 @@ mod combine_resource_tests {
         travel_explorer(&mut orch, 0, 1);
 
         // now try to combine diamond
-        let _ =orch.send_combine_resource_request(0, ComplexResourceType::Diamond);
+        let _ = orch.send_combine_resource_request(0, ComplexResourceType::Diamond);
         drain_messages(&mut orch, 200);
         let bag = &orch.explorers_info.get(&0).unwrap().bag;
         debug_println!("{:?}", bag);
@@ -1898,7 +1906,12 @@ mod resource_after_movement_tests {
         // verify explorer is on planet 1
         orch.send_current_planet_request(explorer_id).unwrap();
         drain_messages(&mut orch, 50);
-        assert_eq!(orch.explorers_info.get_current_planet(&explorer_id).unwrap(), 1);
+        assert_eq!(
+            orch.explorers_info
+                .get_current_planet(&explorer_id)
+                .unwrap(),
+            1
+        );
 
         // now generate a resource on planet 1
         orch.send_generate_resource_request(explorer_id, BasicResourceType::Silicon)
@@ -1935,7 +1948,6 @@ mod end_to_end_tests {
     fn rapid_fire_messages() {
         let mut orch = setup_orch_with_explorer(PlanetType::BlackAdidasShoe, 0, 0);
 
-        let planet_channel = orch.planet_channels.get(&0).unwrap().0.clone();
 
         // send multiple different requests rapidly
         orch.send_bag_content_request(0).unwrap();
@@ -1998,9 +2010,9 @@ mod end_to_end_tests {
 #[cfg(test)]
 mod explorer_planet_comms {
     use super::*;
-    use crate::utils::registry::PlanetType;
-    use crate::utils::ExplorerInfo;
     use crate::Status;
+    use crate::utils::ExplorerInfo;
+    use crate::utils::registry::PlanetType;
     use common_game::components::resource::BasicResourceType;
     use common_game::protocols::orchestrator_explorer::{
         ExplorerToOrchestrator, OrchestratorToExplorer,
@@ -2370,7 +2382,8 @@ mod explorer_planet_comms {
             "AsteroidAck on dead planet should return Ok, got: {:?}",
             result
         );
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2392,7 +2405,8 @@ mod explorer_planet_comms {
             "KillPlanetResult on dead planet should return Ok, got: {:?}",
             result
         );
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2436,7 +2450,8 @@ mod explorer_planet_comms {
             "Dead explorer should not receive any response"
         );
 
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2462,7 +2477,8 @@ mod explorer_planet_comms {
             result
         );
 
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2509,7 +2525,8 @@ mod explorer_planet_comms {
             "Explorer should receive MoveToPlanet rejection with planet_id 77"
         );
 
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2535,7 +2552,8 @@ mod explorer_planet_comms {
             result
         );
 
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2564,7 +2582,8 @@ mod explorer_planet_comms {
             result
         );
 
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2601,7 +2620,8 @@ mod explorer_planet_comms {
             "Explorer should be redirected back to current planet after dst planet dies"
         );
 
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 
@@ -2623,7 +2643,8 @@ mod explorer_planet_comms {
             result
         );
 
-        orch.send_planet_kill_to_all().expect("failed to send planet kill to all");
+        orch.send_planet_kill_to_all()
+            .expect("failed to send planet kill to all");
         drain_messages(&mut orch, 200);
     }
 }

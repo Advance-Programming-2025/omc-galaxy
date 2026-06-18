@@ -1,14 +1,16 @@
-use crate::components::mattia_explorer::ActorType;
-use crate::components::mattia_explorer::Explorer;
 use crate::components::mattia_explorer::ai_params::AiParams;
 use crate::components::mattia_explorer::helpers::gather_info_from_planet;
 use crate::components::mattia_explorer::planet_info::PlanetInfo;
 use crate::components::mattia_explorer::states::ExplorerState;
-use common_game::components::resource::{BasicResourceType, ComplexResourceType, ResourceType};
+use crate::components::mattia_explorer::ActorType;
+use crate::components::mattia_explorer::Explorer;
+use common_game::components::resource::{
+    BasicResourceType, ComplexResourceType, ResourceType,
+};
 use common_game::protocols::orchestrator_explorer::ExplorerToOrchestrator;
 use common_game::protocols::planet_explorer::ExplorerToPlanet;
 use common_game::utils::ID;
-use logging_utils::{LoggableActor, log_fn_call, log_internal_op};
+use logging_utils::{log_fn_call, log_internal_op, LoggableActor};
 use rand::Rng;
 use std::collections::HashMap;
 
@@ -81,9 +83,10 @@ pub(super) struct ResourceNeeds {
     ai_partner: f32,
     dolphin: f32,
 }
-impl ResourceNeeds {
+
+impl Default for ResourceNeeds {
     /// Creates a new `ResourceNeeds` with all resource needs initialized to 0.0.
-    fn new() -> Self {
+    fn default() -> Self {
         Self {
             oxygen: 0.0,
             carbon: 0.0,
@@ -95,6 +98,34 @@ impl ResourceNeeds {
             diamond: 0.0,
             ai_partner: 0.0,
             dolphin: 0.0,
+        }
+    }
+}
+impl ResourceNeeds {
+    /// Creates a new `ResourceNeeds` with all resource needs initialized.
+    fn new(
+        oxygen: f32,
+        carbon: f32,
+        silicon: f32,
+        hydrogen: f32,
+        water: f32,
+        life: f32,
+        robot: f32,
+        diamond: f32,
+        ai_partner: f32,
+        dolphin: f32,
+    ) -> Self {
+        Self {
+            oxygen,
+            carbon,
+            silicon,
+            hydrogen,
+            water,
+            life,
+            robot,
+            diamond,
+            ai_partner,
+            dolphin,
         }
     }
     /// Recursively computes the effective need of a resource by propagating
@@ -185,7 +216,7 @@ pub(super) struct AiData {
 impl AiData {
     pub(super) fn new(params: AiParams) -> Self {
         Self {
-            resource_needs: ResourceNeeds::new(),
+            resource_needs: ResourceNeeds::default(),
             ai_action: AIAction::new(),
             last_action: None,
             last_action_planet_id: None,
@@ -580,7 +611,7 @@ fn calculate_safety_score(
     {
         1.0
     } else {
-        0.5 // penalty because the planet does not have a rocket
+        0.3 // penalty because the planet does not have a rocket
     };
     //adding some randomness
     let mut rng = rand::rng();
@@ -653,6 +684,7 @@ fn score_survey_energy(explorer: &Explorer) -> Result<f32, &'static str> {
         if planet_info.charge_rate.unwrap_or(0.0) >= params.min_active_charge_rate {
             // Fast charging planet: energy could have changed a lot
             let max_cells = calculate_max_number_cells(planet_info);
+            // number of energy cells changed/maximum number of cells available
             let potential_change =
                 (planet_info.charge_rate.unwrap_or(0.0) * energy_age as f32) / max_cells as f32;
             potential_change.min(0.5) // Cap at 0.5 additional uncertainty
@@ -928,7 +960,7 @@ fn find_best_action(
 /// 3. **Action execution**: picks the action with the highest utility and executes it
 /// Handles all action types: produce, combine, move to, survey neighbors/energy, wait, and run away.
 #[allow(clippy::too_many_lines)]
-pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn std::error::Error>> {
+pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), String> {
     //LOG
     log_fn_call!(explorer, "ai_core_function", explorer,);
     //LOG
@@ -959,7 +991,7 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn st
             }
             Err(err) => {
                 explorer.state = ExplorerState::Idle;
-                return Err(Box::new(err));
+                return Err(err.to_string());
             }
         }
     } else if base_resource || comp_resource {
@@ -1017,7 +1049,7 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn st
                             Ok(()) => return Ok(()),
                             Err(err) => {
                                 explorer.state = ExplorerState::Idle;
-                                return Err(Box::new(err));
+                                return Err(err.to_string());
                             }
                         }
                     }
@@ -1037,7 +1069,7 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn st
                         }
                         Err(err) => {
                             explorer.state = ExplorerState::Idle;
-                            return Err(Box::new(err));
+                            return Err(err.to_string());
                         }
                     }
                 }
@@ -1055,7 +1087,7 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn st
                         }
                         Err(err) => {
                             explorer.state = ExplorerState::Idle;
-                            return Err(Box::new(err));
+                            return Err(err.to_string());
                         }
                     }
                 }
@@ -1100,7 +1132,7 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn st
                         }
                         Err(err) => {
                             explorer.state = ExplorerState::Idle;
-                            return Err(Box::new(err));
+                            return Err(err.to_string());
                         }
                     }
                 }
@@ -1139,7 +1171,7 @@ pub(super) fn ai_core_function(explorer: &mut Explorer) -> Result<(), Box<dyn st
                                 }
                                 Err(err) => {
                                     explorer.state = ExplorerState::Idle;
-                                    return Err(Box::new(err));
+                                    return Err(err.to_string());
                                 }
                             }
                         }

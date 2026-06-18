@@ -136,7 +136,7 @@ I campi `orch_resource` e `orch_combination` nel `Surveying` servono per ricorda
   - In `Idle` tutti i messaggi sono accettati.
   - `NeighborsResponse` solo in `WaitingForNeighbours`.
   - `MoveToPlanet` solo in `Traveling`.
-  - `KillExplorer` e' **sempre** accettato in qualsiasi stato.
+  - `KillExplorer` e `StopExplorerAI` sono **sempre** accettati in qualsiasi stato.
 
 - `planet_msg_match_state(state, msg)` (`states.rs:40`): verifica se un messaggio del pianeta e' accettabile.
   - In `Idle` tutti i messaggi sono accettati.
@@ -154,22 +154,35 @@ Il metodo `run()` e' il cuore dell'explorer. Funziona cosi':
 
 ```
 loop {
-    1. Incrementa il tick temporale (con wrapping_add per evitare overflow/panic)
-    2. select! sui canali:
-       a. Messaggio dall'orchestrator:
-          - Se il messaggio corrisponde allo stato -> esegui handler
-          - Altrimenti -> push nel buffer orchestrator
-          - Se il canale e' disconnesso -> ERRORE FATALE, return Err
-       b. Messaggio dal pianeta:
-          - Se il messaggio corrisponde allo stato -> esegui handler
-          - Altrimenti -> push nel buffer pianeta
-          - Se il canale e' disconnesso -> LOG errore ma NON termina
-            (perche' deve aspettare il KillExplorer dall'orchestrator)
-       c. default (nessun messaggio):
-          - Se ci sono messaggi nei buffer -> gestisci buffer
-          - Se manage_buffer_msg ha impostato stato Killed -> return Ok
-          - Altrimenti se non e' in manual_mode e' e' Idle -> chiama ai_core_function()
-    3. Sleep di 20ms per ridurre il busy waiting
+    1. Incrementa il tick temporale (con wrapping_add per evitare overflow/panic).
+    
+    2. Costruzione dinamica della Select (crossbeam_channel):
+       - Il canale Orchestrator è sempre monitorato.
+       - Il canale Planet viene aggiunto alla Select SOLO se `planet_channel_active` è true.
+       - Esegue una `try_select()` per verificare se ci sono messaggi pronti senza bloccarsi.
+
+    3. Match sul risultato della selezione (`Selected`):
+    
+       a. Selected::Orchestrator(msg_result):
+          - Se il messaggio è valido e corrisponde allo stato -> esegui handler.
+            * NOTA: Se riceve `MoveToPlanet`, imposta `planet_channel_active = true` per riabilitare il canale del pianeta.
+            * NOTA: Se riceve `KillExplorer`, esce dal loop ritornando `Ok(())`.
+          - Se lo stato non corrisponde -> push nel buffer dell'orchestrator.
+          - Se il canale è disconnesso -> ERRORE FATALE, return Err.
+
+       b. Selected::Planet(msg_result):
+          - Se il messaggio corrisponde allo stato -> esegui handler.
+          - Se lo stato non corrisponde -> push nel buffer del pianeta.
+          - Se il canale è disconnesso -> LOG errore e imposta `planet_channel_active = false`.
+            Questo disattiva il canale nelle iterazioni successive, evitando un ciclo di busy waiting (spin loop) 
+            mentre si attende il KillExplorer ufficiale dall'orchestrator.
+
+       c. Selected::None (nessun messaggio pronto nei canali):
+          - Se ci sono messaggi accumulati nei buffer -> chiama `manage_buffer_msg`.
+            * Se dopo la gestione del buffer lo stato è `Killed` -> return Ok.
+          - Se i buffer sono vuoti, non si è in `manual_mode` e lo stato è `Idle` -> chiama `ai_core_function()`.
+
+    4. Sleep di 20ms per ridurre l'utilizzo della CPU.
 }
 ```
 
@@ -185,7 +198,7 @@ Quando il canale del pianeta si disconnette (es. il pianeta muore), l'explorer n
 
 ### Risposta `BagContentRequest`
 
-`mod.rs:191`: *"IMPORTANTE: restituisce un vettore contenente i resource type e non gli item in se"*. La risposta a `BagContentRequest` invia un `Vec<ResourceType>` e non gli oggetti risorse veri e propri, perche' il bag non puo' cedere l'ownership delle risorse all'orchestrator.
+`mod.rs:191`: La risposta a `BagContentRequest` invia un `Vec<ResourceType>` e non gli oggetti risorse veri e propri, perche' il bag non puo' cedere l'ownership delle risorse all'orchestrator.
 
 ---
 
@@ -206,7 +219,7 @@ Funzionamento:
 2. Se il buffer pianeta non e' vuoto:
    - Stessa logica con `planet_msg_match_state`
 
-**Nota sul `KillExplorer` dal buffer** (`buffers.rs:46`): il commento dice *"I don't think it is possible to arrive here"* - il `KillExplorer` nel buffer e' un caso teoricamente impossibile perche' `KillExplorer` e' sempre accettato (match in qualsiasi stato).
+il `KillExplorer` nel buffer e' un caso teoricamente impossibile perche' `KillExplorer` e' sempre accettato (match in qualsiasi stato).
 
 ---
 
@@ -401,6 +414,7 @@ enum PlanetClassType { A, B, C, D }
 
 ### `PlanetInfo`
 
+Struct che contiene tutte le informazioni su un pianeta che possono essere usati dall'AI per decidere l'azione
 ```rust
 struct PlanetInfo {
     basic_resources: Option<HashSet<BasicResourceType>>,     // risorse base producibili
@@ -450,7 +464,7 @@ Funzione che, basandosi sullo stato `Surveying` dell'explorer, invia i messaggi 
 - Se `combinations == true` -> invia `SupportedCombinationRequest`
 - Se `energy_cells == true` -> invia `AvailableEnergyCellRequest`
 
-Se l'explorer non e' in stato `Surveying`, logga un warning ma **non genera errore** (restituisce `Ok(())`).
+Se l'explorer non e' in stato `Surveying`, logga un warning e genera errore.
 
 ---
 
@@ -472,28 +486,50 @@ Converte una risorsa tipizzata (es. `BasicResource::Oxygen(val)`) nel tipo gener
 
 ## 12. Il Sistema di Intelligenza Artificiale
 
-**File:** `explorer_ai.rs` (1104 righe)
+**File:** `explorer_ai.rs`
 
 ### 12.1 Panoramica
 
-L'AI dell'explorer e' un sistema **utility-based**: ad ogni ciclo calcola un punteggio di utilita' (valore `f32` in `[0.0, 1.0]`) per ogni azione possibile, poi esegue quella con il punteggio piu' alto.
+L'AI dell'explorer è un sistema **utility-based**: ad ogni ciclo calcola un punteggio di utilità (valore `f32` solitamente nel range `[0.0, 1.0]`) per ogni azione possibile, poi esegue quella con il punteggio più alto.
 
-### 12.2 Costanti di Configurazione
+I parametri di configurazione sono indicati nella struttura `AiParams`, la quale consente la **configurazione a runtime** dell'esploratore. Questo approccio rende il sistema flessibile e apre alla possibilità di effettuare fine-tuning o ottimizzazioni tramite tecniche di Machine Learning.
 
-| Costante | Valore | Descrizione |
-|----------|--------|-------------|
-| `RANDOMNESS_RANGE` | 0.1    | Rumore aggiunto ai calcoli di utilita' |
-| `LAMBDA` | 0.005  | Fattore di decadimento per informazioni obsolete |
-| `PROPAGATION_FACTOR` | 0.8    | Propagazione bisogno risorse nell'albero dei crafting |
-| `SAFETY_CRITICAL` | 0.3    | Soglia di pericolo critico - evacuazione immediata |
-| `SAFETY_WARNING` | 0.6    | Soglia di allarme - inizia a cercare pianeti piu' sicuri |
-| `ENERGY_CELLS_DEFENSE_THRESHOLD` | 2      | Celle energetiche minime per difesa |
-| `MAX_ENERGY_INFO_AGE` | 150    | Tick massimi prima che i dati energetici siano obsoleti |
-| `ACTION_HYSTERESIS_MARGIN` | 0.07   | Margine per evitare cambio azione frequente |
-| `MIN_ACTIVE_CHARGE_RATE` | 0.05   | Tasso minimo per considerare il pianeta "in ricarica" |
-| `MAX_PREDICTION_HORIZON` | 100    | Tick massimi per predizioni energetiche |
-| `PERFECT_INFO_MAX_TIME` | 25      | Tick entro cui l'informazione e' considerata perfetta |
-| `SAFETY_MIN_DIFF` | 0.07   | Differenza minima di safety per fuga |
+### 12.2 Parametri di Configurazione (`AiParams`)
+
+La struttura `AiParams` raggruppa logicamente tutti i parametri di tuning necessari per il comportamento dell'AI. Di seguito sono elencati i campi della struttura e i loro valori di default:
+
+| Parametro                           | Valore di Default | Descrizione                                                                                                         |
+| ----------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Rumore (Noise)**                  |                   |                                                                                                                     |
+| `randomness_range`                  | `0.1`             | Livello di rumore applicato ai calcoli di utilità (moltiplicatore nel range `[1-val, 1+val]`).                      |
+| **Decadimento Informazioni**        |                   |                                                                                                                     |
+| `lambda`                            | `0.005`           | Fattore di decadimento esponenziale per le informazioni obsolete: e−λ⋅Δt.                                           |
+| **Bisogno di Risorse**              |                   |                                                                                                                     |
+| `propagation_factor`                | `0.8`             | Fattore di propagazione del bisogno da una risorsa padre alle risorse figlie nell'albero di crafting.               |
+| **Soglie di Sicurezza**             |                   |                                                                                                                     |
+| `safety_critical`                   | `0.3`             | Soglia di pericolo critico: innesca l'evacuazione immediata.                                                        |
+| `safety_warning`                    | `0.6`             | Soglia di pre-allarme: l'explorer inizia a cercare pianeti più sicuri.                                              |
+| `energy_cells_defense_threshold`    | `2`               | Numero minimo di celle energetiche necessarie per considerare un pianeta "difeso".                                  |
+| **Obsolescenza Dati**               |                   |                                                                                                                     |
+| `max_energy_info_age`               | `150`             | Tick massimi prima che le informazioni energetiche siano considerate obsolete.                                      |
+| **Isteresi**                        |                   |                                                                                                                     |
+| `action_hysteresis_margin`          | `0.07`            | Vantaggio minimo richiesto per cambiare l'azione corrente, evitando oscillazioni e cambi di decisione continui.     |
+| **Predizioni di Ricarica**          |                   |                                                                                                                     |
+| `min_active_charge_rate`            | `0.05`            | Tasso di ricarica minimo per considerare un pianeta "attivamente in ricarica".                                      |
+| `max_prediction_horizon`            | `100`             | Numero massimo di tick nel futuro per le proiezioni (evita predizioni troppo ottimistiche a lungo termine).         |
+| `perfect_info_max_time`             | `10`              | Tick temporali entro cui le informazioni possedute sono considerate perfettamente accurate.                         |
+| **Fuga (Escape)**                   |                   |                                                                                                                     |
+| `safety_min_diff`                   | `0.07`            | Differenza minima di sicurezza necessaria per giustificare la fuga verso un altro pianeta.                          |
+| **Pesi delle Utilità Base**         |                   |                                                                                                                     |
+| `wait_base`                         | `0.08`            | Punteggio di utilità base per l'azione di attesa (`wait`).                                                          |
+| `wait_bonus`                        | `0.1`             | Punteggio di utilità bonus per l'azione di attesa se ci si trova su un pianeta sicuro e in ricarica.                |
+| **Pesi del Punteggio di Sicurezza** |                   |                                                                                                                     |
+| `safety_weight_sustainability`      | `0.15`            | Peso della componente di sostenibilità nel calcolo del punteggio di sicurezza generale.                             |
+| `safety_weight_physical`            | `0.70`            | Peso della componente di sicurezza fisica, combinata con la presenza o meno del razzo.                              |
+| `safety_weight_escape`              | `0.15`            | Peso della componente relativa al potenziale fattore di fuga.                                                       |
+| **Smoothing Energetico**            |                   |                                                                                                                     |
+| `charge_rate_alpha`                 | `0.3`             | Fattore _alpha_ della media mobile esponenziale (EMA) utilizzata per calcolare il tasso di ricarica in modo fluido. |
+
 
 ### 12.3 Strutture Dati AI
 
@@ -535,7 +571,7 @@ struct AIAction {
 
 Traccia i bisogni di ogni tipo di risorsa. Ogni campo e' un `f32` in `[0, 1]`.
 
-**`get_effective_need()`** (`explorer_ai.rs:168`): calcola il bisogno effettivo di una risorsa tenendo conto della **propagazione attraverso l'albero dei crafting**.
+**`get_effective_need()`** (`explorer_ai.rs:168`): calcola il bisogno effettivo di una risorsa tenendo conto della **propagazione attraverso l'albero dei crafting**. (ricorsivamente)
 
 L'albero ha 5 livelli:
 
@@ -557,6 +593,7 @@ struct AiData {
     ai_action: AIAction,                     // utilita' correnti
     last_action: Option<AIActionType>,       // ultima azione eseguita (per hysteresis)
     last_action_planet_id: Option<ID>,       // pianeta dell'ultima azione (anti ping-pong)
+    params: AiParams,                        // parametri tunabili utilizzati dall'AI
 }
 ```
 
@@ -620,11 +657,11 @@ Calcola l'utilita' di produrre una risorsa base:
 
 ```
 score = bisogno_effettivo
-      * (1 / conteggio_in_bag)           -- meno risorse hai, piu' ne vuoi
-      * (1 - 1/energy_cells)             -- meno energia, piu' conservativo
+      * (1 / conteggio_in_bag*2)         -- meno risorse hai, piu' ne vuoi
+      * (1 - 0.6/energy_cells)           -- meno energia, piu' conservativo
       * (charge_rate > 0 ? 1.0 : 0.8)    -- bonus per pianeti in ricarica
       * (affidabilita'*0.2 + 0.8)        -- l'affidabilita' dei dati energetici conta poco
-      * noise_factor                      -- rumore [0.95, 1.05]
+      * noise_factor                     -- rumore [0.95, 1.05]
 ```
 
 #### `score_complex_resource_production()` - `explorer_ai.rs:485`
@@ -662,10 +699,11 @@ Calcola il punteggio di sicurezza di un pianeta come combinazione pesata di:
    - 2 vicini: `0.8`
    - 3+ vicini: `1.0`
    - Aggiustato con affidabilita' dei dati: `(escape * reliability) + (0.15 * (1 - reliability))`
+4. **Rocket** se il pianeta può avere il razzo rocket = `1.0` altrimenti rocket = `0.3`
 
 Formula finale: `(sustainability*0.15 + physical_safety*rocket*0.70 + escape*0.15) * noise`
 
-Il risultato e' salvato in `planet_info.safety_score`.
+Il risultato e' salvato in `planet_info.safety_score` clampato tra `0.0` e `1.0`
 
 #### `score_survey_neighbors()` - `explorer_ai.rs:609`
 

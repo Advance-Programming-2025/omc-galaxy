@@ -218,7 +218,19 @@ impl Explorer {
                         }
                     } else if !self.manual_mode && self.state == ExplorerState::Idle {
                         //buffers empty and not in manual mode => running ai
-                        ai_core_function(self).map_err(|e| e.to_string())?;
+                        if let Err(err) = ai_core_function(self) {
+                            LogEvent::self_directed(
+                                Participant::new(ActorType::Explorer, self.explorer_id),
+                                EventType::InternalExplorerAction,
+                                Channel::Warning,
+                                warning_payload!(
+                                    "ai_core_function returned an error",
+                                    err,
+                                    "mattia_explorer::run()"
+                                ),
+                            )
+                            .emit();
+                        }
                     }
                 }
 
@@ -467,7 +479,6 @@ impl fmt::Debug for Explorer {
                 &self.current_planet_neighbors_update,
             )
             .field("manual_mode", &self.manual_mode)
-            // Possiamo omettere i buffer se sono troppo lunghi o includerli normalmente
             .field(
                 "buffer_orchestrator_len",
                 &self.buffer_orchestrator_msg.len(),
