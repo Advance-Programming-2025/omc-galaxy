@@ -19,13 +19,13 @@ use crate::utils::registry::PlanetType::{
 };
 use crate::{
     GalaxyTopology,
-    components::mattia_explorer::Explorer as MattiaExplorer,
     components::tommy_explorer::Explorer as TommyExplorer,
     utils::{
         Status,
         registry::{PLANET_REGISTRY, PlanetType},
     },
 };
+use omc_mattia_explorer::Explorer as MattiaExplorer;
 
 use crate::utils::ExplorerInfo;
 use logging_utils::{debug_println, log_fn_call, log_internal_op, warning_payload};
